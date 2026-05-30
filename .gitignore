@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# WXT / build output
+.output/
+.wxt/
+dist/
+*.zip
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Claude Code local config
+.claude/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Test / coverage
+coverage/
+.vitest/
+test-results/
+playwright-report/
+
+# Tooling caches
+.playwright-mcp/
