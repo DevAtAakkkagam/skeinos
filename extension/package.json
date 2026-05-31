@@ -2,6 +2,7 @@
   "name": "skeinos",
   "description": "A unified workspace layer for your LLM chats.",
   "private": true,
+  "license": "UNLICENSED",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -17,10 +18,12 @@
     "test:all": "vitest run && vitest run -c vitest.browser.config.ts"
   },
   "dependencies": {
+    "idb": "^8.0.3",
     "preact": "^10.25.4"
   },
   "devDependencies": {
     "@vitest/browser": "^3.2.4",
+    "fake-indexeddb": "^6.2.5",
     "happy-dom": "^16.5.3",
     "playwright": "^1.60.0",
     "typescript": "^5.7.3",
