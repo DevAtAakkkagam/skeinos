@@ -25,8 +25,8 @@ describe('manifest permission policy', () => {
     }
   });
 
-  it('requests no credential-bearing permissions (none at all in bootstrap)', () => {
-    expect(skeinosManifest.permissions).toEqual([]);
+  it('requests only the non-credential-bearing alarms permission (canary watchdog)', () => {
+    expect(skeinosManifest.permissions).toEqual(['alarms']);
     for (const perm of skeinosManifest.permissions) {
       expect(CREDENTIAL_BEARING).not.toContain(perm);
     }

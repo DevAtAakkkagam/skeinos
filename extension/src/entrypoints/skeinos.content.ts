@@ -4,6 +4,6 @@ import { runContent } from '../content';
 export default defineContentScript({
   matches: [...P0_MATCHES],
   main() {
-    runContent();
+    void runContent();
   },
 });

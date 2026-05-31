@@ -1,0 +1,22 @@
+{
+  "platformId": "claude",
+  "configVersion": "1.0.0",
+  "hostMatch": ["*://claude.ai/*"],
+  "selectors": {
+    "conversationList": "[data-testid=\"conversation-list\"]",
+    "conversationItem": "[data-conversation-id]",
+    "conversationTitle": "[data-conversation-title]",
+    "conversationIdAttr": "data-conversation-id",
+    "messageUser": "[data-message-author=\"user\"]",
+    "messageAssistant": "[data-message-author=\"assistant\"]",
+    "composer": "div.ProseMirror[contenteditable=\"true\"]",
+    "sendButton": "button[aria-label=\"Send message\"]",
+    "sidebarAnchor": "nav[data-testid=\"sidebar\"]",
+    "inputBarAnchor": "[data-testid=\"composer-root\"]"
+  },
+  "behaviors": {
+    "insertMode": "react-set",
+    "submitMode": "click",
+    "supportsSystemPrompt": true
+  }
+}

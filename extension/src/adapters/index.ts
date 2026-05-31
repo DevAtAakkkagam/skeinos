@@ -1,0 +1,49 @@
+// adapters — one generic, config-driven adapter + per-platform configs (LLD §4).
+// `PlatformAdapter` is the ONLY platform contract the rest of the system imports;
+// everything else here is the runtime that builds and feeds it. Nothing in
+// `core/` imports this module — dependencies point inward (LLD §2).
+
+export type {
+  AdapterBehaviors,
+  AdapterConfig,
+  AdapterEvent,
+  AdapterSelectors,
+  ConversationRef,
+  InsertMode,
+  Message,
+  PlatformAdapter,
+  PlatformId,
+  SelfCheckResult,
+  SubmitMode,
+} from './types';
+export { REQUIRED_ANCHORS } from './types';
+
+export { createAdapter, type AdapterContext } from './runtime/adapter';
+export { loadConfig, type ConfigCache, type LoaderOptions } from './runtime/loader';
+export {
+  validateAdapterConfig,
+  isValidationErrors,
+  type ValidationError,
+} from './runtime/validate';
+export { matchPlatform, matchesHostPattern } from './runtime/host-match';
+export { reportDegraded, registerAdapterHandlers } from './runtime/degraded';
+export { getBundledConfig, BUNDLED_CONFIGS } from './configs';
+
+// adapter-resilience: durable health, the health-report seam, the canary
+// watchdog, and the breakage-notice banner (LLD §4.3).
+export {
+  getHealth,
+  getPlatformHealth,
+  getDegraded,
+  setHealth,
+  clearHealth,
+  type PlatformHealth,
+} from './resilience/health';
+export { reportHealth, queryHealth, registerResilienceHandlers } from './resilience/report';
+export {
+  registerCanary,
+  runCanaryTick,
+  CANARY_ALARM,
+  CANARY_PERIOD_MINUTES,
+} from './resilience/canary';
+export { Banner, mountBanner, BANNER_LABELS } from './resilience/Banner';

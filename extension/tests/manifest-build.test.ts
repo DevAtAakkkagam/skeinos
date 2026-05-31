@@ -29,8 +29,8 @@ describe('generated MV3 manifest', () => {
     expect(manifest.host_permissions).not.toContain('*://*/*');
   });
 
-  it('declares no API permissions', () => {
-    expect(manifest.permissions ?? []).toEqual([]);
+  it('declares only the alarms API permission (canary watchdog)', () => {
+    expect(manifest.permissions ?? []).toEqual(['alarms']);
   });
 
   it('injects a content script scoped to the P0 hosts', () => {

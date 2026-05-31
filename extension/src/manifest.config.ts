@@ -12,7 +12,10 @@ export const skeinosManifest = {
   name: 'Skeinos',
   description: 'A unified workspace layer for your LLM chats.',
   host_permissions: [...P0_MATCHES],
-  // Bootstrap requests no API permissions at all. Anything added later must be
-  // justified against the privacy-first positioning and store review.
-  permissions: [] as string[],
+  // `alarms` powers the adapter-resilience canary watchdog (LLD §4.3): a durable,
+  // worker-death-surviving schedule that re-surfaces a degraded platform within
+  // 24h. It is non-credential-bearing and adds no host access. No other API
+  // permissions are requested; anything added later must be justified against the
+  // privacy-first positioning and store review.
+  permissions: ['alarms'] as string[],
 };

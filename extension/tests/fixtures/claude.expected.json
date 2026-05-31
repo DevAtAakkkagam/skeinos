@@ -1,0 +1,10 @@
+{
+  "activeUrl": "https://claude.ai/chat/conv-1",
+  "active": { "nativeId": "conv-1", "title": "Quantum basics" },
+  "conversationCount": 2,
+  "messages": [
+    { "role": "user", "text": "What is superposition?" },
+    { "role": "assistant", "text": "Superposition is a quantum state combining possibilities." }
+  ],
+  "inserted": "Hello from Skeinos"
+}

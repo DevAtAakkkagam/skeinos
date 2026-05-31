@@ -46,3 +46,6 @@ jobs:
           name: skeinos-chrome
           path: extension/.output/*.zip
           if-no-files-found: error
+          # `.output` is a dot-directory; upload-artifact@v4 skips hidden paths
+          # by default, so opt in or the zip is silently excluded.
+          include-hidden-files: true
