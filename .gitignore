@@ -22,6 +22,9 @@ yarn-error.log*
 # Claude Code local config
 .claude/
 
+# Local dev runner config (machine-specific Firefox binary path)
+web-ext.config.ts
+
 # Editor / OS
 .DS_Store
 Thumbs.db

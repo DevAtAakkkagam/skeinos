@@ -1,0 +1,30 @@
+{
+  "name": "skeinos",
+  "description": "A unified workspace layer for your LLM chats.",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "prepare": "wxt prepare",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:browser": "vitest run -c vitest.browser.config.ts",
+    "test:all": "vitest run && vitest run -c vitest.browser.config.ts"
+  },
+  "dependencies": {
+    "preact": "^10.25.4"
+  },
+  "devDependencies": {
+    "@vitest/browser": "^3.2.4",
+    "happy-dom": "^16.5.3",
+    "playwright": "^1.60.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5",
+    "wxt": "^0.19.27"
+  }
+}
