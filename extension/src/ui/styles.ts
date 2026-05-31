@@ -22,4 +22,12 @@ export const COMPONENT_CSS = `
   font: inherit;
   cursor: pointer;
 }
+.sk-select {
+  background: var(--sk-color-bg);
+  color: var(--sk-color-fg);
+  border: 1px solid var(--sk-color-border);
+  border-radius: var(--sk-radius);
+  padding: var(--sk-space-1) var(--sk-space-2);
+  font: inherit;
+}
 `;
