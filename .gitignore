@@ -36,6 +36,8 @@ coverage/
 .vitest/
 test-results/
 playwright-report/
+# Vitest browser-mode failure screenshots (regenerated on failure, not source)
+**/__screenshots__/
 
 # Tooling caches
 .playwright-mcp/
