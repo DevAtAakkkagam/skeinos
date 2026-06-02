@@ -44,7 +44,7 @@ const SIDEBAR_FEATURE_CSS = `
 .sk-brand__status { width: 6px; height: 6px; border-radius: 50%; background: var(--sk-color-success); flex: none; }
 .sk-search { display: flex; align-items: center; gap: var(--sk-space-2); margin: var(--sk-space-2) var(--sk-space-3) 0; padding: var(--sk-space-1) var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-muted); font: inherit; cursor: default; }
 .sk-search__placeholder { flex: 1; text-align: left; }
-.sk-search__kbd { font-family: var(--sk-font-mono); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); font-size: 11px; }
+.sk-search__kbd { font-family: var(--sk-font-system); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); font-size: 11px; }
 .sk-tabs { display: flex; gap: var(--sk-space-1); padding: var(--sk-space-2) var(--sk-space-3) 0; }
 .sk-tab { flex: 1; text-align: center; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--sk-color-muted); font: inherit; padding: var(--sk-space-1) var(--sk-space-2); cursor: pointer; }
 .sk-tab--active { color: var(--sk-color-fg); border-bottom-color: var(--sk-color-accent); }

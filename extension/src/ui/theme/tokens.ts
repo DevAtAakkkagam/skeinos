@@ -17,7 +17,7 @@ export const THEME_CSS = `
   /* Lattice Design System typefaces (bundled in fonts.ts). */
   --sk-font-ui: "Urbanist", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --sk-font-dot: "Handjet", "Urbanist", system-ui, sans-serif;
-  --sk-font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sk-font-system: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 
   font-family: var(--sk-font-ui);
   /* Body · 500 · 13 / 20 (Lattice type scale). */
