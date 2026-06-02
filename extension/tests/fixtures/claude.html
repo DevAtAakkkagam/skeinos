@@ -1,31 +1,37 @@
-<!-- Representative Claude DOM snapshot (sidebar list + ProseMirror composer).
-     See tests/fixtures/README.md — re-capture from the live site before relying
-     on the exact selectors in production. -->
+<!-- Representative Claude DOM snapshot, shaped from the live claude.ai sidebar +
+     tiptap composer (captured 2026-06). Conversations are `/chat/<id>` links inside
+     nav[aria-label="Sidebar"], each carrying its title in an `.sr-only` span; the
+     composer is the tiptap/ProseMirror contenteditable inside a <fieldset>.
+     See tests/fixtures/README.md — re-capture if the live selectors drift. -->
 <div class="app">
-  <nav data-testid="sidebar">
-    <div data-testid="conversation-list">
-      <a
-        href="/chat/conv-1"
-        data-conversation-id="conv-1"
-        aria-current="page"
-      >
-        <span data-conversation-title>Quantum basics</span>
-      </a>
-      <a href="/chat/conv-2" data-conversation-id="conv-2">
-        <span data-conversation-title>Trip planning</span>
-      </a>
-    </div>
+  <nav aria-label="Sidebar">
+    <a href="/new" aria-label="New chat">New chat</a>
+    <a href="/recents" aria-label="Chats">Chats</a>
+    <ul class="flex flex-col gap-px">
+      <li>
+        <a href="/chat/conv-1" aria-current="page">
+          <span class="sr-only">Quantum basics</span>
+          <span aria-hidden="true">Quantum basics</span>
+        </a>
+      </li>
+      <li>
+        <a href="/chat/conv-2">
+          <span class="sr-only">Trip planning</span>
+          <span aria-hidden="true">Trip planning</span>
+        </a>
+      </li>
+    </ul>
   </nav>
 
   <main>
     <div class="thread">
-      <div data-message-author="user">What is superposition?</div>
-      <div data-message-author="assistant">Superposition is a quantum state combining possibilities.</div>
+      <div data-testid="user-message">What is superposition?</div>
+      <div class="font-claude-message">Superposition is a quantum state combining possibilities.</div>
     </div>
 
-    <div data-testid="composer-root">
-      <div class="ProseMirror" contenteditable="true"></div>
+    <fieldset>
+      <div contenteditable="true" data-testid="chat-input" class="tiptap ProseMirror"></div>
       <button aria-label="Send message">Send</button>
-    </div>
+    </fieldset>
   </main>
 </div>

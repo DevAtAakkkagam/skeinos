@@ -11,17 +11,18 @@ import type { AdapterConfig, PlatformAdapter, PlatformId } from '../src/adapters
 
 const claudeConfig = getBundledConfig('claude') as AdapterConfig;
 
-// Minimal host markup matching the Claude config's required anchors.
+// Minimal host markup matching the Claude config's required anchors
+// (nav[aria-label="Sidebar"], a fieldset input bar, and the chat-input composer).
 const HEALTHY_HTML = `
-  <nav data-testid="sidebar"><div data-testid="conversation-list"></div></nav>
-  <div data-testid="composer-root">
-    <div class="ProseMirror" contenteditable="true"></div>
-  </div>
+  <nav aria-label="Sidebar"><a href="/chat/c1">Chat</a></nav>
+  <fieldset>
+    <div data-testid="chat-input" contenteditable="true" class="tiptap ProseMirror"></div>
+  </fieldset>
 `;
 // A "broken config": the composer anchor the selectors target is gone.
 const BROKEN_HTML = `
-  <nav data-testid="sidebar"><div data-testid="conversation-list"></div></nav>
-  <div data-testid="composer-root"></div>
+  <nav aria-label="Sidebar"><a href="/chat/c1">Chat</a></nav>
+  <fieldset></fieldset>
 `;
 
 function makeAdapter(html: string): { adapter: PlatformAdapter; root: HTMLElement } {
@@ -92,9 +93,9 @@ describe('Breakage-notice banner (5.5)', () => {
 
     // The host page recovers: the missing composer anchor reappears.
     const composer = document.createElement('div');
-    composer.className = 'ProseMirror';
+    composer.setAttribute('data-testid', 'chat-input');
     composer.setAttribute('contenteditable', 'true');
-    root.querySelector('[data-testid="composer-root"]')!.appendChild(composer);
+    root.querySelector('fieldset')!.appendChild(composer);
 
     buttonByText(banners()[0], BANNER_LABELS.retry).click();
     expect(banners()).toHaveLength(0);

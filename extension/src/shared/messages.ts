@@ -59,7 +59,8 @@ export interface RequestContract {
  * so the typed `Request` union and `registerHandler`/`send` grow without
  * touching `core/messaging`.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
+// Intentionally empty: feature modules augment this via declaration merging.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface RequestContracts {}
 
 /** Every registered request `kind`. */

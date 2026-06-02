@@ -38,6 +38,18 @@ export interface Folder extends SyncMeta {
   archived?: boolean;
 }
 
+/**
+ * A derived view of the folder hierarchy — not persisted. `core/folders`
+ * `buildTree` produces it from the flat `Folder` rows; the sidebar renders it.
+ * `depth` is 1-based (a root folder is depth 1) so the nest-≤5 guard reads
+ * directly.
+ */
+export interface FolderTreeNode {
+  folder: Folder;
+  depth: number;
+  children: FolderTreeNode[];
+}
+
 /** Local only — never synced. */
 export interface ConversationIndex {
   id: string;

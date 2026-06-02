@@ -1,18 +1,18 @@
 {
   "platformId": "claude",
-  "configVersion": "1.0.0",
+  "configVersion": "1.0.1",
   "hostMatch": ["*://claude.ai/*"],
   "selectors": {
-    "conversationList": "[data-testid=\"conversation-list\"]",
-    "conversationItem": "[data-conversation-id]",
-    "conversationTitle": "[data-conversation-title]",
-    "conversationIdAttr": "data-conversation-id",
-    "messageUser": "[data-message-author=\"user\"]",
-    "messageAssistant": "[data-message-author=\"assistant\"]",
-    "composer": "div.ProseMirror[contenteditable=\"true\"]",
+    "conversationList": "nav[aria-label=\"Sidebar\"]",
+    "conversationItem": "a[href^=\"/chat/\"]",
+    "conversationTitle": ".sr-only",
+    "conversationIdAttr": "href",
+    "messageUser": "[data-testid=\"user-message\"]",
+    "messageAssistant": ".font-claude-message",
+    "composer": "[data-testid=\"chat-input\"]",
     "sendButton": "button[aria-label=\"Send message\"]",
-    "sidebarAnchor": "nav[data-testid=\"sidebar\"]",
-    "inputBarAnchor": "[data-testid=\"composer-root\"]"
+    "sidebarAnchor": "nav[aria-label=\"Sidebar\"]",
+    "inputBarAnchor": "fieldset"
   },
   "behaviors": {
     "insertMode": "react-set",

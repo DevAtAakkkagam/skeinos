@@ -22,6 +22,7 @@ export type { Repo } from './repo';
 export { syncableStores, STORES, type StoreName } from './schema';
 export { openDb, MIGRATIONS, type Migration } from './db';
 export { contentHash, getDeviceId } from './envelope';
+export { workspaceStore, __resetWorkspaceStore } from './instance';
 
 export type Txn = IDBPTransaction<unknown, string[], 'readwrite'>;
 

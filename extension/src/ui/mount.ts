@@ -1,4 +1,5 @@
 import { render, type ComponentChild } from 'preact';
+import { ensureFontsLoaded } from './theme/fonts';
 import { THEME_CSS } from './theme/tokens';
 import { COMPONENT_CSS } from './styles';
 
@@ -27,6 +28,10 @@ export function mount(
   vnode: ComponentChild,
   opts: MountOptions = {},
 ): MountHandle {
+  // Register the bundled typefaces with the document font set (shadow DOM inherits
+  // it); @font-face inside a shadow root would be ignored by Chrome.
+  ensureFontsLoaded();
+
   const host = document.createElement('div');
   host.setAttribute('data-skeinos-root', '');
 
@@ -40,6 +45,9 @@ export function mount(
   shadowRoot.appendChild(style);
 
   const app = document.createElement('div');
+  // Fill the host when it is sized (e.g. the docked sidebar at 100vh); collapses
+  // to auto for unsized hosts (e.g. the breakage banner), so this is a safe default.
+  app.style.height = '100%';
   shadowRoot.appendChild(app);
 
   const setTheme = (theme: Theme) => host.setAttribute('data-theme', theme);

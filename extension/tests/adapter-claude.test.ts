@@ -38,7 +38,10 @@ describe('Claude self-check fails cleanly on a broken fixture', () => {
   it('reports the missing composer anchor and does not throw', () => {
     const root = document.createElement('div');
     // Same fixture with the composer removed.
-    root.innerHTML = claudeHtml.replace(/<div class="ProseMirror"[^>]*><\/div>/, '');
+    root.innerHTML = claudeHtml.replace(
+      /<div contenteditable="true" data-testid="chat-input"[^>]*><\/div>/,
+      '',
+    );
     document.body.appendChild(root);
 
     const adapter = createAdapter(claudeConfig, { root });

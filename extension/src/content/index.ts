@@ -1,8 +1,10 @@
-// Content-script logic home. On a supported host it picks the platform's config,
-// builds the generic adapter, and runs `selfCheck()` (LLD §4.3): on success the
-// adapter is ready for the overlay (mounting lands in M2); on failure it stays
-// dormant, reports its health to the worker, and raises an in-product breakage
-// banner so the user knows this platform is paused — all isolated to this tab.
+// Content-script logic home — DOM-only (the `side-panel` change, D4). On a
+// supported host it picks the platform's config, builds the generic adapter, and
+// runs `selfCheck()` (LLD §4.3): on failure it stays dormant, reports its health
+// to the worker, and raises an in-product breakage banner so the user knows this
+// platform is paused — all isolated to this tab. On success it ingests the host's
+// conversation list through the worker. It mounts NO workspace UI: the sidebar
+// shell now lives in the browser side panel, not injected into the host page.
 
 import {
   createAdapter,
@@ -12,6 +14,7 @@ import {
   mountBanner,
   reportHealth,
 } from '../adapters';
+import { mutateWorkspaceRemote } from '../core/folders';
 
 export async function runContent(): Promise<void> {
   const url = location.href;
@@ -35,7 +38,16 @@ export async function runContent(): Promise<void> {
     return;
   }
 
-  // Self-check passed: the adapter is ready. The overlay (sidebar/input bar) mounts
-  // in M2 once the workspace UI exists; for now injection + readiness is proven.
+  // Self-check passed: the adapter is ready. Ingest the host's current
+  // conversation list through the worker so folder counts reflect them. The
+  // adapter is the only DOM reader; `core/` never touches the page. No workspace
+  // UI is mounted here — the side panel owns that surface now.
   console.log('[Skeinos] adapter ready', platformId, adapter.configVersion);
+
+  const refs = adapter
+    .listConversations()
+    .map((ref) => ({ nativeId: ref.nativeId, title: ref.title }));
+  if (refs.length > 0) {
+    await mutateWorkspaceRemote({ op: 'conversation.ingest', platform: platformId, refs });
+  }
 }

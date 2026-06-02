@@ -13,14 +13,23 @@ export const THEME_CSS = `
 :host {
   all: initial;
   display: block;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+
+  /* Lattice Design System typefaces (bundled in fonts.ts). */
+  --sk-font-ui: "Urbanist", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --sk-font-dot: "Handjet", "Urbanist", system-ui, sans-serif;
+  --sk-font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  font-family: var(--sk-font-ui);
+  /* Body · 500 · 13 / 20 (Lattice type scale). */
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
 
   --sk-color-bg: #ffffff;
   --sk-color-fg: #1a1a1a;
   --sk-color-muted: #6b7280;
   --sk-color-accent: #4f46e5;
+  --sk-color-success: #84c9b0;
   --sk-color-border: #e5e7eb;
   --sk-space-1: 4px;
   --sk-space-2: 8px;
@@ -35,6 +44,7 @@ export const THEME_CSS = `
   --sk-color-fg: #f5f5f5;
   --sk-color-muted: #9ca3af;
   --sk-color-accent: #818cf8;
+  --sk-color-success: #84c9b0;
   --sk-color-border: #374151;
 }
 
@@ -44,6 +54,7 @@ export const THEME_CSS = `
     --sk-color-fg: #f5f5f5;
     --sk-color-muted: #9ca3af;
     --sk-color-accent: #818cf8;
+    --sk-color-success: #84c9b0;
     --sk-color-border: #374151;
   }
 }
