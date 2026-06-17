@@ -11,13 +11,13 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { matchPlatform } from '../../adapters/runtime/host-match';
+import { ChatIcon } from '../../ui/components/Icon';
 import { SidebarShell } from '../../ui/sidebar/SidebarShell';
 import type { PlatformId } from '../../shared/types';
 
 const STR = {
   emptyTitle: 'Open a supported chat',
   emptyBody: 'Skeinos works alongside Claude, Gemini, and Perplexity. Open one of those tabs to see your workspace here.',
-  emptyIcon: '#',
 } as const;
 
 interface TabLike {
@@ -71,7 +71,7 @@ export function SidePanelApp() {
     // way there is no platform to scope folder data to yet.
     return (
       <div class="sk-empty" data-testid="sk-panel-empty">
-        <div class="sk-empty__icon" aria-hidden="true">{STR.emptyIcon}</div>
+        <div class="sk-empty__icon" aria-hidden="true"><ChatIcon size={40} /></div>
         <p class="sk-empty__title">{STR.emptyTitle}</p>
         <p class="sk-empty__body">{STR.emptyBody}</p>
       </div>

@@ -19,6 +19,11 @@ export type {
 export { REQUIRED_ANCHORS } from './types';
 
 export { createAdapter, type AdapterContext } from './runtime/adapter';
+export {
+  waitForSelfCheck,
+  SELF_CHECK_TIMEOUT_MS,
+  type WaitForSelfCheckOptions,
+} from './runtime/ready';
 export { loadConfig, type ConfigCache, type LoaderOptions } from './runtime/loader';
 export {
   validateAdapterConfig,

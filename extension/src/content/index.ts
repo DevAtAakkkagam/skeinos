@@ -13,6 +13,7 @@ import {
   matchPlatform,
   mountBanner,
   reportHealth,
+  waitForSelfCheck,
 } from '../adapters';
 import { mutateWorkspaceRemote } from '../core/folders';
 
@@ -28,7 +29,11 @@ export async function runContent(): Promise<void> {
   if (!config) return; // no bundled config shipped for this platform yet
 
   const adapter = createAdapter(config);
-  const check = adapter.selfCheck();
+  // Don't judge the adapter broken on the first synchronous probe: the host SPA
+  // hydrates its anchors after `document_idle`, so wait (re-probing on DOM
+  // mutations) until the check passes or a bounded timeout elapses. A genuinely
+  // stale selector still fails after the timeout and raises the banner below.
+  const check = await waitForSelfCheck(adapter);
   await reportHealth(platformId, check);
   if (!check.ok) {
     console.warn('[Skeinos] adapter self-check failed', platformId, check.missing);
@@ -50,4 +55,24 @@ export async function runContent(): Promise<void> {
   if (refs.length > 0) {
     await mutateWorkspaceRemote({ op: 'conversation.ingest', platform: platformId, refs });
   }
+
+  // Active-conversation seam (conversation-filing): tell the worker which
+  // conversation this tab currently has open so the side panel's
+  // current-conversation card reflects it. Only id/title cross — never message
+  // content (PRIV-1). Report on load and again whenever the host SPA swaps the
+  // open conversation without a full reload (the adapter already keys active-by-
+  // URL and emits `conversation-changed`).
+  const reportActive = (ref: { nativeId: string; title: string } | null): void => {
+    if (!ref) return;
+    void mutateWorkspaceRemote({
+      op: 'conversation.reportActive',
+      platform: platformId,
+      nativeId: ref.nativeId,
+      title: ref.title,
+    });
+  };
+  reportActive(adapter.detectConversation());
+  adapter.observe((e) => {
+    if (e.type === 'conversation-changed') reportActive(e.ref);
+  });
 }

@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // hoisted `vi.mock` factories.
 const m = vi.hoisted(() => ({
   listConversations: vi.fn(() => [{ nativeId: 'n1', title: 'First chat' }]),
+  detectConversation: vi.fn(() => ({ nativeId: 'n1', title: 'First chat', url: '/c/n1' })),
+  observe: vi.fn((_cb: (e: unknown) => void) => () => {}),
   selfCheck: vi.fn((): { ok: boolean; missing: string[] } => ({ ok: true, missing: [] })),
   mountBanner: vi.fn(),
   reportHealth: vi.fn(async () => {}),
@@ -25,10 +27,16 @@ vi.mock('../src/adapters', () => ({
   createAdapter: () => ({
     selfCheck: m.selfCheck,
     listConversations: m.listConversations,
+    detectConversation: m.detectConversation,
+    observe: m.observe,
     configVersion: '1.0.0',
   }),
   reportHealth: m.reportHealth,
   mountBanner: m.mountBanner,
+  // Delegate the readiness gate straight to the adapter's selfCheck so the
+  // pipeline's success/failure paths stay driven by the `selfCheck` spy.
+  waitForSelfCheck: async (a: { selfCheck: () => { ok: boolean; missing: string[] } }) =>
+    a.selfCheck(),
 }));
 
 vi.mock('../src/core/folders', () => ({ mutateWorkspaceRemote: m.mutateWorkspaceRemote }));
@@ -53,6 +61,13 @@ describe('content script is DOM-only (7.4)', () => {
     expect(mutateWorkspaceRemote).toHaveBeenCalledWith(
       expect.objectContaining({ op: 'conversation.ingest', platform: 'claude' }),
     );
+    // …reported the active conversation (id/title only, no content)…
+    expect(mutateWorkspaceRemote).toHaveBeenCalledWith({
+      op: 'conversation.reportActive',
+      platform: 'claude',
+      nativeId: 'n1',
+      title: 'First chat',
+    });
     // …reported health and (on success) raised no breakage banner…
     expect(reportHealth).toHaveBeenCalled();
     expect(mountBanner).not.toHaveBeenCalled();

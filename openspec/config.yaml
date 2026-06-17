@@ -18,3 +18,6 @@ schema: spec-driven
 #       - Always include a "Non-goals" section
 #     tasks:
 #       - Break tasks into chunks of max 2 hours
+rules:
+  explore:
+    - Instead of bug prose, prepare easy to comprehend choice questions when asking to make decisions.

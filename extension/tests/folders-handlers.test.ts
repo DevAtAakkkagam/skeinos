@@ -78,6 +78,26 @@ describe('mutate → persist → re-query round-trips', () => {
     expect(snap.counts).toEqual({ a: 1 });
   });
 
+  it('re-ingesting preserves pin / archive / colour state (1.3)', async () => {
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'claude',
+      refs: [{ nativeId: 'c1', title: 'One' }],
+    });
+    await mutateWorkspace(store, { op: 'conversation.pin', conversationId: 'claude::c1', pinned: true });
+    await mutateWorkspace(store, { op: 'conversation.recolor', conversationId: 'claude::c1', color: '#5aa9e6' });
+
+    // A later page load re-ingests the same conversation (host title changed).
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'claude',
+      refs: [{ nativeId: 'c1', title: 'One (renamed by host)' }],
+    });
+
+    const conv = await store.conversations.get('claude::c1');
+    expect(conv).toMatchObject({ pinned: true, color: '#5aa9e6', title: 'One (renamed by host)' });
+  });
+
   it('re-ingesting preserves an existing folder assignment', async () => {
     await mutateWorkspace(store, { op: 'folder.create', id: 'a', name: 'A' });
     await mutateWorkspace(store, {
@@ -100,6 +120,65 @@ describe('mutate → persist → re-query round-trips', () => {
     const snap = await queryWorkspace(store, { kind: 'folder.counts' });
     if (snap.kind !== 'folder.counts') throw new Error('expected counts');
     expect(snap.counts).toEqual({ a: 1 }); // still filed
+  });
+});
+
+describe('conversation pin / archive / colour ops (2.4)', () => {
+  let store: WorkspaceStore;
+  beforeEach(async () => {
+    store = await freshStore();
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'claude',
+      refs: [{ nativeId: 'c1', title: 'One' }],
+    });
+  });
+  const id = 'claude::c1';
+
+  it('pins and unpins a conversation, broadcasting the conversations store', async () => {
+    const before = await store.conversations.get(id);
+    const r = await mutateWorkspace(store, { op: 'conversation.pin', conversationId: id, pinned: true });
+    expect(r.stores).toEqual(['conversations']);
+    const pinned = await store.conversations.get(id);
+    expect(pinned!.pinned).toBe(true);
+    // The helper bumps updatedAt (conversations are local-only and carry no sync
+    // envelope, so the re-sort key is updatedAt, not `rev`).
+    expect(pinned!.updatedAt).toBeGreaterThanOrEqual(before!.updatedAt);
+
+    await mutateWorkspace(store, { op: 'conversation.pin', conversationId: id, pinned: false });
+    expect((await store.conversations.get(id))!.pinned).toBe(false);
+  });
+
+  it('archives and unarchives a conversation, retaining the row + folder', async () => {
+    await mutateWorkspace(store, { op: 'conversation.assign', conversationId: id, folderId: null });
+    const r = await mutateWorkspace(store, { op: 'conversation.archive', conversationId: id, archived: true });
+    expect(r.stores).toEqual(['conversations']);
+    const archived = await store.conversations.get(id);
+    expect(archived!.archived).toBe(true);
+    expect(archived).toBeTruthy(); // retained, not deleted
+
+    await mutateWorkspace(store, { op: 'conversation.archive', conversationId: id, archived: false });
+    expect((await store.conversations.get(id))!.archived).toBe(false);
+  });
+
+  it('sets and clears a conversation colour', async () => {
+    const r = await mutateWorkspace(store, { op: 'conversation.recolor', conversationId: id, color: '#5cb98b' });
+    expect(r.stores).toEqual(['conversations']);
+    expect((await store.conversations.get(id))!.color).toBe('#5cb98b');
+
+    await mutateWorkspace(store, { op: 'conversation.recolor', conversationId: id, color: undefined });
+    expect((await store.conversations.get(id))!.color).toBeUndefined();
+  });
+
+  it('rejects pin / archive / recolor on a missing conversation, writing nothing', async () => {
+    for (const op of [
+      { op: 'conversation.pin', conversationId: 'claude::nope', pinned: true } as const,
+      { op: 'conversation.archive', conversationId: 'claude::nope', archived: true } as const,
+      { op: 'conversation.recolor', conversationId: 'claude::nope', color: '#000' } as const,
+    ]) {
+      await expect(mutateWorkspace(store, op)).rejects.toMatchObject({ code: 'folder_not_found' });
+    }
+    expect(await store.conversations.get('claude::nope')).toBeUndefined();
   });
 });
 

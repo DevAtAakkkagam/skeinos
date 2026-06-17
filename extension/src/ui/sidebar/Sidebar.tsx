@@ -5,11 +5,24 @@
 // and the tree re-renders from the worker's broadcast — it holds no authoritative
 // folder state of its own (PREACT guardrail).
 
-import { useRef, useState } from 'preact/hooks';
-import type { Folder, FolderTreeNode, PlatformId } from '../../shared/types';
-import type { MutationOp } from '../../shared/workspace';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import type { ConversationIndex, Folder, FolderTreeNode, PlatformId } from '../../shared/types';
+import { conversationId, type MutationOp } from '../../shared/workspace';
 import { Dialog, useMenu, mergeProps, getNodeRoot } from '../primitives';
-import { useWorkspace, type WorkspaceView } from './useWorkspace';
+import { CheckIcon, ChevronIcon, CloseIcon, FolderIcon, PlusIcon } from '../components/Icon';
+import { ConversationList } from './ConversationList';
+import { FOLDER_COLORS } from './palette';
+import { DRAG_MIME, type DragPayload } from './drag';
+import { useWorkspace, type MutateResult, type WorkspaceView } from './useWorkspace';
+
+// Re-exported for the existing import site (`tests`/other UI) that reaches for the
+// drag contract via this module; the definition now lives in `./drag`.
+export { DRAG_MIME } from './drag';
+export type { DragPayload } from './drag';
+
+/** Delay before a loading indicator appears, so a warm read never flashes a
+ *  spinner (matches the transport's retry cadence). */
+const SPINNER_DELAY_MS = 150;
 
 // User-facing strings in one place (i18n-ready; no inline literals in markup).
 const STR = {
@@ -19,11 +32,22 @@ const STR = {
   newFolder: 'New folder',
   noFolders: 'No folders yet',
   emptyBody: 'Create a folder to start organising conversations across every platform.',
+  loading: 'Loading your workspace…',
+  loadError: 'Couldn’t load your folders',
+  loadErrorBody: 'The workspace didn’t respond. Check your connection and try again.',
+  retry: 'Retry',
+  createError: 'Couldn’t save the folder. Your changes are kept — try again.',
   name: 'Name',
+  namePlaceholder: 'Folder name',
   icon: 'Icon',
-  color: 'Color',
-  create: 'Create',
-  save: 'Save',
+  color: 'Colour',
+  parentFolder: 'Parent folder',
+  topLevel: 'No parent (top level)',
+  clearColor: 'No colour',
+  clearIcon: 'No icon',
+  create: 'Create folder',
+  save: 'Save changes',
+  close: 'Close',
   cancel: 'Cancel',
   rename: 'Rename',
   pin: 'Pin',
@@ -34,12 +58,15 @@ const STR = {
   moveDown: 'Move down',
   moveTop: 'Move to top level',
   delete: 'Delete',
-  createTitle: 'Create folder',
+  createTitle: 'New folder',
   editTitle: 'Edit folder',
+  unfiled: 'Unfiled',
+  expand: 'Expand',
+  collapse: 'Collapse',
 } as const;
 
-const DRAG_MIME = 'application/x-skeinos';
-type DragPayload = { type: 'folder' | 'conversation'; id: string };
+/** Sentinel expansion key for the (non-folder) "Unfiled" pseudo-node. */
+const UNFILED = 'unfiled';
 
 interface DialogState {
   mode: 'create' | 'edit';
@@ -64,21 +91,91 @@ function siblingsOf(nodes: FolderTreeNode[], id: string): Folder[] {
   return [];
 }
 
+/** The chain of folder ids from a root down to `id` (inclusive), or null if `id`
+ *  is not in the active tree — used to auto-expand the path to the active chat. */
+function pathToFolder(nodes: FolderTreeNode[], id: string, acc: string[] = []): string[] | null {
+  for (const n of nodes) {
+    const next = [...acc, n.folder.id];
+    if (n.folder.id === id) return next;
+    const found = pathToFolder(n.children, id, next);
+    if (found) return found;
+  }
+  return null;
+}
+
 export interface SidebarProps {
   platform: PlatformId;
   /** Injectable for tests; defaults to the live worker-backed view. */
   view?: WorkspaceView;
+  /** Open a conversation in the active tab; forwarded to the inline lists.
+   *  Defaults (in ConversationList) to the live tab-navigation helper. */
+  onOpenConversation?: (conv: ConversationIndex) => void;
 }
 
-export function Sidebar({ platform, view }: SidebarProps) {
+export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   const live = useWorkspace(platform);
   const ws = view ?? live;
-  const { tree, counts, mutate } = ws;
+  const { tree, counts, conversations, active, status, mutate, retry } = ws;
+
+  // Conversations that belong to no folder — surfaced under the "Unfiled" node so
+  // they stay reachable in a folders-only tree (the design has no flat list).
+  const unfiledConvs = conversations.filter((c) => c.folderId == null);
+  const activeConvId = active ? conversationId(active.platform, active.nativeId) : null;
+
+  // The loading indicator is delayed so a warm read (which resolves first) renders
+  // the tree/empty state directly without flashing a spinner.
+  const [showSpinner, setShowSpinner] = useState(false);
+  useEffect(() => {
+    if (status !== 'loading') {
+      setShowSpinner(false);
+      return;
+    }
+    const t = setTimeout(() => setShowSpinner(true), SPINNER_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [status]);
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   // Which folder the open context menu acts on (the row last right-clicked).
   const [menuTargetId, setMenuTargetId] = useState<string | null>(null);
+
+  // Which nodes are expanded to reveal their conversations (folder ids + the
+  // UNFILED sentinel). Local view state only — never authoritative (PREACT rule).
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Auto-expand the path to the active-tab conversation so it is revealed and
+  // highlighted — but only once per active conversation, so a user who collapses
+  // the branch is not fought on the next reconcile.
+  const autoExpandedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeConvId) {
+      autoExpandedFor.current = null;
+      return;
+    }
+    if (autoExpandedFor.current === activeConvId) return;
+    const record = conversations.find((c) => c.id === activeConvId);
+    if (!record) return; // not ingested yet — try again once it lands
+    const chain = record.folderId == null ? [UNFILED] : pathToFolder(tree.active, record.folderId);
+    if (!chain || chain.length === 0) return;
+    autoExpandedFor.current = activeConvId;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const id of chain) {
+        if (next.has(id)) continue;
+        next.add(id);
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [activeConvId, conversations, tree]);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -97,6 +194,13 @@ export function Sidebar({ platform, view }: SidebarProps) {
   // keyboard ENTER routes through Zag's `onSelect`. `actedRef` dedupes the case where
   // a highlighted mouse click fires both within one tick.
   const actedRef = useRef<MenuAction | null>(null);
+
+  // The context menu targets active-tree folders and the flat archive list alike;
+  // archived rows live outside `tree.active`, so fall back to the archive set so
+  // they remain actionable (notably: Unarchive).
+  const resolveFolder = (id: string): Folder | undefined =>
+    findFolder(tree.active, id) ?? tree.archived.find((f) => f.id === id);
+
   const performMenuAction = (value: MenuAction) => {
     if (actedRef.current === value) return;
     actedRef.current = value;
@@ -106,7 +210,7 @@ export function Sidebar({ platform, view }: SidebarProps) {
 
     const id = menuTargetId;
     if (!id) return;
-    const folder = findFolder(tree.active, id);
+    const folder = resolveFolder(id);
     if (!folder) return;
     switch (value) {
       case 'rename':
@@ -160,6 +264,8 @@ export function Sidebar({ platform, view }: SidebarProps) {
 
   const renderNode = (node: FolderTreeNode) => {
     const f = node.folder;
+    const isOpen = expanded.has(f.id);
+    const folderConvs = conversations.filter((c) => c.folderId === f.id);
     return (
       <div key={f.id} class="sk-sidebar__section" style={{ marginLeft: `${(node.depth - 1) * 12}px` }}>
         <div
@@ -167,6 +273,7 @@ export function Sidebar({ platform, view }: SidebarProps) {
           data-testid="sk-folder"
           data-folder-id={f.id}
           draggable
+          onClick={() => toggleExpanded(f.id)}
           onDragStart={(e) =>
             (e as DragEvent).dataTransfer?.setData(
               DRAG_MIME,
@@ -183,11 +290,36 @@ export function Sidebar({ platform, view }: SidebarProps) {
             onContextMenu: () => setMenuTargetId(f.id),
           })}
         >
+          <button
+            class="sk-caret"
+            type="button"
+            data-testid="sk-folder-caret"
+            aria-expanded={isOpen}
+            aria-label={isOpen ? STR.collapse : STR.expand}
+            onClick={(e) => {
+              (e as MouseEvent).stopPropagation();
+              toggleExpanded(f.id);
+            }}
+          >
+            <ChevronIcon size={14} />
+          </button>
           {f.icon ? <span class="sk-row__icon">{f.icon}</span> : null}
           <span class="sk-row__label" style={f.color ? { color: f.color } : undefined}>{f.name}</span>
           <span class="sk-row__count" data-testid="sk-folder-count">{counts[f.id] ?? 0}</span>
         </div>
-        {node.children.map(renderNode)}
+        {isOpen && (
+          <div class="sk-node__children">
+            {node.children.map(renderNode)}
+            <ConversationList
+              conversations={folderConvs}
+              active={active}
+              tree={tree}
+              mutate={mutate}
+              context={{ kind: 'folder', name: f.name }}
+              onOpen={onOpenConversation}
+            />
+          </div>
+        )}
       </div>
     );
   };
@@ -195,14 +327,22 @@ export function Sidebar({ platform, view }: SidebarProps) {
   // A non-tree folder row (pinned / archive): icon · color · count, like the
   // active tree but without disclosure/drag affordances.
   const renderLeaf = (f: Folder, attr: 'data-pinned-id' | 'data-archived-id') => (
-    <div key={f.id} class="sk-row" {...{ [attr]: f.id }}>
+    <div
+      key={f.id}
+      class="sk-row"
+      {...{ [attr]: f.id }}
+      {...mergeProps(menu.getContextTriggerProps({ value: f.id }), {
+        onContextMenu: () => setMenuTargetId(f.id),
+      })}
+    >
+      <span class="sk-caret-spacer" aria-hidden="true" />
       {f.icon ? <span class="sk-row__icon">{f.icon}</span> : null}
       <span class="sk-row__label" style={f.color ? { color: f.color } : undefined}>{f.name}</span>
       <span class="sk-row__count" data-testid="sk-folder-count">{counts[f.id] ?? 0}</span>
     </div>
   );
 
-  const menuTarget = menuTargetId ? findFolder(tree.active, menuTargetId) : undefined;
+  const menuTarget = menuTargetId ? resolveFolder(menuTargetId) : undefined;
 
   return (
     <div ref={sidebarRef} class="sk-sidebar" data-testid="sk-sidebar">
@@ -227,34 +367,99 @@ export function Sidebar({ platform, view }: SidebarProps) {
               setDialog({ mode: 'create', parentId: null });
             }}
           >
-            +
+            <PlusIcon size={16} />
           </button>
         </div>
-        {tree.active.length === 0 ? (
-          <div class="sk-empty" data-testid="sk-folders-empty">
-            <span class="sk-empty__icon" aria-hidden="true">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              </svg>
-            </span>
-            <p class="sk-empty__title">{STR.noFolders}</p>
-            <p class="sk-empty__body">{STR.emptyBody}</p>
+        {tree.active.length > 0
+          ? // Whenever we have folders, show them — never flicker to a load state.
+            tree.active.map(renderNode)
+          : status === 'error'
+            ? // Load failed after the retry budget: offer a retry, not a false empty.
+              (
+                <div class="sk-empty" data-testid="sk-folders-error" role="alert">
+                  <span class="sk-empty__icon" aria-hidden="true">
+                    <FolderIcon size={40} />
+                  </span>
+                  <p class="sk-empty__title">{STR.loadError}</p>
+                  <p class="sk-empty__body">{STR.loadErrorBody}</p>
+                  <button
+                    class="sk-btn sk-btn--icon"
+                    type="button"
+                    data-testid="sk-folders-retry"
+                    onClick={(e) => {
+                      (e as MouseEvent).stopPropagation();
+                      retry();
+                    }}
+                  >
+                    {STR.retry}
+                  </button>
+                </div>
+              )
+            : status === 'ready'
+              ? // A read succeeded and returned nothing: the honest empty state.
+                (
+                  <div class="sk-empty" data-testid="sk-folders-empty">
+                    <span class="sk-empty__icon" aria-hidden="true">
+                      <FolderIcon size={40} />
+                    </span>
+                    <p class="sk-empty__title">{STR.noFolders}</p>
+                    <p class="sk-empty__body">{STR.emptyBody}</p>
+                    <button
+                      class="sk-btn sk-btn--icon"
+                      type="button"
+                      data-testid="sk-empty-new-folder"
+                      onClick={(e) => {
+                        (e as MouseEvent).stopPropagation();
+                        setDialog({ mode: 'create', parentId: null });
+                      }}
+                    >
+                      <PlusIcon size={16} />
+                      {STR.newFolder}
+                    </button>
+                  </div>
+                )
+              : // Still loading: a delayed spinner (nothing on the warm fast path).
+                showSpinner && (
+                  <div class="sk-empty" data-testid="sk-folders-loading" role="status" aria-live="polite">
+                    <span class="sk-spinner" aria-hidden="true" />
+                    <p class="sk-empty__body">{STR.loading}</p>
+                  </div>
+                )}
+      </div>
+
+      {unfiledConvs.length > 0 && (
+        <div class="sk-sidebar__section" data-testid="sk-unfiled">
+          <div class="sk-row" onClick={() => toggleExpanded(UNFILED)}>
             <button
-              class="sk-btn"
+              class="sk-caret"
               type="button"
-              data-testid="sk-empty-new-folder"
+              data-testid="sk-unfiled-caret"
+              aria-expanded={expanded.has(UNFILED)}
+              aria-label={expanded.has(UNFILED) ? STR.collapse : STR.expand}
               onClick={(e) => {
                 (e as MouseEvent).stopPropagation();
-                setDialog({ mode: 'create', parentId: null });
+                toggleExpanded(UNFILED);
               }}
             >
-              + {STR.newFolder}
+              <ChevronIcon size={14} />
             </button>
+            <span class="sk-row__label">{STR.unfiled}</span>
+            <span class="sk-row__count" data-testid="sk-unfiled-count">{unfiledConvs.length}</span>
           </div>
-        ) : (
-          tree.active.map(renderNode)
-        )}
-      </div>
+          {expanded.has(UNFILED) && (
+            <div class="sk-node__children">
+              <ConversationList
+                conversations={unfiledConvs}
+                active={active}
+                tree={tree}
+                mutate={mutate}
+                context={{ kind: 'unfiled' }}
+                onOpen={onOpenConversation}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {tree.archived.length > 0 && (
         <details class="sk-sidebar__section" data-testid="sk-archive">
@@ -281,11 +486,9 @@ export function Sidebar({ platform, view }: SidebarProps) {
         <FolderDialog
           state={dialog}
           platform={platform}
+          tree={tree.active}
           onClose={() => setDialog(null)}
-          onSubmit={(op) => {
-            setDialog(null);
-            void mutate(op);
-          }}
+          onSubmit={(op) => mutate(op)}
         />
       )}
     </div>
@@ -302,37 +505,101 @@ function findFolder(nodes: FolderTreeNode[], id: string): Folder | undefined {
   }
   return undefined;
 }
+// Curated emoji icon set (the icon grid in design 03·05); the leading "clear"
+// option resets to no icon. Emoji keep the picker zero-asset and theme-agnostic.
+const FOLDER_ICONS = ['📁', '✏️', '📊', '⏱️', '💰', '📚', '🌿', '📷', '🚀', '📞', '🎯', '📌'] as const;
+
+/** A selectable parent option: the folder and its depth-derived indent. */
+interface ParentOption {
+  id: string;
+  name: string;
+  depth: number;
+}
+
+/** Flatten the active tree into parent options, skipping `excludeId` and its whole
+ *  subtree (you cannot re-parent a folder under itself or a descendant). */
+function parentOptions(nodes: FolderTreeNode[], excludeId: string | undefined, depth = 0): ParentOption[] {
+  const out: ParentOption[] = [];
+  for (const n of nodes) {
+    if (n.folder.id === excludeId) continue; // prune self + descendants
+    out.push({ id: n.folder.id, name: n.folder.name, depth });
+    out.push(...parentOptions(n.children, excludeId, depth + 1));
+  }
+  return out;
+}
+
 interface FolderDialogProps {
   state: DialogState;
   platform: PlatformId;
+  /** Active (non-archived) tree, for the parent-folder picker. */
+  tree: FolderTreeNode[];
   onClose: () => void;
-  onSubmit: (op: MutationOp) => void;
+  /** Apply a mutation and reconcile; resolves with whether it took effect. The
+   *  dialog closes itself on success and stays open (keeping input) on failure. */
+  onSubmit: (op: MutationOp) => Promise<MutateResult>;
 }
 
-function FolderDialog({ state, platform, onClose, onSubmit }: FolderDialogProps) {
+function FolderDialog({ state, platform, tree, onClose, onSubmit }: FolderDialogProps) {
   const editing = state.mode === 'edit';
   const [name, setName] = useState(state.folder?.name ?? '');
   const [icon, setIcon] = useState(state.folder?.icon ?? '');
   const [color, setColor] = useState(state.folder?.color ?? '');
+  const [parentId, setParentId] = useState<string | null>(
+    editing ? (state.folder?.parentId ?? null) : state.parentId,
+  );
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // A new folder's id is fixed once, so a retry after a (possibly committed but
+  // unacknowledged) attempt overwrites the same row instead of duplicating it.
+  const [newId] = useState(makeId);
 
-  const submit = (e: Event) => {
+  // A folder cannot be its own parent or nest under one of its descendants, so
+  // prune the edited folder's subtree from the options.
+  const options = parentOptions(tree, editing ? state.folder?.id : undefined);
+
+  /** A mutation "took effect" if the worker acked it or the reconcile confirmed it. */
+  const took = (r: MutateResult) => r.ok || r.applied;
+
+  const submit = async (e: Event) => {
     e.preventDefault();
+    if (busy) return;
     const trimmed = name.trim();
     if (!trimmed) return;
+    setFailed(false);
+    setBusy(true);
+    let ok: boolean;
     if (editing && state.folder) {
-      onSubmit({ op: 'folder.rename', id: state.folder.id, name: trimmed });
-      onSubmit({ op: 'folder.recolor', id: state.folder.id, color: color || undefined, icon: icon || undefined });
+      const renamed = await onSubmit({ op: 'folder.rename', id: state.folder.id, name: trimmed });
+      const recolored = await onSubmit({
+        op: 'folder.recolor',
+        id: state.folder.id,
+        color: color || undefined,
+        icon: icon || undefined,
+      });
+      // Only re-parent when the selection actually changed (avoids a redundant
+      // move + the cycle/depth checks the worker would otherwise re-run).
+      const moved =
+        parentId !== (state.folder.parentId ?? null)
+          ? await onSubmit({ op: 'folder.move', id: state.folder.id, parentId })
+          : null;
+      ok = took(renamed) && took(recolored) && (moved === null || took(moved));
     } else {
-      onSubmit({
+      const created = await onSubmit({
         op: 'folder.create',
-        id: makeId(),
+        id: newId,
         name: trimmed,
-        parentId: state.parentId,
+        parentId,
         color: color || undefined,
         icon: icon || undefined,
         platformScope: platform,
       });
+      ok = took(created);
     }
+    setBusy(false);
+    // On success close; on a confirmed failure keep the dialog (and the typed
+    // values) open and surface the error — never silently discard input ([PRIV]).
+    if (ok) onClose();
+    else setFailed(true);
   };
 
   return (
@@ -342,22 +609,110 @@ function FolderDialog({ state, platform, onClose, onSubmit }: FolderDialogProps)
       ariaLabel={editing ? STR.editTitle : STR.createTitle}
       contentTestId="sk-folder-dialog"
     >
-      <form class="sk-dialog__body" onSubmit={submit}>
+      <form class="sk-dialog__body sk-folder-form" onSubmit={submit}>
+        <div class="sk-dialog__header">
+          <h2 class="sk-dialog__title">{editing ? STR.editTitle : STR.createTitle}</h2>
+          <button class="sk-icon-btn" type="button" data-testid="sk-folder-close" aria-label={STR.close} onClick={onClose}>
+            <CloseIcon size={16} />
+          </button>
+        </div>
+
         <label class="sk-field">
           <span class="sk-sidebar__heading">{STR.name}</span>
-          <input class="sk-input" data-testid="sk-folder-name" aria-label={STR.name} value={name} autoFocus onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)} />
+          <span class="sk-name-field">
+            <span class="sk-name-field__icon" aria-hidden="true">
+              {icon ? icon : <FolderIcon size={16} />}
+            </span>
+            <input
+              class="sk-name-field__input"
+              data-testid="sk-folder-name"
+              aria-label={STR.name}
+              placeholder={STR.namePlaceholder}
+              value={name}
+              autoFocus
+              onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
+            />
+          </span>
         </label>
+
+        <fieldset class="sk-field sk-fieldset">
+          <legend class="sk-sidebar__heading">{STR.color}</legend>
+          <div class="sk-swatches" data-testid="sk-folder-colors">
+            <button
+              type="button"
+              class={`sk-swatch sk-swatch--clear${color ? '' : ' sk-swatch--selected'}`}
+              aria-label={STR.clearColor}
+              aria-pressed={!color}
+              onClick={() => setColor('')}
+            />
+            {FOLDER_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                class={`sk-swatch${color === c ? ' sk-swatch--selected' : ''}`}
+                style={{ background: c }}
+                aria-label={c}
+                aria-pressed={color === c}
+                onClick={() => setColor(c)}
+              />
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset class="sk-field sk-fieldset">
+          <legend class="sk-sidebar__heading">{STR.icon}</legend>
+          <div class="sk-icon-grid" data-testid="sk-folder-icons">
+            <button
+              type="button"
+              class={`sk-icon-option sk-icon-option--clear${icon ? '' : ' sk-icon-option--selected'}`}
+              aria-label={STR.clearIcon}
+              aria-pressed={!icon}
+              onClick={() => setIcon('')}
+            >
+              <CloseIcon size={14} />
+            </button>
+            {FOLDER_ICONS.map((g) => (
+              <button
+                key={g}
+                type="button"
+                class={`sk-icon-option${icon === g ? ' sk-icon-option--selected' : ''}`}
+                aria-label={g}
+                aria-pressed={icon === g}
+                onClick={() => setIcon(g)}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <label class="sk-field">
-          <span class="sk-sidebar__heading">{STR.icon}</span>
-          <input class="sk-input" data-testid="sk-folder-icon" aria-label={STR.icon} value={icon} onInput={(e) => setIcon((e.currentTarget as HTMLInputElement).value)} />
+          <span class="sk-sidebar__heading">{STR.parentFolder}</span>
+          <select
+            class="sk-select"
+            data-testid="sk-folder-parent"
+            aria-label={STR.parentFolder}
+            value={parentId ?? ''}
+            onChange={(e) => setParentId((e.currentTarget as HTMLSelectElement).value || null)}
+          >
+            <option value="">{STR.topLevel}</option>
+            {options.map((o) => (
+              <option key={o.id} value={o.id}>
+                {`${'  '.repeat(o.depth)}${o.name}`}
+              </option>
+            ))}
+          </select>
         </label>
-        <label class="sk-field">
-          <span class="sk-sidebar__heading">{STR.color}</span>
-          <input class="sk-input" data-testid="sk-folder-color" aria-label={STR.color} value={color} onInput={(e) => setColor((e.currentTarget as HTMLInputElement).value)} />
-        </label>
+
+        {failed && (
+          <p class="sk-dialog__error" data-testid="sk-folder-error" role="alert">{STR.createError}</p>
+        )}
         <div class="sk-dialog__actions">
           <button class="sk-menu__item" type="button" onClick={onClose}>{STR.cancel}</button>
-          <button class="sk-btn" type="submit" data-testid="sk-folder-submit">{editing ? STR.save : STR.create}</button>
+          <button class="sk-btn sk-btn--icon" type="submit" data-testid="sk-folder-submit" disabled={busy} aria-busy={busy}>
+            <CheckIcon size={16} />
+            {editing ? STR.save : STR.create}
+          </button>
         </div>
       </form>
     </Dialog>

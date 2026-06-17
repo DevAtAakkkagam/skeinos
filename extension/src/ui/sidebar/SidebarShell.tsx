@@ -8,8 +8,9 @@
 // Everything draws from `--sk-*` tokens and is keyboard-operable and ARIA-labelled.
 
 import type { PlatformId } from '../../shared/types';
+import { SearchIcon, SettingsIcon } from '../components/Icon';
 import { Sidebar } from './Sidebar';
-import type { WorkspaceView } from './useWorkspace';
+import { useWorkspace, type WorkspaceView } from './useWorkspace';
 
 // The header omits the app name/glyph on purpose: the browser's native side-panel
 // title bar already shows the Skeinos name + icon, so repeating them here would be
@@ -45,8 +46,25 @@ export interface SidebarShellProps {
 }
 
 export function SidebarShell({ platform, view }: SidebarShellProps) {
+  // One workspace view feeds the Folders tab's tree (folders + inline
+  // conversations + the Unfiled node), so nothing opens competing subscriptions or
+  // diverges. Tests inject `view`; production uses the live worker-backed view.
+  const live = useWorkspace(platform);
+  const ws = view ?? live;
+
+  // Suppress the browser's native context menu inside the panel — it has nothing
+  // useful for our chrome (Back/Reload/Inspect) and obscures the workspace. Folder
+  // rows open our own menu via Zag (which already preventDefaults); this catches the
+  // areas without a context trigger (conversation rows, empty space, headers). We
+  // still defer to the native menu on editable fields so right-click paste works.
+  const suppressNativeMenu = (e: Event) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('input, textarea, [contenteditable="true"]')) return;
+    e.preventDefault();
+  };
+
   return (
-    <div class="sk-shell" data-testid="sk-shell">
+    <div class="sk-shell" data-testid="sk-shell" onContextMenu={suppressNativeMenu}>
       <header class="sk-shell__header">
         <div class="sk-brand">
           <span class="sk-brand__sub">
@@ -64,7 +82,7 @@ export function SidebarShell({ platform, view }: SidebarShellProps) {
         aria-disabled="true"
         title={STR.comingSoon}
       >
-        <span class="sk-search__icon" aria-hidden="true">⌕</span>
+        <span class="sk-search__icon" aria-hidden="true"><SearchIcon size={16} /></span>
         <span class="sk-search__placeholder">{STR.searchPlaceholder}</span>
         <kbd class="sk-search__kbd">⌘K</kbd>
       </button>
@@ -87,7 +105,7 @@ export function SidebarShell({ platform, view }: SidebarShellProps) {
       </div>
 
       <div class="sk-shell__body" role="tabpanel">
-        <Sidebar platform={platform} view={view} />
+        <Sidebar platform={platform} view={ws} />
       </div>
 
       <footer class="sk-shell__footer">
@@ -101,7 +119,7 @@ export function SidebarShell({ platform, view }: SidebarShellProps) {
           title={STR.settings}
           onClick={openOptions}
         >
-          ⚙
+          <SettingsIcon size={16} />
         </button>
       </footer>
     </div>

@@ -9,8 +9,15 @@
 // Importing `hub` for its side effect (the `onMessage` listener) is the
 // background entrypoint's job; feature code imports the pieces it needs here.
 
-export { send, subscribe, type BroadcastHandler } from './client';
-export { broadcast, dispatch } from './hub';
+export {
+  send,
+  sendWithRetry,
+  subscribe,
+  TRANSIENT_ERRORS,
+  type BroadcastHandler,
+  type RetryOptions,
+} from './client';
+export { broadcast, dispatch, installMessageHub } from './hub';
 export { registerHandler, getHandler, type Handler } from './registry';
 export { appError, toAppError } from './errors';
 

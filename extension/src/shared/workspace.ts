@@ -5,7 +5,13 @@
 // registered via declaration merging in `core/folders/handlers.ts` (the messaging
 // seam), so adding ops never edits the hub.
 
-import type { ConversationIndex, Folder, FolderTreeNode, PlatformId } from './types';
+import type {
+  ActiveConversation,
+  ConversationIndex,
+  Folder,
+  FolderTreeNode,
+  PlatformId,
+} from './types';
 
 /** A lightweight conversation reference ingested from a platform adapter. */
 export interface ConversationRefLite {
@@ -17,7 +23,8 @@ export interface ConversationRefLite {
 export type WorkspaceSelector =
   | { kind: 'folder.tree' }
   | { kind: 'folder.counts' }
-  | { kind: 'conversation.list'; platform: PlatformId };
+  | { kind: 'conversation.list'; platform: PlatformId }
+  | { kind: 'conversation.active'; platform: PlatformId };
 
 /** The folder hierarchy split into the sections the sidebar renders. */
 export interface FolderTreeSnapshot {
@@ -30,7 +37,8 @@ export interface FolderTreeSnapshot {
 export type WorkspaceSnapshot =
   | { kind: 'folder.tree'; tree: FolderTreeSnapshot }
   | { kind: 'folder.counts'; counts: Record<string, number> }
-  | { kind: 'conversation.list'; conversations: ConversationIndex[] };
+  | { kind: 'conversation.list'; conversations: ConversationIndex[] }
+  | { kind: 'conversation.active'; active: ActiveConversation | null };
 
 /** A write request against the workspace, discriminated by `op`. */
 export type MutationOp =
@@ -43,7 +51,11 @@ export type MutationOp =
   | { op: 'folder.reorder'; orderedIds: string[] }
   | { op: 'folder.delete'; id: string }
   | { op: 'conversation.ingest'; platform: PlatformId; refs: ConversationRefLite[] }
-  | { op: 'conversation.assign'; conversationId: string; folderId: string | null };
+  | { op: 'conversation.assign'; conversationId: string; folderId: string | null }
+  | { op: 'conversation.pin'; conversationId: string; pinned: boolean }
+  | { op: 'conversation.archive'; conversationId: string; archived: boolean }
+  | { op: 'conversation.recolor'; conversationId: string; color?: string }
+  | { op: 'conversation.reportActive'; platform: PlatformId; nativeId: string; title: string };
 
 /** The result of a successful mutation: the stores that changed (for the broadcast). */
 export interface MutationResult {

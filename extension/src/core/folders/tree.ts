@@ -213,6 +213,25 @@ export function assignConversation(conv: ConversationIndex, folderId: string | n
   return { ...conv, folderId, updatedAt: Date.now() };
 }
 
+// Conversation organization helpers (conversation-context-menu) — pure record
+// transforms mirroring the folder `setPinned` / `setArchived` / `recolorFolder`
+// shapes. Each bumps `updatedAt` like `assignConversation` so the row re-sorts.
+
+/** Pin (or unpin) a conversation. */
+export function setConversationPinned(conv: ConversationIndex, pinned: boolean): ConversationIndex {
+  return { ...conv, pinned, updatedAt: Date.now() };
+}
+
+/** Archive (or unarchive) a conversation — retains the row and its folder. */
+export function setConversationArchived(conv: ConversationIndex, archived: boolean): ConversationIndex {
+  return { ...conv, archived, updatedAt: Date.now() };
+}
+
+/** Set (or clear, with `undefined`) a conversation's colour. */
+export function setConversationColor(conv: ConversationIndex, color?: string): ConversationIndex {
+  return { ...conv, color, updatedAt: Date.now() };
+}
+
 /** Count conversations per folder id (direct membership only). */
 export function countByFolder(conversations: ConversationIndex[]): Record<string, number> {
   const counts: Record<string, number> = {};

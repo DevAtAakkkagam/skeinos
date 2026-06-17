@@ -52,6 +52,15 @@ function buttonByText(banner: Element, text: string): HTMLButtonElement {
   return btn as HTMLButtonElement;
 }
 
+/** The close (dismiss) control is an icon button addressed by its accessible label. */
+function dismissButton(banner: Element): HTMLButtonElement {
+  const btn = banner.querySelector<HTMLButtonElement>(
+    `button[aria-label="${BANNER_LABELS.dismiss}"]`,
+  );
+  if (!btn) throw new Error('dismiss button not found');
+  return btn;
+}
+
 afterEach(() => {
   document.body.innerHTML = '';
 });
@@ -67,14 +76,14 @@ describe('Breakage-notice banner (5.5)', () => {
     const banner = found[0];
     expect(banner.getAttribute('role')).toBe('alert');
     expect(buttonByText(banner, BANNER_LABELS.retry)).toBeTruthy();
-    expect(buttonByText(banner, BANNER_LABELS.dismiss)).toBeTruthy();
+    expect(dismissButton(banner)).toBeTruthy();
   });
 
   it('Dismiss unmounts the banner', () => {
     const { adapter } = makeAdapter(BROKEN_HTML);
     mountBanner(adapter, 'claude');
 
-    buttonByText(banners()[0], BANNER_LABELS.dismiss).click();
+    dismissButton(banners()[0]).click();
     expect(banners()).toHaveLength(0);
   });
 

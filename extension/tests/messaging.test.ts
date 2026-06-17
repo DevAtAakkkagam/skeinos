@@ -85,12 +85,17 @@ describe('Error envelope, no throw escapes (4.2)', () => {
 });
 
 describe('Synchronous handler registration (4.3)', () => {
-  it('registers the onMessage listener at module load (cold-start safe)', async () => {
+  it('installMessageHub registers exactly one dispatch listener (worker-only, idempotent)', async () => {
     vi.resetModules();
     const addListener = vi.fn();
     setChrome({ runtime: { onMessage: { addListener, removeListener: vi.fn() } } });
-    // Importing the hub must register the listener as a top-level side effect.
-    await import('../src/core/messaging/hub');
+    // Importing the hub must NOT register the listener (extension pages import it
+    // transitively for send/subscribe and must not become responders).
+    const { installMessageHub } = await import('../src/core/messaging/hub');
+    expect(addListener).not.toHaveBeenCalled();
+    // The worker entry installs it explicitly; repeated calls stay singular.
+    installMessageHub();
+    installMessageHub();
     expect(addListener).toHaveBeenCalledTimes(1);
   });
 });
@@ -133,5 +138,59 @@ describe('Broadcast to all subscribed tabs (4.4)', () => {
     expect(spyB).not.toHaveBeenCalled();
 
     unsubA();
+  });
+
+  it('reaches an extension-page subscriber (side panel) with no tabs open', async () => {
+    // The side panel is an extension page, not a tab: it listens on
+    // chrome.runtime.onMessage and never receives a tabs.sendMessage. The worker
+    // must fan the broadcast out via runtime.sendMessage too.
+    const page = makeContext();
+    const spy = vi.fn();
+
+    setChrome({ runtime: page });
+    const unsub = subscribe(spy);
+
+    // The worker broadcasts with NO host tabs open; delivery must still reach the
+    // page through runtime.sendMessage.
+    setChrome({
+      runtime: { ...page, sendMessage: async (msg: unknown) => void page.deliver(msg) },
+      tabs: { query: async () => [], sendMessage: async () => undefined },
+    });
+    await broadcast({ kind: 'state.changed', stores: ['folders'] });
+
+    expect(spy).toHaveBeenCalledWith({ kind: 'state.changed', stores: ['folders'] });
+    unsub();
+  });
+
+  it('swallows the rejection when no extension page is listening', async () => {
+    // runtime.sendMessage rejects ("Could not establish connection") when no page
+    // is open; broadcast must not reject.
+    setChrome({
+      runtime: { sendMessage: async () => Promise.reject(new Error('no receiver')) },
+      tabs: { query: async () => [], sendMessage: async () => undefined },
+    });
+    await expect(broadcast({ kind: 'state.changed', stores: ['folders'] })).resolves.toBeUndefined();
+  });
+
+  it('a missed broadcast self-heals: the change is observable on the next re-query', async () => {
+    // Broadcast is best-effort — a subscriber can miss it (worker torn down before
+    // fan-out, or no page listening). Durable truth lives in the store, so the
+    // change is recovered by re-querying the worker. Here the broadcast reaches no
+    // one and is swallowed, yet a re-query (dispatch) returns the current truth.
+    __clearHandlers();
+    let folderCount = 0;
+    registerHandler('test.echo', () => ({ echoed: String(folderCount) }));
+
+    // The worker commits a change and broadcasts it with no subscriber listening.
+    folderCount = 1;
+    setChrome({
+      runtime: { sendMessage: async () => Promise.reject(new Error('no receiver')) },
+      tabs: { query: async () => [], sendMessage: async () => undefined },
+    });
+    await expect(broadcast({ kind: 'state.changed', stores: ['folders'] })).resolves.toBeUndefined();
+
+    // The subscriber missed the broadcast but observes the change on its next read.
+    const res = await dispatch({ kind: 'test.echo', value: 'x' } as RequestOf<'test.echo'>);
+    expect(res).toEqual({ ok: true, data: { echoed: '1' } });
   });
 });

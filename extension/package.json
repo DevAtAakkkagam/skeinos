@@ -11,6 +11,7 @@
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
+    "check:size": "node scripts/check-bundle-size.mjs",
     "prepare": "wxt prepare",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

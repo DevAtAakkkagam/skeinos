@@ -41,6 +41,48 @@ export async function send<K extends RequestKind>(
   }
 }
 
+// Transport-level failures from a service worker that is still waking from MV3
+// idle teardown: `chrome.runtime.sendMessage` resolves with no response, or the
+// channel drops, before the worker is ready to dispatch. These are the only
+// *transient* symptoms — retrying them lets a cold-start round-trip recover.
+// Logic and domain errors (`unknown_kind`, `handler_error`, validation) are real
+// failures and are returned on the first attempt (retrying just masks the bug).
+export const TRANSIENT_ERRORS: ReadonlySet<string> = new Set(['no_response', 'send_failed']);
+
+/** Options for {@link sendWithRetry}. */
+export interface RetryOptions {
+  /** Maximum number of attempts (including the first). Default 8. */
+  tries?: number;
+  /** Delay between attempts, in milliseconds. Default 150. */
+  delayMs?: number;
+}
+
+/**
+ * Send a request, retrying only *transient transport* failures from a waking
+ * worker (`no_response`, `send_failed`), bounded by `tries` with `delayMs`
+ * between attempts. Resolves with the first successful `Response` or, once the
+ * budget is exhausted, the last error envelope. Logic/domain errors are returned
+ * immediately without retry. Opt-in per call: only idempotent reads should use
+ * this, never a mutation whose lost response would be replayed.
+ */
+export async function sendWithRetry<K extends RequestKind>(
+  request: RequestOf<K>,
+  { tries = 8, delayMs = 150 }: RetryOptions = {},
+): Promise<Response<ResponseDataOf<K>>> {
+  let res = await send(request);
+  for (let i = 1; i < tries && !res.ok && TRANSIENT_ERRORS.has(res.error.code); i++) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    res = await send(request);
+  }
+  // Budget exhausted on a still-transient failure: surface the real code so the
+  // live failure mode is observable rather than assumed (diagnostic only — the
+  // returned envelope is unchanged).
+  if (!res.ok && TRANSIENT_ERRORS.has(res.error.code)) {
+    console.warn('[Skeinos] sendWithRetry exhausted budget', request.kind, res.error.code);
+  }
+  return res;
+}
+
 /** A broadcast handler. */
 export type BroadcastHandler = (message: Broadcast) => void;
 

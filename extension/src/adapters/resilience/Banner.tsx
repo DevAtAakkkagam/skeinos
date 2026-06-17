@@ -10,6 +10,7 @@ import { h, type VNode } from 'preact';
 import { mount, type MountHandle, type Theme } from '../../ui/mount';
 import { Button } from '../../ui/components/Button';
 import { Text } from '../../ui/components/Text';
+import { CloseIcon } from '../../ui/components/Icon';
 import type { PlatformAdapter, PlatformId } from '../types';
 import { reportHealth } from './report';
 
@@ -28,15 +29,28 @@ export interface BannerProps {
   onDismiss: () => void;
 }
 
-/** A token-styled, alert-role breakage notice with Retry and Dismiss controls. */
+/**
+ * A token-styled, alert-role breakage notice rendered as a compact snackbar
+ * pinned to the top-center of the viewport. Retry re-runs the adapter's check;
+ * the icon button closes (dismisses) it.
+ */
 export function Banner({ platform, onRetry, onDismiss }: BannerProps): VNode {
   return (
-    <div role="alert" class="sk-panel sk-stack" data-testid="sk-breakage-banner">
-      <Text>{BANNER_LABELS.title}</Text>
-      <Text muted>{BANNER_LABELS.body(platform)}</Text>
-      <div class="sk-stack">
+    <div role="alert" class="sk-snackbar" data-testid="sk-breakage-banner">
+      <div class="sk-snackbar__content">
+        <Text>{BANNER_LABELS.title}</Text>
+        <Text muted>{BANNER_LABELS.body(platform)}</Text>
+      </div>
+      <div class="sk-snackbar__actions">
         <Button onClick={onRetry}>{BANNER_LABELS.retry}</Button>
-        <Button onClick={onDismiss}>{BANNER_LABELS.dismiss}</Button>
+        <button
+          type="button"
+          class="sk-snackbar__close"
+          aria-label={BANNER_LABELS.dismiss}
+          onClick={onDismiss}
+        >
+          <CloseIcon />
+        </button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@
 
 import type { IDBPDatabase, IDBPTransaction } from 'idb';
 import type {
+  ActiveConversation,
   Comparison,
   ConversationIndex,
   Folder,
@@ -35,6 +36,7 @@ export interface WorkspaceStore {
   tags: Repo<Tag>;
   comparisons: Repo<Comparison>;
   searchPostings: Repo<SearchPosting>;
+  activeConversations: Repo<ActiveConversation>;
   /** Names of stores eligible for sync (envelope-carrying). */
   syncableStores(): StoreName[];
   /** Run `fn` across `stores` in one transaction; commit all or none. */
@@ -61,6 +63,7 @@ export function makeWorkspaceStore(db: IDBPDatabase): WorkspaceStore {
     tags: makeRepo<Tag>(db, STORES.tags),
     comparisons: makeRepo<Comparison>(db, STORES.comparisons),
     searchPostings: makeRepo<SearchPosting>(db, STORES.searchPostings),
+    activeConversations: makeRepo<ActiveConversation>(db, STORES.activeConversations),
     syncableStores,
     async tx(stores, fn) {
       const t = db.transaction(stores, 'readwrite') as Txn;

@@ -1,0 +1,30 @@
+{
+  "$comment": "Bundle-size gate. Budgets are gzipped KB per logical entrypoint — see scripts/check-bundle-size.mjs. The content script is injected into every LLM tab, so it gets the tightest scrutiny. Bump a budget only with a deliberate reason in the commit.",
+  "outDir": ".output/chrome-mv3",
+  "entries": [
+    {
+      "name": "content-script",
+      "files": [
+        "content-scripts/skeinos.js"
+      ],
+      "budgetKb": 65
+    },
+    {
+      "name": "background",
+      "files": [
+        "background.js"
+      ],
+      "budgetKb": 20
+    },
+    {
+      "name": "sidepanel",
+      "html": "sidepanel.html",
+      "budgetKb": 110
+    },
+    {
+      "name": "options",
+      "html": "options.html",
+      "budgetKb": 60
+    }
+  ]
+}

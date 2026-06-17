@@ -16,6 +16,24 @@ with theme tokens, base components, and CI. Two capabilities exist (`extension-s
 The next ready, independent slices are `workspace-store`, `messaging`, and `settings`. See
 `docs/OPENSPEC_CHANGES.md` for the full M0–M8 change map and dependency graph.
 
+## Commands
+
+All commands run from `extension/` (the only npm package — there is no root `package.json`).
+
+```bash
+npm run dev               # WXT dev server (Chrome); dev:firefox for Firefox
+npm run build             # production build → .output/ ; build:firefox, zip for store artifact
+npm run typecheck         # tsc --noEmit
+npm run lint              # eslint . ; lint:fix to autofix
+npm test                  # Vitest unit/integration (happy-dom)
+npm run test:browser      # real-Chromium tests (shadow-DOM + token resolution) via Playwright system Chrome
+npm run test:all          # both suites
+npm run check:size        # enforce extension/bundle-budgets.json against the last build
+```
+
+Run a single test file or pattern: `npm test -- tests/messaging.test.ts` or `npm test -- -t "name substring"`.
+Real-browser tests live in `tests/browser/**/*.browser.test.{ts,tsx}` and need a local Chrome (Playwright `chrome` channel — no download); everything else runs under happy-dom. After a UI/manifest change, run `typecheck` + `test` before `test:browser`.
+
 ## Source of truth — read these before designing or coding
 
 The three planning docs are layered (each builds on the previous); when they conflict, the
@@ -101,6 +119,20 @@ siblings (settings does not depend on the store, per D4).
 - **[PRIV] Hard boundary.** `ConversationIndex`, `searchPostings`, `Comparison` never leave the
   device — any tier. Only metadata syncs, only AES-GCM ciphertext, backend in the EU. No credentials.
   Telemetry off by default. Tier limits block-with-nudge; never lose user input.
+
+## Where code lives (`extension/src/`)
+
+The directory layout mirrors the architecture spine — `core/` is the inward dependency target:
+
+- `core/` — the worker's domain logic: `store/` (`Repo<T>` + IndexedDB + migrations), `messaging/`
+  (typed Request/Response hub + client), `folders/`, `settings/`. Imports nothing from `adapters/` or `ui/`.
+- `adapters/` — generic platform adapter + per-platform `configs/`, `resilience/` (fallback banners),
+  `runtime/` (readiness gating). `PlatformAdapter` is the only contract exposed outward.
+- `background/` — service-worker entry (the single writer); `content/` — per-tab content script.
+- `ui/` — shadow-DOM Preact: `primitives/`, `components/`, `theme/` (`--sk-*` tokens), `sidebar/`, `options/`.
+- `entrypoints/` — WXT entrypoints (`sidepanel/`, `options/`) that mount the UI.
+
+Tests live in `extension/tests/` (flat, one file per unit) with the real-browser suite under `tests/browser/`.
 
 ## Conventions
 

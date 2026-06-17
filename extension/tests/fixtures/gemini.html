@@ -1,0 +1,37 @@
+<!-- Representative Gemini DOM snapshot, shaped from the live gemini.google.com
+     sidebar + Quill composer (captured 2026-06). Conversations are `/app/<id>`
+     links inside <conversations-list>, each wrapping its title in a `.title-text`;
+     the open conversation's anchor carries aria-current="page". The composer is the
+     Quill `.ql-editor` contenteditable inside <input-area-v2>. Only framework-stable
+     hooks are used — custom-element tags, aria-labels, href prefixes — never the
+     volatile Angular `ng-tns-*`/`mat-mdc-*` classes. See tests/fixtures/README.md;
+     re-capture if the live selectors drift. -->
+<div class="app">
+  <bard-sidenav>
+    <conversations-list>
+      <a href="/app" aria-label="New chat"><span class="title-text">New chat</span></a>
+      <div data-test-id="conversation">
+        <a href="/app/conv-1" aria-current="page">
+          <span class="title-text">Quantum basics</span>
+        </a>
+      </div>
+      <div data-test-id="conversation">
+        <a href="/app/conv-2">
+          <span class="title-text">Trip planning</span>
+        </a>
+      </div>
+    </conversations-list>
+  </bard-sidenav>
+
+  <main>
+    <div class="chat-history">
+      <user-query>What is superposition?</user-query>
+      <model-response>Superposition is a quantum state combining possibilities.</model-response>
+    </div>
+
+    <input-area-v2>
+      <div class="ql-editor" contenteditable="true" data-placeholder="Ask Gemini"></div>
+      <button aria-label="Send message">Send</button>
+    </input-area-v2>
+  </main>
+</div>

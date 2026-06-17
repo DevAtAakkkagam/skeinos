@@ -1,0 +1,22 @@
+{
+  "platformId": "gemini",
+  "configVersion": "1.0.0",
+  "hostMatch": ["*://gemini.google.com/*"],
+  "selectors": {
+    "conversationList": "conversations-list",
+    "conversationItem": "a[href^=\"/app/\"]",
+    "conversationTitle": ".title-text",
+    "conversationIdAttr": "href",
+    "messageUser": "user-query",
+    "messageAssistant": "model-response",
+    "composer": ".ql-editor",
+    "sendButton": "button[aria-label=\"Send message\"]",
+    "sidebarAnchor": "bard-sidenav",
+    "inputBarAnchor": "input-area-v2"
+  },
+  "behaviors": {
+    "insertMode": "execCommand",
+    "submitMode": "click",
+    "supportsSystemPrompt": false
+  }
+}

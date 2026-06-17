@@ -33,6 +33,9 @@ import {
   renameFolder,
   reorderSiblings,
   setArchived,
+  setConversationArchived,
+  setConversationColor,
+  setConversationPinned,
   setPinned,
   type TreeCheck,
 } from './tree';
@@ -68,6 +71,12 @@ async function requireFolder(store: WorkspaceStore, id: string): Promise<Folder>
   return f;
 }
 
+async function requireConversation(store: WorkspaceStore, id: string): Promise<ConversationIndex> {
+  const c = (await store.conversations.get(id)) as ConversationIndex | undefined;
+  if (!c) throw new FolderError(FOLDER_ERROR.notFound, `No conversation ${id}`);
+  return c;
+}
+
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
@@ -98,6 +107,10 @@ export async function queryWorkspace(
         kind: 'conversation.list',
         conversations: all.filter((c) => c.platform === selector.platform),
       };
+    }
+    case 'conversation.active': {
+      const active = (await store.activeConversations.get(selector.platform)) ?? null;
+      return { kind: 'conversation.active', active };
     }
   }
 }
@@ -178,6 +191,11 @@ export async function mutateWorkspace(
           tags: prev?.tags ?? [],
           indexedText: prev?.indexedText ?? '',
           contentHash: prev?.contentHash ?? '',
+          // Preserve per-conversation organization state across re-ingest so a page
+          // reload never clobbers pin / archive / colour (conversation-context-menu).
+          pinned: prev?.pinned,
+          archived: prev?.archived,
+          color: prev?.color,
           updatedAt: Date.now(),
         });
       }
@@ -190,6 +208,38 @@ export async function mutateWorkspace(
       if (!conv) throw new FolderError(FOLDER_ERROR.notFound, `No conversation ${op.conversationId}`);
       await store.conversations.put(assignConversation(conv, op.folderId));
       return { stores: ['conversations'] };
+    }
+    case 'conversation.pin': {
+      const conv = await requireConversation(store, op.conversationId);
+      await store.conversations.put(setConversationPinned(conv, op.pinned));
+      return { stores: ['conversations'] };
+    }
+    case 'conversation.archive': {
+      const conv = await requireConversation(store, op.conversationId);
+      await store.conversations.put(setConversationArchived(conv, op.archived));
+      return { stores: ['conversations'] };
+    }
+    case 'conversation.recolor': {
+      const conv = await requireConversation(store, op.conversationId);
+      await store.conversations.put(setConversationColor(conv, op.color));
+      return { stores: ['conversations'] };
+    }
+    case 'conversation.reportActive': {
+      // The content script reports the active tab's conversation (id/title only,
+      // never content — PRIV-1) on load and on SPA navigation. Persist one record
+      // per platform so the side panel's card survives worker death (SW-2). When
+      // nothing changed, return no touched stores so we skip a needless broadcast.
+      const prev = await store.activeConversations.get(op.platform);
+      if (prev && prev.nativeId === op.nativeId && prev.title === op.title) {
+        return { stores: [] };
+      }
+      await store.activeConversations.put({
+        platform: op.platform,
+        nativeId: op.nativeId,
+        title: op.title,
+        updatedAt: Date.now(),
+      });
+      return { stores: ['activeConversations'] };
     }
   }
 }
@@ -205,7 +255,12 @@ export function registerFolderHandlers(): void {
   });
   registerHandler('workspace.mutate', async (req) => {
     const result = await mutateWorkspace(await workspaceStore(), req.op);
-    await broadcast({ kind: 'state.changed', stores: result.stores });
+    // Skip the fan-out when a mutation touched nothing (e.g. an active-conversation
+    // report that matched the stored value), so a steady stream of unchanged
+    // reports never wakes every tab into a re-query.
+    if (result.stores.length > 0) {
+      await broadcast({ kind: 'state.changed', stores: result.stores });
+    }
     return result;
   });
 }

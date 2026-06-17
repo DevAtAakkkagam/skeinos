@@ -40,6 +40,9 @@ jobs:
       - name: Build extension
         run: npm run build
 
+      - name: Check bundle size budget
+        run: npm run check:size
+
       - name: Package zip
         run: npm run zip
 

@@ -28,6 +28,24 @@ export const MIGRATIONS: Migration[] = [
       }
     }
   },
+  // v2 — add the local-only `activeConversations` store (conversation-filing).
+  // Guarded by a presence check so a *fresh* install (whose v1 step already
+  // created it from the current ALL_STORES) skips it, while an existing v1
+  // database gains the store on upgrade. Idempotent either way.
+  (db) => {
+    if (!db.objectStoreNames.contains('activeConversations')) {
+      db.createObjectStore('activeConversations', { keyPath: 'platform' });
+    }
+  },
+  // v3 — conversation organization state (conversation-context-menu). The new
+  // `pinned` / `archived` / `color` fields on `ConversationIndex` are optional,
+  // non-indexed, and read with defaults, so existing `conversations` rows are
+  // valid as-is and need no rewrite. This step exists only to record the schema
+  // evolution as an explicit, append-only version bump ([STORE]); it is a no-op.
+  () => {
+    // Intentionally empty — additive optional record fields require no structural
+    // change to the (schemaless-per-record) IndexedDB object store.
+  },
 ];
 
 /**

@@ -10,6 +10,12 @@ export const PRIMITIVES_CSS = `
 
 /* Menu — Zag's positioner gets absolute popper styles inline; we add stacking. */
 .sk-menu__positioner { z-index: 2147483647; }
+/* Floating UI computes the position asynchronously, writing --x/--y onto the
+   positioner only after the first paint. For an anchor-point (context) menu Zag
+   keeps placement defined, so its built-in off-screen guard never engages and the
+   menu paints once at the positioner origin before snapping to the pointer. Hide it
+   until --x lands so it appears in one place. */
+.sk-menu__positioner:not([style*="--x:"]) { visibility: hidden; }
 .sk-menu { background: var(--sk-color-bg); color: var(--sk-color-fg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: flex; flex-direction: column; min-width: 160px; padding: var(--sk-space-1); }
 .sk-menu:focus-visible { outline: none; }
 .sk-menu__item { background: none; border: 0; color: inherit; font: inherit; text-align: left; padding: var(--sk-space-1) var(--sk-space-2); border-radius: var(--sk-radius); cursor: pointer; }

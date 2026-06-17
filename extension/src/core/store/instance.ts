@@ -7,9 +7,21 @@ import { openWorkspaceStore, type WorkspaceStore } from './index';
 
 let cached: Promise<WorkspaceStore> | null = null;
 
-/** Resolve the worker's shared store, opening the database on first use. */
+/** Resolve the worker's shared store, opening the database on first use. A
+ *  successful open is cached for the life of the worker (single open per
+ *  generation); a *failed* open is NOT cached — it resets the handle so the next
+ *  call re-opens, rather than poisoning every later read/write with the cached
+ *  rejection until the worker restarts. */
 export function workspaceStore(): Promise<WorkspaceStore> {
-  if (!cached) cached = openWorkspaceStore();
+  if (!cached) {
+    const opening = openWorkspaceStore();
+    opening.catch(() => {
+      // Only clear if this rejected open is still the cached one (a later
+      // successful open may have already replaced it).
+      if (cached === opening) cached = null;
+    });
+    cached = opening;
+  }
   return cached;
 }
 

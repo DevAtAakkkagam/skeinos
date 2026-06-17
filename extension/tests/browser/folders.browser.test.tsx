@@ -138,6 +138,25 @@ describe('folders sidebar (real browser)', () => {
     await vi.waitFor(() => expect($('[data-testid=sk-archive]')?.textContent).toContain('Work'));
   });
 
+  it('unarchives a folder from the archived row context menu', async () => {
+    await createFolder('Stale');
+    folderRow('Stale').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    await vi.waitFor(() => expect($('[data-testid=sk-context-menu]')).toBeTruthy());
+    $('[data-testid=sk-menu-archive]')!.click();
+    await vi.waitFor(() => expect($('[data-archived-id]')?.textContent).toContain('Stale'));
+
+    // Right-click the archived row and Unarchive it: the archive menu item flips
+    // its label, and the folder returns to the active tree.
+    $('[data-archived-id]')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    await vi.waitFor(() => expect($('[data-testid=sk-menu-archive]')?.textContent).toBe('Unarchive'));
+    $('[data-testid=sk-menu-archive]')!.click();
+
+    await vi.waitFor(() => {
+      expect($('[data-testid=sk-archive]')).toBeNull();
+      expect(folderRow('Stale')).toBeTruthy();
+    });
+  });
+
   it('persists folders, assignment, and counts across a reload', async () => {
     await createFolder('Keep');
     fireDrop(folderRow('Keep'), { type: 'conversation', id: 'claude::c1' });
@@ -161,9 +180,14 @@ describe('folders sidebar (real browser)', () => {
     await createFolder('Child');
     // Nest Child under Parent (valid move).
     fireDrop(folderRow('Parent'), { type: 'folder', id: folderRow('Child').dataset.folderId! });
+    // Folders collapse by default, so expand Parent to reveal its now-nested Child.
+    await vi.waitFor(() =>
+      expect(folderRow('Parent').querySelector('[data-testid=sk-folder-caret]')).toBeTruthy(),
+    );
+    (folderRow('Parent').querySelector('[data-testid=sk-folder-caret]') as HTMLElement).click();
     await vi.waitFor(() => {
       const parent = folderRow('Parent');
-      // Child now renders as a descendant block following Parent's row.
+      // Child now renders as a descendant block inside Parent's expanded section.
       expect(parent.parentElement!.textContent).toContain('Child');
     });
 

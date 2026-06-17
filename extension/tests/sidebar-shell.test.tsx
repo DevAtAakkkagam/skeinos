@@ -12,8 +12,11 @@ const view: WorkspaceView = {
   tree: { active: [], pinned: [], archived: [] },
   counts: {},
   conversations: [],
+  active: null,
+  status: 'ready',
   refresh: vi.fn(),
-  mutate: vi.fn(async () => true),
+  retry: vi.fn(),
+  mutate: vi.fn(async () => ({ ok: true, applied: true })),
 };
 
 // --- minimal chrome shim: storage.local (settings) + runtime (options + msg) ---

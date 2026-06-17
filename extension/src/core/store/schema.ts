@@ -82,6 +82,15 @@ export const STORES = {
     indexes: [{ name: 'createdAt', keyPath: 'createdAt' }],
     synced: false,
   },
+  // The active conversation per platform (conversation-filing). Keyed by
+  // `platform` — one record each — so the side panel's current-conversation card
+  // survives MV3 worker death (SW-2). Local-only routing metadata, never synced.
+  activeConversations: {
+    name: 'activeConversations',
+    keyPath: 'platform',
+    indexes: [],
+    synced: false,
+  },
   // Keyed by `term`, sharded by term prefix (D6). Indexing logic lands in M2.
   searchPostings: {
     name: 'searchPostings',

@@ -43,3 +43,27 @@ snapshot, update selectors in the config if needed, and re-run the suite.
 > The Claude fixture here is a **representative** snapshot modelling Claude's
 > structure (sidebar list + ProseMirror composer). Re-capture from the live site
 > before relying on the exact selectors in production.
+
+## Gemini — collapsed-sidebar open question
+
+The `gemini.html` fixture models the **expanded** sidebar: `<conversations-list>`
+populated with `/app/<id>` anchors (each wrapping a `.title-text`), the open
+conversation's anchor carrying `aria-current="page"`, ordered
+`user-query`/`model-response` messages, the Quill `.ql-editor` composer, the
+`button[aria-label="Send message"]`, and the `bard-sidenav` / `input-area-v2` mount
+anchors. Only framework-stable hooks are used (custom-element tags, `aria-label`s,
+`href` prefixes) — never the volatile Angular `ng-tns-*`/`mat-mdc-*` classes.
+
+**Open question (design D / Open Questions):** does `<conversations-list>` (and its
+anchors) stay in the DOM while the sidebar is **collapsed**? This was **not**
+re-confirmed against the live logged-in site during this change. `conversationList`
+is a required selfCheck anchor, so if the list is removed (not just hidden) when the
+sidebar collapses, `selfCheck()` reports `conversationList` missing until the user
+expands it.
+
+**selfCheck implication / mitigation:** this is the expected degraded path, not a
+crash — `waitForSelfCheck` re-probes on DOM mutations within a bounded timeout, and a
+genuine miss raises the isolated resilience banner with Retry (no effect on other
+tabs). If a live re-capture shows the list is torn down when collapsed, re-anchor
+`conversationList` to an always-present ancestor (e.g. `bard-sidenav`) and re-capture
+this fixture.

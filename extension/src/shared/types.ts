@@ -50,6 +50,19 @@ export interface FolderTreeNode {
   children: FolderTreeNode[];
 }
 
+/**
+ * The conversation open in a platform's active tab, reported by the content
+ * script so the side panel can surface a "current conversation" card. One record
+ * per platform (keyed by `platform`). Local only — never synced; carries only the
+ * id/title metadata that already crosses the messaging seam, never content.
+ */
+export interface ActiveConversation {
+  platform: PlatformId;
+  nativeId: string;
+  title: string;
+  updatedAt: number;
+}
+
 /** Local only — never synced. */
 export interface ConversationIndex {
   id: string;
@@ -61,6 +74,12 @@ export interface ConversationIndex {
   indexedText: string;
   contentHash: string;
   updatedAt: number;
+  // Per-conversation organization state (conversation-context-menu). Optional and
+  // additive — absent means unpinned / not archived / no colour. Local-only like
+  // the rest of the record: these never sync (PRIV-1).
+  pinned?: boolean;
+  archived?: boolean;
+  color?: string;
 }
 
 /** D14: variables carry defaults + an input type that drives the fill-in modal. */
