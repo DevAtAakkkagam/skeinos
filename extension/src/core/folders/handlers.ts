@@ -24,7 +24,6 @@ import {
   buildTree,
   canCreateUnder,
   canMove,
-  countByFolder,
   createFolder,
   indexById,
   moveFolder,
@@ -97,16 +96,13 @@ export async function queryWorkspace(
         },
       };
     }
-    case 'folder.counts': {
-      const conversations = await store.conversations.query();
-      return { kind: 'folder.counts', counts: countByFolder(conversations) };
-    }
     case 'conversation.list': {
+      // The unified library (D28): return EVERY conversation regardless of
+      // platform. The folder browser is one library; narrowing to a platform is a
+      // UI view-filter, and per-folder counts are derived client-side from this
+      // single list — so the badge can never disagree with the rows it labels.
       const all = (await store.conversations.query()) as ConversationIndex[];
-      return {
-        kind: 'conversation.list',
-        conversations: all.filter((c) => c.platform === selector.platform),
-      };
+      return { kind: 'conversation.list', conversations: all };
     }
     case 'conversation.active': {
       const active = (await store.activeConversations.get(selector.platform)) ?? null;

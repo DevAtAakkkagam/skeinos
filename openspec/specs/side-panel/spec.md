@@ -4,9 +4,11 @@
 
 The side-panel capability hosts the workspace UI (the sidebar shell and folder tree) in
 the browser's native side panel as an extension page, rather than injecting it into the
-host page. It opens from the toolbar action on supported hosts, scopes its data to the
-active tab's platform, and stays in sync with the service worker through the same request /
-broadcast messaging the rest of the UI uses.
+host page. It opens from the toolbar action on supported hosts; the **active-conversation
+context and host gating** derive from the active tab's platform, while the **folder/workspace
+browser is unified** across every platform (an optional platform view-filter may narrow it —
+D28). It stays in sync with the service worker through the same request / broadcast messaging
+the rest of the UI uses.
 
 ## Requirements
 
@@ -63,20 +65,33 @@ survives cold starts.
 
 ### Requirement: Panel scopes to the active tab's platform
 
-The side panel SHALL determine the active platform from the active tab and present
-platform-scoped workspace data accordingly, re-scoping when the active tab changes.
-When no supported host tab is active, it SHALL show a neutral prompt rather than stale
-or incorrect data.
+The side panel SHALL determine the active platform from the active tab and use it for
+the **active-conversation context** (the card reflecting the conversation open in that
+tab) and for **host gating** (enabling the panel only on supported hosts), re-deriving
+when the active tab changes. The **folder/workspace browser SHALL be unified** — its
+folder contents and counts span every platform and are NOT scoped to the active tab's
+platform; an optional platform view-filter (default "All") may narrow them. When no
+supported host tab is active, the panel SHALL show a neutral prompt rather than stale or
+incorrect data.
 
-#### Scenario: Panel reflects the active host
+#### Scenario: Active-conversation context reflects the active host
+
+- **WHEN** the active tab is a supported host with an open conversation
+- **THEN** the panel's active-conversation context reflects that tab's platform and
+  conversation
+
+#### Scenario: Folder browser stays unified across the active host
 
 - **WHEN** the active tab is a supported host
-- **THEN** the panel scopes its data to that platform
+- **THEN** the folder browser still shows folders' conversations from every platform
+  (it is not narrowed to the active tab's platform unless the user applies the platform
+  filter)
 
-#### Scenario: Panel re-scopes when the active tab changes
+#### Scenario: Active-conversation context re-derives when the active tab changes
 
 - **WHEN** the user switches to a different supported host tab
-- **THEN** the panel re-scopes to the newly active platform
+- **THEN** the active-conversation context re-derives to the newly active platform,
+  while the unified folder browser is unaffected
 
 #### Scenario: Neutral state with no supported tab
 

@@ -60,7 +60,7 @@ describe('mutate → persist → re-query round-trips', () => {
     expect(tree(snap).active[0].children).toHaveLength(0);
   });
 
-  it('ingests conversations, assigns one, and counts it', async () => {
+  it('ingests conversations and assigns one (filing reflected in the unified list)', async () => {
     await mutateWorkspace(store, { op: 'folder.create', id: 'a', name: 'A' });
     await mutateWorkspace(store, {
       op: 'conversation.ingest',
@@ -73,9 +73,35 @@ describe('mutate → persist → re-query round-trips', () => {
       folderId: 'a',
     });
 
-    const snap = await queryWorkspace(store, { kind: 'folder.counts' });
-    if (snap.kind !== 'folder.counts') throw new Error('expected counts');
-    expect(snap.counts).toEqual({ a: 1 });
+    // counts are derived client-side now (folder.counts retired) — the unified
+    // conversation.list is the single source the panel derives them from.
+    const snap = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    expect(snap.conversations.find((c) => c.id === 'claude::c1')?.folderId).toBe('a');
+    expect(snap.conversations.find((c) => c.id === 'claude::c2')?.folderId).toBeNull();
+  });
+
+  it('conversation.list returns the UNIFIED set across every platform (no platform filter)', async () => {
+    await mutateWorkspace(store, { op: 'folder.create', id: 'a', name: 'A' });
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'claude',
+      refs: [{ nativeId: 'c1', title: 'Claude one' }],
+    });
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'gemini',
+      refs: [{ nativeId: 'g1', title: 'Gemini one' }],
+    });
+    // File both — from two different platforms — into the same folder.
+    await mutateWorkspace(store, { op: 'conversation.assign', conversationId: 'claude::c1', folderId: 'a' });
+    await mutateWorkspace(store, { op: 'conversation.assign', conversationId: 'gemini::g1', folderId: 'a' });
+
+    const snap = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    // Both platforms' conversations come back from the one unified read.
+    expect(snap.conversations.map((c) => c.id).sort()).toEqual(['claude::c1', 'gemini::g1']);
+    expect(snap.conversations.every((c) => c.folderId === 'a')).toBe(true);
   });
 
   it('re-ingesting preserves pin / archive / colour state (1.3)', async () => {
@@ -117,9 +143,9 @@ describe('mutate → persist → re-query round-trips', () => {
       refs: [{ nativeId: 'c1', title: 'One (renamed by host)' }],
     });
 
-    const snap = await queryWorkspace(store, { kind: 'folder.counts' });
-    if (snap.kind !== 'folder.counts') throw new Error('expected counts');
-    expect(snap.counts).toEqual({ a: 1 }); // still filed
+    const snap = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    expect(snap.conversations.find((c) => c.id === 'claude::c1')?.folderId).toBe('a'); // still filed
   });
 });
 

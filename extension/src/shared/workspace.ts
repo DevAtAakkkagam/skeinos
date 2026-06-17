@@ -22,8 +22,7 @@ export interface ConversationRefLite {
 /** A read request against the workspace, discriminated by `kind`. */
 export type WorkspaceSelector =
   | { kind: 'folder.tree' }
-  | { kind: 'folder.counts' }
-  | { kind: 'conversation.list'; platform: PlatformId }
+  | { kind: 'conversation.list' }
   | { kind: 'conversation.active'; platform: PlatformId };
 
 /** The folder hierarchy split into the sections the sidebar renders. */
@@ -33,10 +32,15 @@ export interface FolderTreeSnapshot {
   archived: Folder[];
 }
 
-/** The result of a {@link WorkspaceSelector}, discriminated by the same `kind`. */
+/** The result of a {@link WorkspaceSelector}, discriminated by the same `kind`.
+ *  `conversation.list` is the **unified** set across every platform (D28 /
+ *  folder-scope-reconciliation): the folder/library browser is one library, and
+ *  the UI owns any platform narrowing as a view filter. Per-folder counts are
+ *  derived client-side from this list, so there is no separate `folder.counts`
+ *  selector. `conversation.active` stays per-platform — the active card genuinely
+ *  reflects "what I'm reading in this tab". */
 export type WorkspaceSnapshot =
   | { kind: 'folder.tree'; tree: FolderTreeSnapshot }
-  | { kind: 'folder.counts'; counts: Record<string, number> }
   | { kind: 'conversation.list'; conversations: ConversationIndex[] }
   | { kind: 'conversation.active'; active: ActiveConversation | null };
 

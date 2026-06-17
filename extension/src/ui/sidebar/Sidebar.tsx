@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ConversationIndex, Folder, FolderTreeNode, PlatformId } from '../../shared/types';
 import { conversationId, type MutationOp } from '../../shared/workspace';
+import { countByFolder } from '../../core/folders';
 import { Dialog, useMenu, mergeProps, getNodeRoot } from '../primitives';
 import { CheckIcon, ChevronIcon, CloseIcon, FolderIcon, PlusIcon } from '../components/Icon';
 import { ConversationList } from './ConversationList';
@@ -115,11 +116,22 @@ export interface SidebarProps {
 export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   const live = useWorkspace(platform);
   const ws = view ?? live;
-  const { tree, counts, conversations, active, status, mutate, retry } = ws;
+  const { tree, conversations, active, platformFilter, status, mutate, retry } = ws;
+
+  // Apply the platform view-filter (D28): "All" shows the unified library across
+  // every platform; selecting a platform narrows to its conversations. Per-folder
+  // counts AND the rendered contents derive from this single filtered set, so a
+  // folder's badge always equals the rows it renders — the "5 vs empty" mismatch
+  // (a global count over a platform-scoped body) is unrepresentable by construction.
+  const visibleConvs =
+    platformFilter === 'all'
+      ? conversations
+      : conversations.filter((c) => c.platform === platformFilter);
+  const counts = countByFolder(visibleConvs);
 
   // Conversations that belong to no folder — surfaced under the "Unfiled" node so
   // they stay reachable in a folders-only tree (the design has no flat list).
-  const unfiledConvs = conversations.filter((c) => c.folderId == null);
+  const unfiledConvs = visibleConvs.filter((c) => c.folderId == null);
   const activeConvId = active ? conversationId(active.platform, active.nativeId) : null;
 
   // The loading indicator is delayed so a warm read (which resolves first) renders
@@ -265,7 +277,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   const renderNode = (node: FolderTreeNode) => {
     const f = node.folder;
     const isOpen = expanded.has(f.id);
-    const folderConvs = conversations.filter((c) => c.folderId === f.id);
+    const folderConvs = visibleConvs.filter((c) => c.folderId === f.id);
     return (
       <div key={f.id} class="sk-sidebar__section" style={{ marginLeft: `${(node.depth - 1) * 12}px` }}>
         <div
@@ -485,7 +497,6 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
       {dialog && (
         <FolderDialog
           state={dialog}
-          platform={platform}
           tree={tree.active}
           onClose={() => setDialog(null)}
           onSubmit={(op) => mutate(op)}
@@ -530,7 +541,6 @@ function parentOptions(nodes: FolderTreeNode[], excludeId: string | undefined, d
 
 interface FolderDialogProps {
   state: DialogState;
-  platform: PlatformId;
   /** Active (non-archived) tree, for the parent-folder picker. */
   tree: FolderTreeNode[];
   onClose: () => void;
@@ -539,7 +549,7 @@ interface FolderDialogProps {
   onSubmit: (op: MutationOp) => Promise<MutateResult>;
 }
 
-function FolderDialog({ state, platform, tree, onClose, onSubmit }: FolderDialogProps) {
+function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
   const editing = state.mode === 'edit';
   const [name, setName] = useState(state.folder?.name ?? '');
   const [icon, setIcon] = useState(state.folder?.icon ?? '');
@@ -591,7 +601,10 @@ function FolderDialog({ state, platform, tree, onClose, onSubmit }: FolderDialog
         parentId,
         color: color || undefined,
         icon: icon || undefined,
-        platformScope: platform,
+        // Folders are platform-agnostic in the unified model (D28 / D-FSR4): never
+        // stamp the creating tab's platform (the dead-data source the panel never
+        // read). The field is retained in the schema as the M4 independent-mode hook.
+        platformScope: 'unified',
       });
       ok = took(created);
     }

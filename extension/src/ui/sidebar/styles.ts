@@ -136,6 +136,12 @@ const SIDEBAR_FEATURE_CSS = `
 .sk-chip { background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); border: 0; border-radius: 999px; color: var(--sk-color-muted); font: inherit; font-size: 12px; padding: 2px var(--sk-space-2); cursor: default; }
 .sk-chip--active { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); color: var(--sk-color-accent); }
 .sk-chip--add { background: none; border: 1px dashed var(--sk-color-border); }
+/* The platform view-filter (D28): live, interactive chips (unlike the disabled
+   tag stubs above), so they take a pointer cursor, hover, and a visible focus ring. */
+.sk-platforms { display: flex; flex-wrap: wrap; gap: var(--sk-space-1); padding: var(--sk-space-1) var(--sk-space-3) 0; }
+.sk-platforms .sk-chip { cursor: pointer; }
+.sk-platforms .sk-chip:hover { color: var(--sk-color-fg); }
+.sk-platforms .sk-chip:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
 .sk-shell__body { flex: 1; overflow: auto; }
 .sk-shell__footer { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-2) var(--sk-space-3); border-top: 1px solid var(--sk-color-border); }
 .sk-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--sk-color-accent); background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 40%, transparent); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); }

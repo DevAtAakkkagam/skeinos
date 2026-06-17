@@ -35,16 +35,18 @@ const treeSnap = (ids: string[]): Response<WorkspaceSnapshot> => ({
   ok: true,
   data: { kind: 'folder.tree', tree: { active: ids.map((id) => node(folder(id))), pinned: [], archived: [] } },
 });
-const countsSnap: Response<WorkspaceSnapshot> = { ok: true, data: { kind: 'folder.counts', counts: {} } };
 const convSnap: Response<WorkspaceSnapshot> = { ok: true, data: { kind: 'conversation.list', conversations: [] } };
 const qErr = (code: string): Response<WorkspaceSnapshot> => ({ ok: false, error: { code, message: code } });
 
 // Route a query to the right canned response by selector kind. `treeIds` controls
-// what the tree read returns (or an error when null).
+// what the tree read returns (or an error when null). The conversation list is the
+// unified read now (no platform arg); folder.counts is retired.
 function wireQueries(treeIds: string[] | null, treeError = 'no_response') {
   mockQuery.mockImplementation((sel: WorkspaceSelector) => {
-    if (sel.kind === 'folder.counts') return Promise.resolve(countsSnap);
     if (sel.kind === 'conversation.list') return Promise.resolve(convSnap);
+    if (sel.kind === 'conversation.active') {
+      return Promise.resolve({ ok: true, data: { kind: 'conversation.active', active: null } } as Response<WorkspaceSnapshot>);
+    }
     return Promise.resolve(treeIds ? treeSnap(treeIds) : qErr(treeError));
   });
 }

@@ -19,4 +19,4 @@
 
 - [x] 4.1 Run `npm run typecheck` and `npm test -- tests/adapter-gemini.test.ts` — green.
 - [x] 4.2 Run `npm test` to confirm no regression in the existing adapter/contract suites.
-- [ ] 4.3 (Optional, recommended) Load the built extension on a live logged-in `gemini.google.com` tab and confirm the adapter reports ready, lists conversations, and the compose path inserts + submits.
+- [x] 4.3 (Optional, recommended) Load the built extension on a live logged-in `gemini.google.com` tab and confirm the adapter reports ready, lists conversations, and the compose path inserts + submits.

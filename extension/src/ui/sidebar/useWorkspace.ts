@@ -1,7 +1,11 @@
 // The sidebar's data layer: a pure view over worker state (PREACT guardrail).
-// It reads the folder tree, counts, and conversation list from the worker, holds
-// NO authoritative state of its own, and re-queries whenever the worker broadcasts
-// `state.changed` — so every open tab converges on the single writer's truth.
+// It reads the folder tree and the UNIFIED conversation list from the worker,
+// holds NO authoritative folder state of its own, and re-queries whenever the
+// worker broadcasts `state.changed` — so every open tab converges on the single
+// writer's truth. Per-folder counts are derived client-side from the unified list
+// (D28), so there is no separate `folder.counts` read. The one piece of view state
+// it owns is the ephemeral platform view-filter (default "All"): a narrowing of the
+// unified list, never a folder mutation and never persisted.
 //
 // Resilience (workspace-view-recovery): reads ride the transport retry helper
 // (messaging-resilience), the hook tracks an honest `loading | ready | error`
@@ -40,13 +44,23 @@ export interface MutateResult {
   applied: boolean;
 }
 
+/** The platform view-filter: a single platform, or `'all'` for the unified view.
+ *  Ephemeral panel-local state (D28 / D-FSR3) — it never mutates folders or
+ *  `Folder.platformScope`, and is not persisted across reopen. */
+export type PlatformFilter = PlatformId | 'all';
+
 export interface WorkspaceView {
   tree: FolderTreeSnapshot;
-  counts: Record<string, number>;
+  /** The unified conversation list across every platform (D28). The UI narrows it
+   *  by {@link platformFilter} and derives per-folder counts from the result. */
   conversations: ConversationIndex[];
   /** The conversation open in the active tab for this platform, or `null` when
    *  none is resolvable. A pure read of worker state — reconciled like the rest. */
   active: ActiveConversation | null;
+  /** The active platform view-filter; defaults to `'all'` (unified). */
+  platformFilter: PlatformFilter;
+  /** Set the platform view-filter (a view control only — no worker round-trip). */
+  setPlatformFilter: (filter: PlatformFilter) => void;
   /** Load status driving the loading/empty/error rendering. */
   status: WorkspaceStatus;
   /** Re-read all selectors from the worker (reconcile). */
@@ -117,9 +131,9 @@ function mutationApplied(op: MutationOp, tree: FolderTreeSnapshot): boolean {
 
 export function useWorkspace(platform: PlatformId): WorkspaceView {
   const [tree, setTree] = useState<FolderTreeSnapshot>(EMPTY_TREE);
-  const [counts, setCounts] = useState<Record<string, number>>({});
   const [conversations, setConversations] = useState<ConversationIndex[]>([]);
   const [active, setActive] = useState<ActiveConversation | null>(null);
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [status, setStatus] = useState<WorkspaceStatus>('loading');
 
   // Always read through the latest status without re-creating the read callback
@@ -142,15 +156,15 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
     return null;
   }, []);
 
-  // Counts/conversations are non-fatal: a failure degrades to the last/default
-  // value and never flips the whole view to `error`.
+  // The unified conversation list + the per-platform active card are non-fatal: a
+  // failure degrades to the last/default value and never flips the whole view to
+  // `error`. The list is unified (no platform arg); only the active card is keyed
+  // by the active tab's platform.
   const readAux = useCallback(async () => {
-    const [countsRes, convRes, activeRes] = await Promise.all([
-      queryWorkspaceRemote({ kind: 'folder.counts' }),
-      queryWorkspaceRemote({ kind: 'conversation.list', platform }),
+    const [convRes, activeRes] = await Promise.all([
+      queryWorkspaceRemote({ kind: 'conversation.list' }),
       queryWorkspaceRemote({ kind: 'conversation.active', platform }),
     ]);
-    if (countsRes.ok && countsRes.data.kind === 'folder.counts') setCounts(countsRes.data.counts);
     if (convRes.ok && convRes.data.kind === 'conversation.list') {
       setConversations(convRes.data.conversations);
     }
@@ -232,5 +246,15 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
     [readTree, readAux],
   );
 
-  return { tree, counts, conversations, active, status, refresh, retry, mutate };
+  return {
+    tree,
+    conversations,
+    active,
+    platformFilter,
+    setPlatformFilter,
+    status,
+    refresh,
+    retry,
+    mutate,
+  };
 }

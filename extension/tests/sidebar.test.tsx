@@ -28,22 +28,33 @@ function conv(id: string, over: Partial<ConversationIndex> = {}): ConversationIn
   return { id, platform: 'claude', nativeId: id, title: id, folderId: null, tags: [], indexedText: '', contentHash: '', updatedAt: 0, ...over };
 }
 
+// Counts are derived client-side from `conversations` now (folder.counts retired),
+// so the 2nd positional arg is accepted-but-ignored to keep existing call sites
+// terse; tests that assert a badge supply the backing conversations via `over`.
 function makeView(
   tree: FolderTreeSnapshot,
-  counts: Record<string, number> = {},
+  _counts: Record<string, number> = {},
   over: Partial<WorkspaceView> = {},
 ): WorkspaceView {
   return {
     tree,
-    counts,
     conversations: [],
     active: null,
+    platformFilter: 'all',
+    setPlatformFilter: vi.fn(),
     status: 'ready',
     refresh: vi.fn(),
     retry: vi.fn(),
     mutate: vi.fn(async () => ({ ok: true, applied: true })),
     ...over,
   };
+}
+
+/** `n` conversations filed into `folderId` on `platform` (for count-badge tests). */
+function convsIn(folderId: string, n: number, platform: ConversationIndex['platform'] = 'claude'): ConversationIndex[] {
+  return Array.from({ length: n }, (_, i) =>
+    conv(`${platform}-${folderId}-${i}`, { folderId, platform, nativeId: `${folderId}-${i}` }),
+  );
 }
 
 let container: HTMLElement | null = null;
@@ -86,7 +97,9 @@ describe('Sidebar empty state (sidebar-shell)', () => {
 describe('Sidebar pinned & archive rows (folders delta)', () => {
   it('a pinned row shows the folder icon, color, and count', () => {
     const pin = folder('p1', { name: 'Launch brief', icon: '📌', color: '#f80', pinned: true });
-    renderSidebar(makeView({ active: [], pinned: [pin], archived: [] }, { p1: 5 }));
+    renderSidebar(
+      makeView({ active: [], pinned: [pin], archived: [] }, {}, { conversations: convsIn('p1', 5) }),
+    );
 
     const row = $('[data-pinned-id=p1]')!;
     expect(row).toBeTruthy();
@@ -97,11 +110,13 @@ describe('Sidebar pinned & archive rows (folders delta)', () => {
 
   it('an archive row shows the folder count', () => {
     const arc = folder('a1', { name: 'Old work', archived: true });
-    renderSidebar(makeView({ active: [node(folder('x'))], pinned: [], archived: [arc] }, { a1: 31 }));
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [arc] }, {}, { conversations: convsIn('a1', 3) }),
+    );
 
     const row = $('[data-archived-id=a1]')!;
     expect(row).toBeTruthy();
-    expect(row.querySelector('[data-testid=sk-folder-count]')!.textContent).toBe('31');
+    expect(row.querySelector('[data-testid=sk-folder-count]')!.textContent).toBe('3');
   });
 
   it('does not render a standalone flat conversation list (folders-only tree)', () => {
@@ -265,5 +280,68 @@ describe('Sidebar create-dialog failure (workspace-view-recovery 7.5)', () => {
 
     expect(mutate).toHaveBeenCalledTimes(1);
     expect($('[data-testid=sk-folder-dialog]')).toBeNull();
+  });
+});
+
+describe('Sidebar unified browser + platform view-filter (folder-scope-reconciliation / D28)', () => {
+  // A folder holding conversations assigned from two different platforms.
+  const tree: FolderTreeSnapshot = { active: [node(folder('x', { name: 'Mixed' }))], pinned: [], archived: [] };
+  const mixedConvs: ConversationIndex[] = [
+    conv('claude::c1', { platform: 'claude', nativeId: 'c1', folderId: 'x', title: 'Claude chat' }),
+    conv('gemini::g1', { platform: 'gemini', nativeId: 'g1', folderId: 'x', title: 'Gemini chat' }),
+  ];
+  const expandFolder = async () => {
+    ($('[data-testid=sk-folder-caret]') as HTMLElement).click();
+    await flush();
+  };
+
+  it('renders conversations from every platform under "All", and the badge equals the rendered rows (5.2)', async () => {
+    renderSidebar(makeView(tree, {}, { conversations: mixedConvs, platformFilter: 'all' }));
+    // The "5 vs empty" regression guard: badge equals the unified contents…
+    expect($('[data-testid=sk-folder-count]')!.textContent).toBe('2');
+    await expandFolder();
+    // …and the body actually lists both platforms' conversations (never empty).
+    expect($$('[data-testid=sk-conv-row]')).toHaveLength(2);
+  });
+
+  it('narrows folder contents AND the badge to a selected platform; "All" restores the unified view (5.3)', async () => {
+    renderSidebar(makeView(tree, {}, { conversations: mixedConvs, platformFilter: 'gemini' }));
+    expect($('[data-testid=sk-folder-count]')!.textContent).toBe('1');
+    await expandFolder();
+    const rows = $$('[data-testid=sk-conv-row]');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].querySelector('[data-testid=sk-conv-title]')!.textContent).toBe('Gemini chat');
+
+    // "All" restores the unified badge (2) over the same data.
+    renderSidebar(makeView(tree, {}, { conversations: mixedConvs, platformFilter: 'all' }));
+    expect($('[data-testid=sk-folder-count]')!.textContent).toBe('2');
+  });
+
+  it('narrows the Unfiled list by the platform filter too (5.3)', () => {
+    const unfiled: ConversationIndex[] = [
+      conv('claude::u1', { platform: 'claude', nativeId: 'u1', folderId: null }),
+      conv('gemini::u2', { platform: 'gemini', nativeId: 'u2', folderId: null }),
+    ];
+    renderSidebar(
+      makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: unfiled, platformFilter: 'claude' }),
+    );
+    expect($('[data-testid=sk-unfiled-count]')!.textContent).toBe('1');
+  });
+
+  it('keeps the active-conversation row highlighted in the unified list and under a matching filter (5.5)', async () => {
+    const active: ActiveConversation = { platform: 'claude', nativeId: 'c1', title: 'Claude chat', updatedAt: 1 };
+
+    // Under "All" the active row is auto-revealed and highlighted among other platforms' rows.
+    renderSidebar(makeView(tree, {}, { conversations: mixedConvs, active, platformFilter: 'all' }));
+    await flush();
+    let activeRow = $$('[data-testid=sk-conv-row]').find((r) => r.getAttribute('aria-current') === 'true');
+    expect(activeRow).toBeTruthy();
+    expect(activeRow!.querySelector('[data-testid=sk-conv-title]')!.textContent).toBe('Claude chat');
+
+    // Under the matching (claude) filter the highlight survives.
+    renderSidebar(makeView(tree, {}, { conversations: mixedConvs, active, platformFilter: 'claude' }));
+    await flush();
+    activeRow = $$('[data-testid=sk-conv-row]').find((r) => r.getAttribute('aria-current') === 'true');
+    expect(activeRow).toBeTruthy();
   });
 });
