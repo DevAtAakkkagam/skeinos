@@ -45,9 +45,15 @@ describe('generated MV3 manifest', () => {
     expect(manifest.host_permissions).not.toContain('*://*/*');
   });
 
-  it('declares the alarms + sidePanel API permissions only (no broad/credential APIs)', () => {
-    expect(manifest.permissions ?? []).toEqual(expect.arrayContaining(['alarms', 'sidePanel']));
-    expect(manifest.permissions ?? []).toHaveLength(2);
+  it('declares the alarms/sidePanel/scripting/storage API permissions only (no broad/credential APIs)', () => {
+    // The four justified API permissions (see src/manifest.config.ts): `alarms`
+    // (resilience canary), `sidePanel` (workspace UI), `scripting` (inject the
+    // content script into already-open supported tabs), and `storage`
+    // (chrome.storage.local settings store). No more, no less.
+    expect(manifest.permissions ?? []).toEqual(
+      expect.arrayContaining(['alarms', 'sidePanel', 'scripting', 'storage']),
+    );
+    expect(manifest.permissions ?? []).toHaveLength(4);
     // The side panel reads the active tab's URL via existing host permissions, so
     // no broad tab-reading permission is requested.
     expect(manifest.permissions ?? []).not.toContain('tabs');
