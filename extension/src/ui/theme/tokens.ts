@@ -50,13 +50,14 @@ export const THEME_CSS = `
   --sk-radius: 6px;
 
   /* Type ramp (theme-independent). Base body stays 13px (the Lattice baseline);
-     above it, title jumps to 16px so the step over body is ~1.23 and reads as a
-     real level, not the muddy 14/13 it replaced. Weight (700/600 vs 500) carries
-     the rest of the hierarchy — see DESIGN.md's Weight-Carries-Hierarchy rule. */
+     above it, title is 15px — a clear step over body (~1.15) that reads as a real
+     level without dominating the tile, where 16px did. Weight (700/600 vs 500)
+     carries the rest of the hierarchy — see DESIGN.md's Weight-Carries-Hierarchy
+     rule. Heading (18px) is reserved for the largest dialog/section headings. */
   --sk-text-xs: 11px;
   --sk-text-sm: 12px;
   --sk-text-base: 13px;
-  --sk-text-title: 16px;
+  --sk-text-title: 15px;
   --sk-text-heading: 18px;
 
   color: var(--sk-color-fg);

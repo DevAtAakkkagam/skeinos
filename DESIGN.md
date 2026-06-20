@@ -171,11 +171,12 @@ in the typeface.
 - **Display / Overline** (IBM Plex Mono, 500, 12px, `letter-spacing: 0.2em`, uppercase):
   section labels only. The monospace and open tracking make them read as architecture, not
   captions.
-- **Title** (Urbanist, 600, 16px / `--sk-text-title`): dialog and picker titles; empty-state
-  titles step down to 15px.
-- **Card Title** (Urbanist, 700, 16px / `--sk-text-title`): prompt-card titles. Sits a real
-  step above body (~1.23 ratio) and is reinforced by weight (700 vs 500). Dense tree-anchor
-  names stay at body size and lean on weight alone, to keep row height tight.
+- **Title** (Urbanist, 600, 16px literal): dialog and picker headings; empty-state titles
+  step down to 15px.
+- **Card Title** (Urbanist, 700, 15px / `--sk-text-title`): prompt-card titles. A clear step
+  above body (~1.15 ratio) reinforced by weight (700 vs 500), sized to anchor a dense list
+  of tiles without reading as a page heading. Dense tree-anchor names stay at body size and
+  lean on weight alone, to keep row height tight.
 - **Body** (Urbanist, 500, 13px / 20px / `--sk-text-base`): the default. Excerpts relax to
   `line-height: 1.45`.
 - **Label / Meta** (Urbanist, 500–600, 11–12px): counts, relative time, result-group labels,
@@ -184,9 +185,10 @@ in the typeface.
 ### Named Rules
 **The Weight-Carries-Hierarchy Rule.** Title-to-body separation rides on weight (700/600 vs
 500) plus a real size step, never colour. Sizes come from one ramp (`--sk-text-xs` 11 /
-`--sk-text-sm` 12 / `--sk-text-base` 13 / `--sk-text-title` 16 / `--sk-text-heading` 18);
+`--sk-text-sm` 12 / `--sk-text-base` 13 / `--sk-text-title` 15 / `--sk-text-heading` 18);
 when a step must read louder, move up the ramp or add weight, never recolour. Card titles
-use `--sk-text-title` so the step over body is ~1.23, not the muddy 14/13 it replaced.
+use `--sk-text-title` (15) so the step over body is ~1.15: distinct from the muddy 14/13 it
+replaced, but calmer than 16, which read as a heading and dominated each tile.
 
 ## 4. Elevation
 
