@@ -11,11 +11,11 @@ colors:
   danger: "#c74b47"
 typography:
   display:
-    fontFamily: "Handjet, Urbanist, system-ui, sans-serif"
-    fontSize: "13px"
-    fontWeight: 600
+    fontFamily: "IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
+    fontSize: "12px"
+    fontWeight: 500
     lineHeight: 1
-    letterSpacing: "0.34em"
+    letterSpacing: "0.2em"
   title:
     fontFamily: "Urbanist, system-ui, sans-serif"
     fontSize: "16px"
@@ -113,7 +113,8 @@ and clarity, not theatrics.
 - Flat by default; depth from tonal tint, shadow only for floating surfaces.
 - Content leads; empty states and self-promoting nudges are demoted beneath real data.
 - Keyboard-first, ARIA-throughout, motion gated behind reduced-motion.
-- A quiet "dot-grid" display face (Handjet) is the one tactile signature of the weave.
+- A precise monospaced overline (IBM Plex Mono) is the one typographic signature, a quiet
+  technical counterpoint to Urbanist.
 
 ## 2. Colors
 
@@ -153,19 +154,23 @@ all retuned from OKLCH; do not reintroduce pure white or gray.
 
 ## 3. Typography
 
-**Display / Overline Font:** Handjet (with Urbanist, system-ui fallback) — a "dot-grid"
-face used only for structural section overlines.
+**Display / Overline Font:** IBM Plex Mono (with `ui-monospace`, SFMono, Menlo fallback /
+`--sk-font-label`) — a monospaced face used only for structural section overlines.
 **Body / UI Font:** Urbanist (with system-ui fallback).
 **Keycap Font:** system-ui, deliberately, so `⌘K` and shortcut hints render as native OS
 keycaps rather than brand type.
 
-**Character:** Urbanist carries the calm, even-tempered voice of the UI; Handjet's woven
-dot texture is the one place the loom motif surfaces typographically, used sparingly on
-overlines (FOLDERS, PROMPTS, ARCHIVE) so it signals structure without becoming decoration.
+**Character:** Urbanist carries the calm, even-tempered voice of the UI; IBM Plex Mono is the
+one typographic counterpoint, a precise, technical monospace used sparingly on overlines
+(FOLDERS, PROMPTS, ARCHIVE) and on code-like marks (the slash alias, `{{variable}}` chips),
+so structure and machinery read distinctly from prose without becoming decoration. The loom
+metaphor now lives in the product and the structural restraint (hairlines, tonal tint), not
+in the typeface.
 
 ### Hierarchy
-- **Display / Overline** (Handjet, 600, 13px, `letter-spacing: 0.34em`, uppercase): section
-  labels only. The wide tracking and dot face make them read as architecture, not captions.
+- **Display / Overline** (IBM Plex Mono, 500, 12px, `letter-spacing: 0.2em`, uppercase):
+  section labels only. The monospace and open tracking make them read as architecture, not
+  captions.
 - **Title** (Urbanist, 600, 16px / `--sk-text-title`): dialog and picker titles; empty-state
   titles step down to 15px.
 - **Card Title** (Urbanist, 700, 16px / `--sk-text-title`): prompt-card titles. Sits a real
@@ -252,9 +257,10 @@ radius, decisive focus states.
   text, 700 weight, and an accent bottom border. Disabled tabs (Profiles) dim to 0.55.
 
 ### Signature: the Section Overline
-The Handjet dot-face overline (FOLDERS / PROMPTS / ARCHIVE) with 0.34em tracking and a
-full-width hairline beneath when its section is open. It is the one piece of pure brand
-texture in an otherwise utilitarian chrome, and the typographic home of the loom motif.
+The IBM Plex Mono overline (FOLDERS / PROMPTS / ARCHIVE) with 0.2em tracking and a full-width
+hairline beneath when its section is open. The monospace gives the chrome its one distinct
+typographic voice, precise and structural, a quiet machine-label register set against
+Urbanist's prose.
 
 ## 6. Do's and Don'ts
 
