@@ -18,14 +18,14 @@ describe('bundled fonts (real browser)', () => {
     const families = new Set<string>();
     document.fonts.forEach((f) => families.add(f.family));
     expect(families.has('Urbanist')).toBe(true);
-    expect(families.has('Handjet')).toBe(true);
+    expect(families.has('IBM Plex Mono')).toBe(true);
 
     await document.fonts.ready;
 
-    // the overline heading should resolve to the dot font (Handjet)
+    // the overline heading should resolve to the label font (IBM Plex Mono)
     const heading = handle.shadowRoot.querySelector('.sk-sidebar__heading') as HTMLElement;
     expect(heading).toBeTruthy();
     const fam = getComputedStyle(heading).fontFamily;
-    expect(fam).toContain('Handjet');
+    expect(fam).toContain('IBM Plex Mono');
   });
 });

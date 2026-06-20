@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
 import { SidePanelApp, resolveActivePlatform } from '../src/entrypoints/sidepanel/SidePanelApp';
+import { SETTINGS_KEY } from '../src/core/settings';
 
 // --- minimal chrome shim: tabs (active-tab URL + change events), storage.local
 //     (settings), and runtime (worker messaging + openOptionsPage) -------------
@@ -20,7 +21,10 @@ function makeChrome(initialUrl: string | undefined) {
   let activeUrl = initialUrl;
   const activated = new Set<TabListener>();
   const updated = new Set<TabListener>();
-  const store: Record<string, unknown> = {};
+  // Seed onboarding as complete so these (pre-onboarding) scenarios exercise the
+  // platform branch (shell / empty), not the first-run onboarding surface. The
+  // onboarding gate itself is covered in onboarding-*.test.tsx.
+  const store: Record<string, unknown> = { [SETTINGS_KEY]: { onboardingCompleted: true } };
   const changeListeners = new Set<ChangeListener>();
   const sendMessage = vi.fn(async () => ({ ok: false, error: { code: 'no_response' } }));
 

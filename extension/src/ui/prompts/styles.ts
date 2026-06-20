@@ -49,7 +49,7 @@ export const PROMPTS_CSS = `
 .sk-prompt-card__title { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--sk-text-title); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The inert slash alias (no insertion until C13): a quiet monospace badge. */
 .sk-prompt-card__slug {
-  flex: none; font-family: var(--sk-font-dot, monospace); font-size: var(--sk-text-xs); color: var(--sk-color-accent);
+  flex: none; font-family: var(--sk-font-label, monospace); font-size: var(--sk-text-xs); color: var(--sk-color-accent);
   background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--sk-color-accent) 35%, transparent);
   border-radius: var(--sk-radius); padding: 0 var(--sk-space-1);
@@ -79,7 +79,7 @@ export const PROMPTS_CSS = `
 /* The highlighted {{variable}} chip in a body excerpt / editor preview — derived
    from the same tokenizer scan as the parsed variable list. */
 .sk-prompt-var {
-  font-family: var(--sk-font-dot, monospace); font-size: 0.92em; color: var(--sk-color-accent);
+  font-family: var(--sk-font-label, monospace); font-size: 0.92em; color: var(--sk-color-accent);
   background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent);
   border-radius: var(--sk-radius); padding: 0 3px; white-space: nowrap;
 }

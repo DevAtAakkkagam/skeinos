@@ -28,7 +28,7 @@ const STR = {
   platformAll: 'All platforms',
   folder: 'Folder',
   folderAll: 'All folders',
-  folderUnfiled: 'Unfiled',
+  folderUnfiled: 'Uncategorized',
   dateFrom: 'Updated after',
   dateTo: 'Updated before',
   archived: 'Include archived',
@@ -40,7 +40,7 @@ const STR = {
   groupPrompts: 'Prompts',
   searching: 'Searching…',
   error: 'Search is unavailable right now. Try again.',
-  unfiled: 'Unfiled',
+  unfiled: 'Uncategorized',
   // Privacy reassurance + keyboard legend pinned to the panel foot (design D-7).
   indexedLocally: 'Indexed locally on your device',
   hintNavigate: 'navigate',

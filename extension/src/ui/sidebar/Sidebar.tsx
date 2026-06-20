@@ -77,7 +77,7 @@ const STR = {
   delete: 'Delete',
   createTitle: 'New folder',
   editTitle: 'Edit folder',
-  unfiled: 'Unfiled',
+  unfiled: 'Uncategorized',
   expand: 'Expand',
   collapse: 'Collapse',
   menuTrigger: 'Folder actions',
@@ -192,7 +192,9 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
 
   // Which nodes are expanded to reveal their conversations (folder ids + the
   // UNFILED sentinel). Local view state only — never authoritative (PREACT rule).
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Unfiled starts expanded so its conversations lead on first paint (the section
+  // only renders when there are unfiled chats); the user can collapse it freely.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set([UNFILED]));
   // A pinned-row "jump-to" in flight: the canonical tree row to scroll into view
   // once the path to it has expanded and re-rendered. Cleared by the scroll effect.
   const [jumpTarget, setJumpTarget] = useState<string | null>(null);
@@ -531,6 +533,13 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   const hasArchive = archivedConvs.length > 0 || tree.archived.length > 0;
   const archiveCount = tree.archived.length + archivedConvs.length;
 
+  // With zero folders we used to lead with a full "create your first folder" card.
+  // But if the user already has unfiled or archived conversations, that blank-slate
+  // pitch is wrong — there IS content. In that case the create prompt is demoted to
+  // a slim ghost row (below) and the Unfiled group / Archive dock lead the panel.
+  // The full card only stands in for a genuinely empty workspace (true first run).
+  const hasContentElsewhere = unfiledConvs.length > 0 || hasArchive;
+
   return (
     <div ref={sidebarRef} class="sk-sidebar" data-testid="sk-sidebar">
       <div class="sk-sidebar__scroll" data-testid="sk-sidebar-scroll">
@@ -610,28 +619,48 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                   </div>
                 )
               : status === 'ready'
-                ? // A read succeeded and returned nothing: the honest empty state.
-                  (
-                    <div class="sk-empty" data-testid="sk-folders-empty">
-                      <span class="sk-empty__icon" aria-hidden="true">
-                        <FolderIcon size={40} />
-                      </span>
-                      <p class="sk-empty__title">{STR.noFolders}</p>
-                      <p class="sk-empty__body">{STR.emptyBody}</p>
+                ? // A read succeeded but there are no folders. If the user already
+                  // has conversations elsewhere (unfiled or archived), don't lead
+                  // with a blank-slate pitch — demote "create your first folder" to a
+                  // slim ghost row so the Unfiled group / Archive dock carry the
+                  // panel. Only a genuinely empty workspace gets the full first-run
+                  // card. (The section-header "+" stays the persistent create path.)
+                  hasContentElsewhere
+                  ? (
                       <button
-                        class="sk-btn sk-btn--icon"
+                        class="sk-ghost-row"
                         type="button"
-                        data-testid="sk-empty-new-folder"
+                        data-testid="sk-ghost-new-folder"
                         onClick={(e) => {
                           (e as MouseEvent).stopPropagation();
                           setDialog({ mode: 'create', parentId: null });
                         }}
                       >
                         <PlusIcon size={16} />
-                        {STR.newFolder}
+                        <span>{STR.newFolder}</span>
                       </button>
-                    </div>
-                  )
+                    )
+                  : (
+                      <div class="sk-empty" data-testid="sk-folders-empty">
+                        <span class="sk-empty__icon" aria-hidden="true">
+                          <FolderIcon size={40} />
+                        </span>
+                        <p class="sk-empty__title">{STR.noFolders}</p>
+                        <p class="sk-empty__body">{STR.emptyBody}</p>
+                        <button
+                          class="sk-btn sk-btn--icon"
+                          type="button"
+                          data-testid="sk-empty-new-folder"
+                          onClick={(e) => {
+                            (e as MouseEvent).stopPropagation();
+                            setDialog({ mode: 'create', parentId: null });
+                          }}
+                        >
+                          <PlusIcon size={16} />
+                          {STR.newFolder}
+                        </button>
+                      </div>
+                    )
                 : // Still loading: a delayed spinner (nothing on the warm fast path).
                   showSpinner && (
                     <div class="sk-empty" data-testid="sk-folders-loading" role="status" aria-live="polite">

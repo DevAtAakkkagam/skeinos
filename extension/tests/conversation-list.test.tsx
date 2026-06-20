@@ -94,7 +94,7 @@ describe('ConversationList rendering (4.1)', () => {
 
   it('shows the unfiled empty copy for the Unfiled node', () => {
     renderList([], { context: { kind: 'unfiled' } });
-    expect($('[data-testid=sk-conv-empty]')!.textContent).toContain('No unfiled conversations');
+    expect($('[data-testid=sk-conv-empty]')!.textContent).toContain('No uncategorized conversations');
   });
 
   it('caps the rendered rows and surfaces the cap (no silent truncation)', () => {

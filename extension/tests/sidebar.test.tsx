@@ -92,6 +92,40 @@ describe('Sidebar empty state (sidebar-shell)', () => {
     await new Promise((r) => setTimeout(r, 0)); // let Preact flush the state update
     expect($('[data-testid=sk-folder-dialog]')).toBeTruthy();
   });
+
+  it('does not fire the blank-slate card when unfiled conversations exist', () => {
+    renderSidebar(
+      makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: [conv('u1'), conv('u2')] }),
+    );
+    // The full "No folders yet" card must NOT lead over real content...
+    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    // ...it is demoted to a slim ghost row, and the Unfiled group leads.
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
+    expect($('[data-testid=sk-unfiled]')).toBeTruthy();
+  });
+
+  it('does not fire the blank-slate card when archived conversations exist', () => {
+    renderSidebar(
+      makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: [conv('a1', { archived: true })] }),
+    );
+    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
+    expect($('[data-testid=sk-archive-dock]')).toBeTruthy();
+  });
+
+  it('still fires the full card for a genuinely empty workspace (no folders, no content)', () => {
+    renderSidebar(makeView({ active: [], pinned: [], archived: [] }));
+    expect($('[data-testid=sk-folders-empty]')).toBeTruthy();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
+  });
+
+  it('the demoted ghost row opens the create-folder dialog', async () => {
+    renderSidebar(makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: [conv('u1')] }));
+    expect($('[data-testid=sk-folder-dialog]')).toBeNull();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect($('[data-testid=sk-folder-dialog]')).toBeTruthy();
+  });
 });
 
 describe('Sidebar pinned & archive rows (folders delta)', () => {
@@ -266,8 +300,9 @@ describe('Sidebar inline expansion (drill-in)', () => {
         },
       ),
     );
-    // Nothing is expanded initially, and the Archive dock is collapsed.
-    expect($$('[data-testid=sk-conv-row]')).toHaveLength(0);
+    // Folders start collapsed; only the Unfiled node is open by default, so just its
+    // loose conversation shows. The Archive dock is collapsed.
+    expect($$('[data-testid=sk-conv-title]').map((e) => e.textContent)).toEqual(['Loose']);
     const archive = $('[data-testid=sk-archive]') as HTMLDetailsElement;
     expect(archive.open).toBe(false);
 
@@ -290,7 +325,7 @@ describe('Sidebar inline expansion (drill-in)', () => {
     expect($$('[data-testid=sk-conv-row]')).toHaveLength(0);
   });
 
-  it('lists unfiled conversations under the Unfiled node when expanded', async () => {
+  it('shows unfiled conversations under the Unfiled node, expanded by default', async () => {
     renderSidebar(
       makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
         conversations: [conv('u1', { folderId: null, title: 'Loose' })],
@@ -299,11 +334,13 @@ describe('Sidebar inline expansion (drill-in)', () => {
     const unfiled = $('[data-testid=sk-unfiled]')!;
     expect(unfiled).toBeTruthy();
     expect(unfiled.querySelector('[data-testid=sk-unfiled-count]')!.textContent).toBe('1');
-    expect($('[data-testid=sk-conv-row]')).toBeNull();
+    // Expanded on first paint — the loose conversation leads without a click.
+    expect($$('[data-testid=sk-conv-row]')).toHaveLength(1);
 
+    // The caret still toggles it closed.
     ($('[data-testid=sk-unfiled-caret]') as HTMLElement).click();
     await flush();
-    expect($$('[data-testid=sk-conv-row]')).toHaveLength(1);
+    expect($('[data-testid=sk-conv-row]')).toBeNull();
   });
 
   it('excludes archived conversations from a folder badge and its rendered rows', async () => {

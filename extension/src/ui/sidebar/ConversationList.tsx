@@ -34,7 +34,7 @@ const RENDER_CAP = 50;
 
 const STR = {
   emptyFolder: 'Nothing here yet',
-  emptyUnfiled: 'No unfiled conversations',
+  emptyUnfiled: 'No uncategorized conversations',
   open: 'Open conversation',
   menuTrigger: 'Conversation actions',
   move: 'Move to folder',

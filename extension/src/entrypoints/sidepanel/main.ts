@@ -2,6 +2,7 @@ import { h } from 'preact';
 import { mount } from '../../ui/mount';
 import { SidePanelApp } from './SidePanelApp';
 import { SIDEBAR_CSS } from '../../ui/sidebar/styles';
+import { ONBOARDING_CSS } from '../../ui/onboarding/styles';
 import { getSettings, subscribeSettings } from '../../core/settings';
 
 // The side panel bootstraps the same shadow-DOM mount + theme tokens as the
@@ -25,7 +26,7 @@ async function main() {
 
   const handle = mount(document.body, h(SidePanelApp, {}), { theme: initial.theme });
   const style = document.createElement('style');
-  style.textContent = SIDEBAR_CSS;
+  style.textContent = `${SIDEBAR_CSS}\n${ONBOARDING_CSS}`;
   handle.shadowRoot.appendChild(style);
   subscribeSettings((s) => handle.setTheme(s.theme));
 }

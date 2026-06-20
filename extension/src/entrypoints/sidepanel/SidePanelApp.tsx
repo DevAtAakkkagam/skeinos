@@ -13,6 +13,9 @@ import { useEffect, useState } from 'preact/hooks';
 import { matchPlatform } from '../../adapters/runtime/host-match';
 import { ChatIcon } from '../../ui/components/Icon';
 import { SidebarShell } from '../../ui/sidebar/SidebarShell';
+import { OnboardingSurface } from '../../ui/onboarding/OnboardingSurface';
+import { isOnboardingComplete } from '../../ui/onboarding/gate';
+import { getSettings, subscribeSettings } from '../../core/settings';
 import type { PlatformId } from '../../shared/types';
 
 const STR = {
@@ -46,6 +49,10 @@ export async function resolveActivePlatform(): Promise<PlatformId | null> {
 export function SidePanelApp() {
   // `undefined` = not yet resolved; `null` = resolved, no supported host.
   const [platform, setPlatform] = useState<PlatformId | null | undefined>(undefined);
+  // `undefined` = onboarding state not yet resolved from storage; treat as "don't
+  // render onboarding yet" so a returning, onboarded user never flashes first-run
+  // UI (design D-4, "unresolved" risk).
+  const [onboarded, setOnboarded] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
     let live = true;
@@ -65,6 +72,29 @@ export function SidePanelApp() {
       tabs?.onUpdated?.removeListener(update);
     };
   }, []);
+
+  useEffect(() => {
+    let live = true;
+    // Read the persisted gate on mount (survives worker/panel reload — [SW]) …
+    void getSettings().then((s) => {
+      if (live) setOnboarded(isOnboardingComplete(s));
+    });
+    // … and re-scope live when it changes, so completing onboarding in this panel
+    // (or anywhere) leaves the onboarding surface without a reload (D-3).
+    const dispose = subscribeSettings((s) => {
+      if (live) setOnboarded(isOnboardingComplete(s));
+    });
+    return () => {
+      live = false;
+      dispose();
+    };
+  }, []);
+
+  // Onboarding branch sits ABOVE the platform branch (D-4): it is platform-
+  // independent and must show even when no supported tab is active. While the
+  // gate is still resolving (`undefined`) render nothing to avoid a flash.
+  if (onboarded === undefined) return null;
+  if (!onboarded) return <OnboardingSurface />;
 
   if (platform == null) {
     // Neutral prompt for both "still resolving" and "no supported tab" — either

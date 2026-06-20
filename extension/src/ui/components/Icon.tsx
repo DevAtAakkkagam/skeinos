@@ -153,6 +153,25 @@ export function PinIcon({ size = 12, class: cls }: IconProps) {
   );
 }
 
+/** A shield outline — the "local-first / on-device" assurance glyph. */
+export function ShieldIcon({ size = 18, class: cls }: IconProps) {
+  return (
+    <Svg size={size} class={cls}>
+      <path d="M12 3l7 3v5c0 4.4-3 7.6-7 8.8-4-1.2-7-4.4-7-8.8V6z" />
+    </Svg>
+  );
+}
+
+/** A padlock — the "encrypted / only metadata leaves" assurance glyph. */
+export function LockIcon({ size = 18, class: cls }: IconProps) {
+  return (
+    <Svg size={size} class={cls}>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </Svg>
+  );
+}
+
 export function ChatIcon({ size = 40, class: cls }: IconProps) {
   return (
     <Svg size={size} class={cls}>

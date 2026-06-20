@@ -23,7 +23,7 @@ const SIDEBAR_FEATURE_CSS = `
 .sk-sidebar__section { display: flex; flex-direction: column; gap: var(--sk-space-1); }
 /* Overline · dot font · 13 · +34% track (Lattice). Pushed toward fg + weight 600
    so it reads as a structural label, not a faint caption. */
-.sk-sidebar__heading { font-family: var(--sk-font-dot); color: color-mix(in srgb, var(--sk-color-muted) 60%, var(--sk-color-fg)); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.34em; margin: var(--sk-space-2) 0 0; }
+.sk-sidebar__heading { font-family: var(--sk-font-label); color: color-mix(in srgb, var(--sk-color-muted) 60%, var(--sk-color-fg)); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.2em; margin: var(--sk-space-2) 0 0; }
 /* A standalone heading (PINNED) sits directly in the section, not inside a padded
    .sk-row like FOLDERS/ARCHIVE — so add the row's inline padding to line its label
    up with the other section labels. */
@@ -104,6 +104,14 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-empty__icon { display: inline-flex; color: var(--sk-color-muted); }
 .sk-empty__title { font-weight: 600; font-size: 15px; margin: 0; }
 .sk-empty__body { color: var(--sk-color-muted); font-size: 13px; margin: 0; }
+/* Demoted create affordance: when there are no folders yet but the user already
+   has unfiled/archived conversations, the full blank-slate card would wrongly lead
+   over real content. Instead a slim dashed "New folder" row sits under the FOLDERS
+   header (same dashed-ghost language as the "+ Tag" filter seam), muted at rest and
+   warming to the accent on hover/focus — a quiet invitation, not a pitch. */
+.sk-ghost-row { display: flex; align-items: center; gap: var(--sk-space-2); width: 100%; padding: var(--sk-space-1) var(--sk-space-2); border: 1px dashed var(--sk-color-border); border-radius: var(--sk-radius); background: none; color: var(--sk-color-muted); font: inherit; text-align: left; cursor: pointer; }
+.sk-ghost-row:hover, .sk-ghost-row:focus-visible { color: var(--sk-color-accent); border-color: color-mix(in srgb, var(--sk-color-accent) 50%, var(--sk-color-border)); background: color-mix(in srgb, var(--sk-color-accent) 8%, transparent); outline: none; }
+.sk-ghost-row svg { display: block; flex: none; }
 /* Load states: a delayed spinner (no flash on warm reads) and the failed-load
    retry affordance. Both reuse the centered sk-empty layout. */
 .sk-spinner { width: 22px; height: 22px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--sk-color-muted) 35%, transparent); border-top-color: var(--sk-color-accent); animation: sk-spin 0.7s linear infinite; }
@@ -216,8 +224,8 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
    chip keeps its accent tint through hover. The disabled "+ Tag" seam opts out below. */
 .sk-chip { background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); border: 0; border-radius: 999px; color: var(--sk-color-muted); font: inherit; font-size: 12px; padding: 2px var(--sk-space-2); cursor: pointer; }
 .sk-chip:not([disabled]):hover { color: var(--sk-color-fg); }
-.sk-chip--active { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); color: var(--sk-color-accent); }
-.sk-chip--active:hover { color: var(--sk-color-accent); }
+.sk-chip--active { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); }
+.sk-chip--active:hover { color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); }
 .sk-chip:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
 /* The "+ Tag" seam (inert until C7/M2): a dashed ghost that reads as a future add. */
 .sk-chip--add { background: none; border: 1px dashed var(--sk-color-border); }
@@ -235,7 +243,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
    dock can stay pinned to the bottom; it only frames the sidebar to fill height. */
 .sk-shell__body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sk-shell__footer { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-2) var(--sk-space-3); border-top: 1px solid var(--sk-color-border); }
-.sk-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--sk-color-accent); background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 40%, transparent); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); }
+.sk-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 40%, transparent); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); }
 .sk-sync { flex: 1; color: var(--sk-color-muted); font-size: 12px; }
 
 /* --- disabled feature stubs: present but visibly inert --------------------- */
