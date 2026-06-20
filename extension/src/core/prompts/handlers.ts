@@ -12,19 +12,25 @@
 
 import { broadcast, registerHandler } from '../../core/messaging';
 import { workspaceStore, type WorkspaceStore } from '../../core/store';
-import type { Prompt, PromptFolder } from '../../shared/types';
+import { normalize } from '../../core/search/normalize';
+import type { Prompt, PromptFolder, SnippetSegment } from '../../shared/types';
+import type { DomainId } from '../../shared/domains';
 import type {
   MutationResult,
+  PromptInstallResult,
   PromptMutationOp,
+  PromptSearchResult,
   PromptSelector,
   PromptSnapshot,
 } from '../../shared/prompts';
 import { parseVariables } from './template';
+import { installSeeds } from './seed';
 
 declare module '../../shared/messages' {
   interface RequestContracts {
     'prompts.query': { request: { selector: PromptSelector }; response: PromptSnapshot };
     'prompts.mutate': { request: { op: PromptMutationOp }; response: MutationResult };
+    'prompts.install': { request: { domain: DomainId }; response: PromptInstallResult };
   }
 }
 
@@ -53,7 +59,8 @@ async function requirePrompt(store: WorkspaceStore, id: string): Promise<Prompt>
 // Reads
 // ---------------------------------------------------------------------------
 
-/** The unified library (D-B): every non-deleted prompt + category, no counts. */
+/** The unified library (D-B): every non-deleted prompt + category, no counts; or a
+ *  ranked `prompt.search` scan over that same library (D-A). */
 export async function queryPromptLibrary(
   store: WorkspaceStore,
   selector: PromptSelector,
@@ -66,7 +73,122 @@ export async function queryPromptLibrary(
       ]);
       return { kind: 'prompt.library', prompts, folders };
     }
+    case 'prompt.search': {
+      // A direct scan of the small library (D-A): no postings index, so prompt
+      // content never enters `searchPostings` or the sync envelope. `query()` already
+      // excludes tombstones, so deleted prompts can't surface.
+      const prompts = await store.prompts.query();
+      const results = searchPrompts(prompts, selector.terms);
+      return { kind: 'prompt.search', results };
+    }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Prompt search (slice 4, design D-A..D-C) — a linear scan over the loaded
+// library. AND across terms over title/body/description/tags/slug, ranked
+// title-over-body with a recency tiebreak, each carrying a highlighted snippet.
+// ---------------------------------------------------------------------------
+
+/** Field weights for ranking: a term in the title outweighs one in the body or any
+ *  other searchable field, matching conversation search's title boost (D-C). */
+const TITLE_WEIGHT = 3;
+const OTHER_WEIGHT = 1;
+/** Tokens of context on each side of the first match in a snippet window. */
+const SNIPPET_WINDOW = 6;
+
+/** Normalize + split a term list into distinct, non-empty normalized terms (the same
+ *  tokenizer conversation search uses, so a typed term and a stored field collapse to
+ *  identical keys). An empty list (or all-blank terms) yields no terms. */
+function normalizeTerms(terms: string[]): string[] {
+  const out = new Set<string>();
+  for (const raw of terms) {
+    for (const t of normalize(raw).split(' ')) if (t) out.add(t);
+  }
+  return [...out];
+}
+
+/** Build a `{title, body, description, tags, slug}` haystack of normalized field
+ *  text for one prompt — the surface matching and ranking read from. */
+function fieldsOf(p: Prompt): { title: string; rest: string } {
+  const title = normalize(p.title);
+  const rest = normalize(
+    [p.body, p.description ?? '', (p.tags ?? []).join(' '), p.slug ?? ''].join(' '),
+  );
+  return { title, rest };
+}
+
+/** Highlight the matching runs in `text` against the normalized terms, windowed
+ *  around the first match. Falls back to a leading excerpt (no highlight) when no
+ *  term hits this field, so a title/tag-only match still shows readable body text. */
+function buildSnippet(text: string, terms: string[]): SnippetSegment[] {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return [];
+  const hits = tokens.map((tok) => {
+    const norm = normalize(tok);
+    return norm.length > 0 && terms.some((t) => norm.includes(t));
+  });
+  const first = hits.indexOf(true);
+  if (first === -1) {
+    return tokens.slice(0, SNIPPET_WINDOW * 2).map((text) => ({ text, match: false }));
+  }
+  const start = Math.max(0, first - SNIPPET_WINDOW);
+  const end = Math.min(tokens.length, first + SNIPPET_WINDOW + 1);
+  const segments: SnippetSegment[] = [];
+  for (let i = start; i < end; i++) segments.push({ text: tokens[i], match: hits[i] });
+  return segments;
+}
+
+/** Recency key for the tiebreak: last use if known, else last update. */
+function recencyOf(p: Prompt): number {
+  return p.lastUsedAt ?? p.updatedAt ?? 0;
+}
+
+/** Filter the library to prompts matching ALL terms (in any searchable field), rank
+ *  title-over-body with a recency tiebreak, and attach a highlighted snippet. An
+ *  empty term list returns `[]` (never the whole library). */
+export function searchPrompts(prompts: Prompt[], rawTerms: string[]): PromptSearchResult[] {
+  const terms = normalizeTerms(rawTerms);
+  if (terms.length === 0) return [];
+
+  const scored: { p: Prompt; score: number }[] = [];
+  for (const p of prompts) {
+    const { title, rest } = fieldsOf(p);
+    let score = 0;
+    let matchedAll = true;
+    for (const term of terms) {
+      const inTitle = title.includes(term);
+      const inRest = rest.includes(term);
+      if (!inTitle && !inRest) {
+        matchedAll = false;
+        break;
+      }
+      score += inTitle ? TITLE_WEIGHT : OTHER_WEIGHT;
+    }
+    if (matchedAll) scored.push({ p, score });
+  }
+
+  scored.sort((a, b) => b.score - a.score || recencyOf(b.p) - recencyOf(a.p));
+
+  return scored.map(({ p }) => {
+    // Snippet from the first field that carries a match (body, then description),
+    // falling back to a leading body excerpt (D-B).
+    const body = buildSnippet(p.body, terms);
+    const snippet =
+      body.some((s) => s.match) || !p.description
+        ? body
+        : (() => {
+            const desc = buildSnippet(p.description ?? '', terms);
+            return desc.some((s) => s.match) ? desc : body;
+          })();
+    return {
+      id: p.id,
+      title: p.title,
+      snippet,
+      targetModels: p.targetModels ?? [],
+      ...(p.slug !== undefined ? { slug: p.slug } : {}),
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -172,5 +294,15 @@ export function registerPromptHandlers(): void {
       await broadcast({ kind: 'state.changed', stores: result.stores });
     }
     return result;
+  });
+  registerHandler('prompts.install', async (req) => {
+    // The single writer installs a domain's seeds (D-E). Broadcast only when at
+    // least one prompt was inserted, so a no-op re-install never wakes every tab
+    // (mirrors the mutate broadcast gate).
+    const installed = await installSeeds(await workspaceStore(), req.domain);
+    if (installed > 0) {
+      await broadcast({ kind: 'state.changed', stores: ['prompts'] });
+    }
+    return { installed };
   });
 }

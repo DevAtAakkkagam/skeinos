@@ -7,8 +7,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
 import { MoveToFolderPicker, type PickerConversation } from '../src/ui/sidebar/MoveToFolderPicker';
+import type { MutateResult } from '../src/ui/sidebar/useWorkspace';
 import type { Folder, FolderTreeNode } from '../src/shared/types';
-import type { FolderTreeSnapshot } from '../src/shared/workspace';
+import type { FolderTreeSnapshot, MutationOp } from '../src/shared/workspace';
 
 function folder(id: string, over: Partial<Folder> = {}): Folder {
   return {
@@ -45,7 +46,7 @@ const TREE: FolderTreeSnapshot = {
 let container: HTMLElement | null = null;
 function renderPicker(
   conversation: PickerConversation,
-  onSubmit = vi.fn(async () => ({ ok: true, applied: true })),
+  onSubmit = vi.fn(async (_op: MutationOp): Promise<MutateResult> => ({ ok: true, applied: true })),
   onClose = vi.fn(),
 ) {
   container = document.createElement('div');
@@ -118,7 +119,7 @@ describe('MoveToFolderPicker filtering (2.1)', () => {
 
 describe('MoveToFolderPicker inline create (quick-file)', () => {
   it('creates a folder with defaults then files the conversation into it, and closes', async () => {
-    const onSubmit = vi.fn(async () => ({ ok: true, applied: true }));
+    const onSubmit = vi.fn(async (_op: MutationOp): Promise<MutateResult> => ({ ok: true, applied: true }));
     const onClose = vi.fn();
     renderPicker(unfiled, onSubmit, onClose);
     await flush();
@@ -156,7 +157,7 @@ describe('MoveToFolderPicker inline create (quick-file)', () => {
   });
 
   it('does not file (and keeps the picker open) when the folder create fails', async () => {
-    const onSubmit = vi.fn(async () => ({ ok: false, applied: false }));
+    const onSubmit = vi.fn(async (_op: MutationOp): Promise<MutateResult> => ({ ok: false, applied: false }));
     const onClose = vi.fn();
     renderPicker(unfiled, onSubmit, onClose);
     await flush();
@@ -250,7 +251,7 @@ describe('MoveToFolderPicker unfiling (2.2)', () => {
 
 describe('MoveToFolderPicker failure handling (2.4)', () => {
   it('keeps the picker open and surfaces an error when the assign does not take effect', async () => {
-    const onSubmit = vi.fn(async () => ({ ok: false, applied: false }));
+    const onSubmit = vi.fn(async (_op: MutationOp): Promise<MutateResult> => ({ ok: false, applied: false }));
     const onClose = vi.fn();
     renderPicker(unfiled, onSubmit, onClose);
     await flush();

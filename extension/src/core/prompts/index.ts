@@ -12,4 +12,10 @@ export {
   mutatePromptLibrary,
   registerPromptHandlers,
 } from './handlers';
-export { queryPromptLibraryRemote, mutatePromptLibraryRemote } from './client';
+export {
+  queryPromptLibraryRemote,
+  mutatePromptLibraryRemote,
+  installPromptSeedsRemote,
+} from './client';
+export { installSeeds } from './seed';
+export { CATALOG, seedsForDomain, type SeedPrompt } from './catalog';

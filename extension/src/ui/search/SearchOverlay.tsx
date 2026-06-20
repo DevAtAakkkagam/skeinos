@@ -13,7 +13,9 @@ import { PlatformLogo } from '../components/PlatformLogo';
 import { openConversation } from '../sidebar/openConversation';
 import { formatRelativeTime } from '../sidebar/relativeTime';
 import type { Folder, PlatformId, SearchResult, SnippetSegment } from '../../shared/types';
+import type { PromptSearchResult } from '../../shared/prompts';
 import { useSearch, type SearchView } from './useSearch';
+import { usePromptSearch, type PromptSearchView } from './usePromptSearch';
 
 const STR = {
   title: 'Search conversations',
@@ -32,8 +34,10 @@ const STR = {
   archived: 'Include archived',
   tag: 'Tag',
   tagComingSoon: 'Tag filter — coming soon',
-  empty: 'No conversations match your search.',
+  empty: 'No conversations or prompts match your search.',
   idle: 'Type to search your conversations.',
+  groupConversations: 'Conversations',
+  groupPrompts: 'Prompts',
   searching: 'Searching…',
   error: 'Search is unavailable right now. Try again.',
   unfiled: 'Unfiled',
@@ -73,8 +77,13 @@ export interface SearchOverlayProps {
   platforms?: PlatformId[];
   /** Close the overlay (Esc / backdrop / close button / after opening a result). */
   onClose: () => void;
+  /** Navigate to a prompt result in the Prompts tab (design D-E). Wired by the shell
+   *  to the slice-3 `openPrompt` seam; the overlay stays presentation-only. */
+  onOpenPrompt?: (id: string) => void;
   /** Injectable search view for tests; production uses the live worker-backed hook. */
   view?: SearchView;
+  /** Injectable prompt-search view for tests; production uses {@link usePromptSearch}. */
+  promptView?: PromptSearchView;
 }
 
 /** Render a highlighted snippet: matched token runs become `<mark>`, the rest plain
@@ -97,11 +106,26 @@ export function SearchOverlay({
   folders = [],
   platforms = [],
   onClose,
+  onOpenPrompt,
   view,
+  promptView,
 }: SearchOverlayProps) {
   const live = useSearch();
   const search = view ?? live;
   const { queryText, setQueryText, filters, setFilters, results, status } = search;
+
+  // The prompt half of the overlay (design D-D): a second source over the same query
+  // text, rendered as its own group. Tests inject `promptView`; production uses the
+  // live hook (called unconditionally so hook order is stable).
+  const livePrompts = usePromptSearch(queryText);
+  const prompts = promptView ?? livePrompts;
+  const promptResults = prompts.results;
+
+  // The unified, flattened view-model: conversations then prompts. The active index
+  // spans both arrays so ↑/↓ crosses the group boundary; an index ≥ the conversation
+  // count maps into the prompt group.
+  const convCount = results.length;
+  const total = convCount + promptResults.length;
 
   // Resolve a result's folder to its display path ("Parent / Child"), walking up
   // the parent chain. Built once per folder set; an unfiled result has no chip.
@@ -129,18 +153,44 @@ export function SearchOverlay({
     inputRef.current?.focus();
   }, []);
 
-  // Reset the active row to the top whenever the result set changes.
-  useEffect(() => {
+  // Reset the active row to the top on a new keystroke (a new search) — see the
+  // input's `onInput`. Done there, not in a mount-time effect, so the reset can never
+  // race a keyboard navigation that happens before the first effect flush. Clamping
+  // (below) keeps the index in range when a live re-query shrinks the result set,
+  // without yanking the cursor back to the top on every `state.changed`.
+  const onQueryInput = (value: string): void => {
     setActive(0);
-  }, [results]);
+    setQueryText(value);
+  };
 
   // Local date-string state for the two date inputs, mapped into epoch filters.
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const openResult = (result: SearchResult): void => {
+  // Keep the active row in range as result sets change between renders, without
+  // resetting it to the top (that is the query-text effect's job).
+  const activeClamped = total > 0 ? Math.min(active, total - 1) : 0;
+
+  const openConversationResult = (result: SearchResult): void => {
     void openConversation({ platform: result.platform, nativeId: result.nativeId }, activePlatform);
     onClose();
+  };
+
+  const openPromptResult = (result: PromptSearchResult): void => {
+    onOpenPrompt?.(result.id);
+    onClose();
+  };
+
+  // Open whatever the flattened active index points at: a conversation routes through
+  // `openConversation` (unchanged); a prompt navigates via `onOpenPrompt`.
+  const openAt = (index: number): void => {
+    if (index < convCount) {
+      const hit = results[index];
+      if (hit) openConversationResult(hit);
+    } else {
+      const hit = promptResults[index - convCount];
+      if (hit) openPromptResult(hit);
+    }
   };
 
   const onKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLInputElement>): void => {
@@ -149,14 +199,13 @@ export function SearchOverlay({
       onClose();
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActive((i) => Math.min(i + 1, results.length - 1));
+      setActive((i) => Math.min(i + 1, total - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActive((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const hit = results[active];
-      if (hit) openResult(hit);
+      openAt(activeClamped);
     }
   };
 
@@ -184,7 +233,12 @@ export function SearchOverlay({
   }, [filters.folderId]);
 
   const hasQuery = queryText.trim().length > 0;
-  const activeId = results.length > 0 ? `sk-sr-${active}` : undefined;
+  const activeId = total > 0 ? `sk-sr-${activeClamped}` : undefined;
+  // Combined overlay state machine over both sources (design D-F): "searching" while
+  // either source is in flight and nothing has landed; "error" only when both failed;
+  // "empty" only when both returned nothing for a non-empty query.
+  const searching = (status === 'searching' || prompts.status === 'searching') && total === 0;
+  const errored = status === 'error' && prompts.status === 'error';
 
   return (
     <div
@@ -207,14 +261,14 @@ export function SearchOverlay({
             type="text"
             class="sk-search-panel__input"
             role="combobox"
-            aria-expanded={results.length > 0}
+            aria-expanded={total > 0}
             aria-controls="sk-search-results"
             aria-activedescendant={activeId}
             aria-label={STR.inputLabel}
             placeholder={STR.placeholder}
             value={queryText}
             data-testid="sk-search-input"
-            onInput={(e) => setQueryText((e.target as HTMLInputElement).value)}
+            onInput={(e) => onQueryInput((e.target as HTMLInputElement).value)}
             onKeyDown={onKeyDown}
           />
           <button
@@ -309,15 +363,15 @@ export function SearchOverlay({
             <p class="sk-search-status" data-testid="sk-search-idle">
               {STR.idle}
             </p>
-          ) : status === 'searching' && results.length === 0 ? (
+          ) : searching ? (
             <p class="sk-search-status" data-testid="sk-search-searching">
               {STR.searching}
             </p>
-          ) : status === 'error' ? (
+          ) : errored ? (
             <p class="sk-search-status" data-testid="sk-search-error">
               {STR.error}
             </p>
-          ) : results.length === 0 ? (
+          ) : total === 0 ? (
             <p class="sk-search-status" data-testid="sk-search-empty">
               {STR.empty}
             </p>
@@ -328,16 +382,23 @@ export function SearchOverlay({
               role="listbox"
               aria-label={STR.results}
             >
+              {/* Conversations group (design D-F): a group with zero results renders
+                  no header, so a prompt-only match shows no empty "Conversations". */}
+              {convCount > 0 && (
+                <li class="sk-search-group" role="presentation" data-testid="sk-search-group-header">
+                  {STR.groupConversations}
+                </li>
+              )}
               {results.map((r, i) => (
                 <li
                   key={r.docId}
                   id={`sk-sr-${i}`}
-                  class={`sk-sr${i === active ? ' sk-sr--active' : ''}`}
+                  class={`sk-sr${i === activeClamped ? ' sk-sr--active' : ''}`}
                   role="option"
-                  aria-selected={i === active}
+                  aria-selected={i === activeClamped}
                   data-testid="sk-search-result"
                   onMouseEnter={() => setActive(i)}
-                  onClick={() => openResult(r)}
+                  onClick={() => openConversationResult(r)}
                 >
                   <span class="sk-sr__logo" aria-hidden="true">
                     <PlatformLogo platform={r.platform} size={16} />
@@ -368,6 +429,37 @@ export function SearchOverlay({
                   </span>
                 </li>
               ))}
+
+              {/* Prompts group: same listbox, flattened index continues after the
+                  conversations so ↑/↓ crosses the boundary seamlessly. */}
+              {promptResults.length > 0 && (
+                <li class="sk-search-group" role="presentation" data-testid="sk-search-group-header">
+                  {STR.groupPrompts}
+                </li>
+              )}
+              {promptResults.map((p, j) => {
+                const flat = convCount + j;
+                return (
+                  <li
+                    key={`prompt-${p.id}`}
+                    id={`sk-sr-${flat}`}
+                    class={`sk-sr sk-sr--prompt${flat === activeClamped ? ' sk-sr--active' : ''}`}
+                    role="option"
+                    aria-selected={flat === activeClamped}
+                    data-testid="sk-search-prompt-result"
+                    onMouseEnter={() => setActive(flat)}
+                    onClick={() => openPromptResult(p)}
+                  >
+                    <span class="sk-sr__logo" aria-hidden="true">
+                      <SearchIcon size={16} />
+                    </span>
+                    <span class="sk-sr__text">
+                      <span class="sk-sr__title">{p.title}</span>
+                      <Snippet segments={p.snippet} />
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

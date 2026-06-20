@@ -8,6 +8,13 @@
 // Light is the default (plain :host). `data-theme="dark"` overrides; `system`
 // follows prefers-color-scheme. The attribute is flipped on the host element by
 // the mount harness, so :host([data-theme=...]) selects the active mode.
+//
+// Scrollbar convention: every scroll container (anything with `overflow:auto`
+// or `overflow:scroll`) MUST also set `scrollbar-gutter: stable`, so the
+// scrollbar's width is reserved as a permanent gutter and the layout never
+// shifts when the bar appears/disappears. This is per-container by design — a
+// blanket `*` rule would wrongly reserve a gutter on `overflow:hidden` ellipsis
+// boxes, which are scroll containers too.
 
 export const THEME_CSS = `
 :host {

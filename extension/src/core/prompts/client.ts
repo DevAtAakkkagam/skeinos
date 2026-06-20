@@ -6,7 +6,14 @@
 // the worker-side `queryPromptLibrary`/`mutatePromptLibrary` (which take a `store`).
 
 import { send, sendWithRetry } from '../messaging';
-import type { MutationResult, PromptMutationOp, PromptSelector, PromptSnapshot } from '../../shared/prompts';
+import type {
+  MutationResult,
+  PromptInstallResult,
+  PromptMutationOp,
+  PromptSelector,
+  PromptSnapshot,
+} from '../../shared/prompts';
+import type { DomainId } from '../../shared/domains';
 import type { Response } from '../../shared/messages';
 
 /** Run a prompt-library read against the worker. Reads are idempotent, so they opt
@@ -24,4 +31,13 @@ export function mutatePromptLibraryRemote(
   op: PromptMutationOp,
 ): Promise<Response<MutationResult>> {
   return send({ kind: 'prompts.mutate', op });
+}
+
+/** Install a domain's starter prompts through the worker (the single writer). The
+ *  install is idempotent on the worker side (dedupe by `seedId`), so it opts into
+ *  transient-transport retry — a lost ack simply re-runs a no-op that inserts 0. */
+export function installPromptSeedsRemote(
+  domain: DomainId,
+): Promise<Response<PromptInstallResult>> {
+  return sendWithRetry({ kind: 'prompts.install', domain });
 }

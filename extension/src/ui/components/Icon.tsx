@@ -160,3 +160,16 @@ export function ChatIcon({ size = 40, class: cls }: IconProps) {
     </Svg>
   );
 }
+
+/** The Prompts-tab empty-state glyph: a document with text lines (the prompt-library
+ *  analog of {@link FolderIcon}). */
+export function PromptIcon({ size = 40, class: cls }: IconProps) {
+  return (
+    <Svg size={size} class={cls}>
+      <path d="M6 3h8l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path d="M13 3v5h5" />
+      <path d="M8 13h8" />
+      <path d="M8 17h5" />
+    </Svg>
+  );
+}

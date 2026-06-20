@@ -29,8 +29,12 @@ async function freshStore(): Promise<WorkspaceStore> {
   return makeWorkspaceStore(db);
 }
 
-async function library(store: WorkspaceStore): Promise<PromptSnapshot> {
-  return queryPromptLibrary(store, { kind: 'prompt.library' });
+async function library(
+  store: WorkspaceStore,
+): Promise<Extract<PromptSnapshot, { kind: 'prompt.library' }>> {
+  const snap = await queryPromptLibrary(store, { kind: 'prompt.library' });
+  if (snap.kind !== 'prompt.library') throw new Error('expected prompt.library snapshot');
+  return snap;
 }
 
 const createOp = (over: Partial<Extract<PromptMutationOp, { op: 'prompt.create' }>> = {}) =>

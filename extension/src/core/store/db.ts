@@ -64,6 +64,15 @@ export const MIGRATIONS: Migration[] = [
     }
     db.createObjectStore('searchPostings', { keyPath: 'prefix' });
   },
+  // v5 — optional `domain` / `seedId` fields on `Prompt` (prompt-seed-catalog, D-F).
+  // Both are optional, non-indexed record fields, so existing `prompts` rows stay
+  // valid unchanged and read back with the fields `undefined` — exactly like the v3
+  // `ConversationIndex` additions. This step exists only to record the additive bump
+  // as an explicit, append-only version ([STORE]); it is a no-op.
+  () => {
+    // Intentionally empty — additive optional record fields require no structural
+    // change to the (schemaless-per-record) IndexedDB object store.
+  },
 ];
 
 /**

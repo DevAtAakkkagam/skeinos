@@ -6,21 +6,55 @@
 // (the messaging seam), so prompts get their own kind pair without editing the hub
 // or coupling into `workspace.*` (owned by `core/folders`).
 
-import type { Prompt, PromptFolder, PlatformId } from './types';
+import type { Prompt, PromptFolder, PlatformId, SnippetSegment } from './types';
+import type { DomainId } from './domains';
 
 export type { MutationResult } from './workspace';
 
-/** A read request against the prompt library, discriminated by `kind`. */
-export type PromptSelector = { kind: 'prompt.library' };
+/** The reply to a `prompts.install` request: how many seeds the worker inserted
+ *  (0 when the domain's seeds were all already present — an idempotent no-op). */
+export interface PromptInstallResult {
+  installed: number;
+}
 
-/** The result of a {@link PromptSelector}: the unified library. Category and tag
- *  counts are derived client-side from `prompts` (D-B) — never stored or returned,
- *  so a badge can never disagree with the rows it labels. Excludes tombstones. */
-export type PromptSnapshot = {
-  kind: 'prompt.library';
-  prompts: Prompt[];
-  folders: PromptFolder[];
-};
+/** The payload of a `prompts.install` request: the domain whose seeds to install. */
+export interface PromptInstallRequest {
+  domain: DomainId;
+}
+
+/** A read request against the prompt library, discriminated by `kind`. The
+ *  `prompt.search` variant (slice 4, design D-A) rides the same `prompts.query`
+ *  kind — a direct in-worker scan of the small library, never a postings entry. */
+export type PromptSelector =
+  | { kind: 'prompt.library' }
+  | { kind: 'prompt.search'; terms: string[] };
+
+/** One ranked prompt-search hit (design D-B): the fields a result row renders,
+ *  reusing the search overlay's {@link SnippetSegment} so prompt rows highlight
+ *  exactly like conversation rows. Local-only — never enters the sync envelope or
+ *  the conversation postings index. */
+export interface PromptSearchResult {
+  id: string;
+  title: string;
+  snippet: SnippetSegment[];
+  targetModels: PlatformId[];
+  slug?: string;
+}
+
+/** The result of a {@link PromptSelector}, discriminated by `kind`. `prompt.library`
+ *  returns the unified library (category/tag counts are derived client-side per D-B —
+ *  never stored or returned); `prompt.search` returns the ranked matches. Both
+ *  exclude tombstones. */
+export type PromptSnapshot =
+  | {
+      kind: 'prompt.library';
+      prompts: Prompt[];
+      folders: PromptFolder[];
+    }
+  | {
+      kind: 'prompt.search';
+      results: PromptSearchResult[];
+    };
 
 /** A write request against the prompt library, discriminated by `op`. The client
  *  supplies a generated id on creates and the raw `body`; it NEVER carries

@@ -47,7 +47,7 @@ Deleting a syncable record SHALL mark it `deleted: true` and retain it as a tomb
 
 ### Requirement: Versioned schema with explicit migrations
 
-The store SHALL define one versioned IndexedDB database whose object stores and indexes match the data model, and SHALL apply schema changes through an explicit, ordered, add-only migration list. The `searchPostings` store SHALL be keyed by `prefix` (prefix-shard layout per LLD §8.1 / D26), each record holding many terms.
+The store SHALL define one versioned IndexedDB database whose object stores and indexes match the data model, and SHALL apply schema changes through an explicit, ordered, add-only migration list. The `searchPostings` store SHALL be keyed by `prefix` (prefix-shard layout per LLD §8.1 / D26), each record holding many terms. Additive optional `Prompt` fields (`domain`, `seedId`) SHALL be introduced by an appended no-op version step that records the bump without rewriting existing `prompts` rows.
 
 #### Scenario: All declared stores and indexes exist at the current version
 
@@ -67,6 +67,12 @@ The store SHALL define one versioned IndexedDB database whose object stores and 
 - **THEN** the `searchPostings` store is dropped and recreated with key path `prefix` at the bumped database version
 - **AND** no posting rows require transformation because indexing has not yet run
 - **AND** all other stores (including `conversations` and `activeConversations`) and their records are unaffected
+
+#### Scenario: Prompt domain/seedId additions are a no-data migration
+
+- **WHEN** a new version step is appended to the add-only list for the optional `Prompt.domain` and `Prompt.seedId` fields
+- **THEN** the step is a no-op that bumps the database version without altering any object store or rewriting any `prompts` row
+- **AND** existing `prompts` records remain readable with both new fields read as `undefined`
 
 ### Requirement: Multi-store atomic transactions
 

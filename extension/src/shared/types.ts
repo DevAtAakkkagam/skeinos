@@ -5,6 +5,8 @@
 // records (`ConversationIndex`, `Comparison`) deliberately do NOT carry the
 // envelope: they never leave the device (PRIV-1), so there is nothing to sync.
 
+import type { DomainId } from './domains';
+
 export type PlatformId =
   | 'claude'
   | 'gemini'
@@ -122,6 +124,20 @@ export interface Prompt extends SyncMeta {
   targetModels: PlatformId[];
   /** Slash alias (`/exp`) shown on cards. Inert until insertion ships (C13). */
   slug?: string;
+  /**
+   * The professional domain this prompt belongs to ({@link DomainId}). Set once when
+   * a catalog seed is installed and left as the stable onboarding filter key —
+   * independent of the user-editable `promptFolderId` category (D-A). Absent on
+   * hand-created prompts.
+   */
+  domain?: DomainId;
+  /**
+   * Catalog provenance: the originating seed's stable id (e.g.
+   * `software-engineering/code-review`). Lets the installer dedupe by presence so
+   * re-installing a domain never duplicates (D-B). Absent on hand-created prompts,
+   * which the installer never touches.
+   */
+  seedId?: string;
   promptFolderId: string | null;
   usageCount: number;
   lastUsedAt?: number;

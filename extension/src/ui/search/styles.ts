@@ -67,10 +67,21 @@ export const SEARCH_CSS = `
 .sk-search-filter input:disabled,
 .sk-search-filter--check[title] input:disabled { cursor: not-allowed; opacity: 0.5; }
 
-.sk-search-body { overflow-y: auto; padding: var(--sk-space-1); }
+.sk-search-body { overflow-y: auto; scrollbar-gutter: stable; padding: var(--sk-space-1); }
 .sk-search-status { color: var(--sk-color-muted); padding: var(--sk-space-3); text-align: center; margin: 0; }
 
 .sk-search-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+/* Group label separating the conversations and prompts result groups within the one
+   listbox. A presentation row (not an option), so it never takes keyboard focus. */
+.sk-search-group {
+  color: var(--sk-color-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--sk-space-2) var(--sk-space-2) var(--sk-space-1);
+}
+.sk-search-group:not(:first-child) { margin-top: var(--sk-space-1); }
 .sk-sr {
   display: flex;
   align-items: flex-start;

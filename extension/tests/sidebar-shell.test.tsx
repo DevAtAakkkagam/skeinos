@@ -122,7 +122,7 @@ describe('Framed shell (6.1)', () => {
 });
 
 describe('Disabled feature stubs (6.2)', () => {
-  it('Prompts/Profiles tabs, PRO badge, and sync are present and inert', async () => {
+  it('Profiles tab stays inert; Prompts is now interactive; PRO badge + sync present', async () => {
     await mountShell();
     const prompts = $('[data-testid=sk-tab-prompts]') as HTMLButtonElement;
     const profiles = $('[data-testid=sk-tab-profiles]') as HTMLButtonElement;
@@ -130,13 +130,56 @@ describe('Disabled feature stubs (6.2)', () => {
     const search = $('[data-testid=sk-search]') as HTMLButtonElement;
     expect(search.disabled).toBe(false);
     expect(container.textContent).toContain('⌘K');
-    expect(prompts.disabled).toBe(true);
-    expect(prompts.getAttribute('aria-disabled')).toBe('true');
+    // Prompts became interactive in this slice (sidebar-shell MODIFIED requirement).
+    expect(prompts.disabled).toBe(false);
+    // Profiles remains a disabled "coming soon" stub.
     expect(profiles.disabled).toBe(true);
+    expect(profiles.getAttribute('aria-disabled')).toBe('true');
     expect($('[data-testid=sk-pro-badge]')).toBeTruthy();
     expect($('[data-testid=sk-sync]')).toBeTruthy();
     // the active Folders tab is not disabled
     expect(($('[data-testid=sk-tab-folders]') as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe('Tab switching folders ⇄ prompts (sidebar-shell, 6.6)', () => {
+  it('Folders is selected by default and the folder body + filter chrome are shown', async () => {
+    await mountShell();
+    expect(($('[data-testid=sk-tab-folders]') as HTMLButtonElement).getAttribute('aria-selected')).toBe('true');
+    expect($('[data-testid=sk-sidebar]')).toBeTruthy();
+    expect($('[data-testid=sk-filters]')).toBeTruthy();
+  });
+
+  it('activating Prompts shows the prompt body and hides the folder filter/nudge', async () => {
+    await mountShell();
+    $('[data-testid=sk-tab-prompts]')!.click();
+    await flush();
+    const prompts = $('[data-testid=sk-tab-prompts]') as HTMLButtonElement;
+    expect(prompts.getAttribute('aria-selected')).toBe('true');
+    expect($('[data-testid=sk-prompts-panel]')).toBeTruthy();
+    // The folder-specific platform filter row + folder body are gone.
+    expect($('[data-testid=sk-filters]')).toBeNull();
+    expect($('[data-testid=sk-sidebar]')).toBeNull();
+  });
+
+  it('switching back to Folders restores the folder body and its filter chrome', async () => {
+    await mountShell();
+    $('[data-testid=sk-tab-prompts]')!.click();
+    await flush();
+    $('[data-testid=sk-tab-folders]')!.click();
+    await flush();
+    expect(($('[data-testid=sk-tab-folders]') as HTMLButtonElement).getAttribute('aria-selected')).toBe('true');
+    expect($('[data-testid=sk-sidebar]')).toBeTruthy();
+    expect($('[data-testid=sk-filters]')).toBeTruthy();
+    expect($('[data-testid=sk-prompts-panel]')).toBeNull();
+  });
+
+  it('the Profiles tab is inert and does not switch the body away from Folders', async () => {
+    await mountShell();
+    $('[data-testid=sk-tab-profiles]')!.click();
+    await flush();
+    expect($('[data-testid=sk-sidebar]')).toBeTruthy();
+    expect($('[data-testid=sk-prompts-panel]')).toBeNull();
   });
 });
 

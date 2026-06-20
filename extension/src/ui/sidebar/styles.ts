@@ -8,17 +8,18 @@
 
 import { PRIMITIVES_CSS } from '../primitives/styles';
 import { SEARCH_CSS } from '../search/styles';
+import { PROMPTS_CSS } from '../prompts/styles';
 
 const SIDEBAR_FEATURE_CSS = `
 /* The sidebar fills the shell body and splits into a scrolling region (pinned ·
    folders · unfiled) and a bottom-docked archive region, so the archive sections
    never scroll out of reach behind a long folder list. */
 .sk-sidebar { display: flex; flex-direction: column; min-width: 220px; flex: 1 1 auto; min-height: 0; }
-.sk-sidebar__scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sk-space-2); padding: var(--sk-space-2); }
+.sk-sidebar__scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: var(--sk-space-2); padding: var(--sk-space-2); }
 /* The archive dock: pinned below the scroll region with its own hairline + bg so
    scrolled rows never show through. Caps its own height (expanded archive scrolls
    internally) so it can never crowd out the live tree above it. */
-.sk-sidebar__dock { flex: none; display: flex; flex-direction: column; gap: var(--sk-space-2); padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-2); border-top: 1px solid var(--sk-color-border); background: var(--sk-color-bg); max-height: 50%; overflow-y: auto; }
+.sk-sidebar__dock { flex: none; display: flex; flex-direction: column; gap: var(--sk-space-2); padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-2); border-top: 1px solid var(--sk-color-border); background: var(--sk-color-bg); max-height: 50%; overflow-y: auto; scrollbar-gutter: stable; }
 .sk-sidebar__section { display: flex; flex-direction: column; gap: var(--sk-space-1); }
 /* Overline · dot font · 13 · +34% track (Lattice). Pushed toward fg + weight 600
    so it reads as a structural label, not a faint caption. */
@@ -148,7 +149,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-picker { display: flex; flex-direction: column; gap: var(--sk-space-2); min-width: 280px; }
 .sk-picker__title { font-weight: 600; font-size: 15px; margin: 0; }
 .sk-picker__input { width: 100%; box-sizing: border-box; }
-.sk-picker__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow: auto; }
+.sk-picker__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow: auto; scrollbar-gutter: stable; }
 .sk-picker__option { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-1) var(--sk-space-2); border-radius: var(--sk-radius); cursor: pointer; }
 .sk-picker__option--active { background: color-mix(in srgb, var(--sk-color-accent) 16%, transparent); }
 .sk-picker__option--unfile { color: var(--sk-color-muted); }
@@ -241,4 +242,4 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-search[disabled], .sk-tab[disabled], .sk-chip[disabled] { opacity: 0.55; cursor: not-allowed; }
 `;
 
-export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}`;
+export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}\n${PROMPTS_CSS}`;
