@@ -21,6 +21,9 @@ export const PRIMITIVES_CSS = `
 .sk-menu__item { background: none; border: 0; color: inherit; font: inherit; text-align: left; padding: var(--sk-space-1) var(--sk-space-2); border-radius: var(--sk-radius); cursor: pointer; }
 .sk-menu__item[data-highlighted], .sk-menu__item:hover, .sk-menu__item:focus-visible { background: color-mix(in srgb, var(--sk-color-accent) 16%, transparent); outline: none; }
 .sk-menu__item[data-disabled] { opacity: 0.55; cursor: not-allowed; }
+/* A hairline separator between menu groups — sets the destructive action apart from
+   the routine ones above it. One weight (1px), token-tinted like every other rule. */
+.sk-menu__divider { height: 1px; margin: var(--sk-space-1) 0; background: var(--sk-color-border); }
 
 /* Dialog — backdrop overlays the overlay; positioner centers the content. */
 /* Tinted-dark scrim (indigo-tinted, never pure black) that darkens in both themes. */

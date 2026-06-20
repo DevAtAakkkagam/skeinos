@@ -60,6 +60,39 @@ describe('mutate → persist → re-query round-trips', () => {
     expect(tree(snap).active[0].children).toHaveLength(0);
   });
 
+  it('deleting a folder re-homes its conversations to Uncategorized (never orphaned)', async () => {
+    await mutateWorkspace(store, { op: 'folder.create', id: 'a', name: 'A' });
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'claude',
+      refs: [{ nativeId: 'c1', title: 'One' }, { nativeId: 'c2', title: 'Two' }],
+    });
+    await mutateWorkspace(store, { op: 'conversation.assign', conversationId: 'claude::c1', folderId: 'a' });
+    await mutateWorkspace(store, { op: 'conversation.assign', conversationId: 'claude::c2', folderId: 'a' });
+
+    const res = await mutateWorkspace(store, { op: 'folder.delete', id: 'a' });
+    // The delete touches both stores so the panel re-reads conversations too.
+    expect(res.stores).toEqual(['folders', 'conversations']);
+
+    const snap = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    // The folder is gone, but both conversations survive, now unfiled (folderId null).
+    expect(tree(await queryWorkspace(store, { kind: 'folder.tree' })).active).toHaveLength(0);
+    expect(snap.conversations.map((c) => c.id).sort()).toEqual(['claude::c1', 'claude::c2']);
+    expect(snap.conversations.every((c) => c.folderId === null)).toBe(true);
+  });
+
+  it('deleting a parent folder promotes its subfolders to the top level', async () => {
+    await mutateWorkspace(store, { op: 'folder.create', id: 'a', name: 'A' });
+    await mutateWorkspace(store, { op: 'folder.create', id: 'b', name: 'B', parentId: 'a' });
+
+    await mutateWorkspace(store, { op: 'folder.delete', id: 'a' });
+
+    const snap = await queryWorkspace(store, { kind: 'folder.tree' });
+    // The child is parent-less now, so buildTree surfaces it as a root.
+    expect(tree(snap).active.map((n) => n.folder.id)).toEqual(['b']);
+  });
+
   it('ingests conversations and assigns one (filing reflected in the unified list)', async () => {
     await mutateWorkspace(store, { op: 'folder.create', id: 'a', name: 'A' });
     await mutateWorkspace(store, {

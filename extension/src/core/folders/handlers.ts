@@ -169,8 +169,17 @@ export async function mutateWorkspace(
       return { stores: ['folders'] };
     }
     case 'folder.delete': {
+      // Re-home direct contents so a delete never silently orphans the user's data
+      // ([PRIV] never lose input): conversations filed directly in this folder drop
+      // to Uncategorized (folderId=null) so they stay reachable under the Unfiled
+      // node. Child folders need no move — `buildTree` surfaces parent-less folders
+      // as roots, so they promote to the top level on the next read.
+      const convs = (await store.conversations.query()) as ConversationIndex[];
+      for (const c of convs) {
+        if (c.folderId === op.id) await store.conversations.put(assignConversation(c, null));
+      }
       await store.folders.delete(op.id);
-      return { stores: ['folders'] };
+      return { stores: ['folders', 'conversations'] };
     }
     case 'conversation.ingest': {
       // Upsert a ConversationIndex per host conversation and index its TITLE (C8),
