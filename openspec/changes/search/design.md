@@ -1,10 +1,12 @@
 ## Context
 
-The store (C1) shipped a `searchPostings` store, a `SearchPosting` type, and a `SearchEngine`
-interface; messaging (C2) shipped the `search.run` request and `state.changed` broadcast; the Claude
-adapter (C4) shipped `readMessages(nativeId): Promise<Message[]>`. None of the search *behavior* exists
-— `searchPostings` has never been written. This change fills that gap end to end: ingest → index →
-query → overlay.
+The store (C1) shipped the local-only `searchPostings` store (keyed by `term`) and a placeholder
+`SearchPosting` type; messaging (C2) shipped the `state.changed` broadcast plus an *open*
+`RequestContracts` map that features extend via declaration merging (it ships no `search.run` kind and
+no `SearchEngine` interface — both are introduced here); the Claude adapter (C4) shipped
+`readMessages(nativeId): Promise<Message[]>`. None of the search *behavior* exists — `searchPostings` has
+never been written. This change fills that gap end to end: type/schema reshape → ingest → index → query →
+overlay, registering `search.run` and defining the `SearchEngine` interface as it goes.
 
 Three architecture rules dominate the design:
 
@@ -35,7 +37,10 @@ shards, synchronous-chunk indexing, tag filter forward-compatible, no-data migra
 - Durable resumable bulk backfill (`chrome.alarms` + persisted cursor) — deferred; bulk indexing is
   best-effort this cut.
 - Tag *assignment/management* UI (C7) and the "indexing N…" indicator UI (C11) — only the seams.
-- Fuzzy / typo-tolerant / semantic search — exact normalized-token match only.
+- Fuzzy / typo-tolerant / semantic search. Matching is normalized-token + **prefix
+  (type-ahead)**: a query term matches any indexed term it is a prefix of (so `ite`
+  finds `iterative`), but there is no edit-distance, transposition, or semantic
+  matching.
 - Cross-platform indexing beyond Claude — other adapters land in C17; the pipeline is platform-agnostic.
 
 ## Decisions
@@ -77,12 +82,20 @@ model). Chosen over a reverse-map store for exactly that reason.
 
 ### D-3: Idempotent ingest, indexing in the SW
 
-The content script's adapter returns `Message[]`; the SW concatenates title + message bodies, normalizes
+The content script's adapter returns `Message[]` (the shipped Claude `readMessages` reads the
+currently-rendered DOM and ignores its `nativeId` argument, so runtime indexing only ever sees the
+**active** conversation — which is exactly why bulk backfill is best-effort, D-4, and the 5k benchmark
+drives a synthetic corpus rather than live DOM reads); the SW concatenates title + message bodies, normalizes
 (lowercase, strip punctuation, collapse whitespace, light stemming), and computes a `contentHash` over
 the normalized text. If the stored `ConversationIndex.contentHash` is unchanged, indexing is a no-op
 (idempotent — re-visiting a conversation costs one hash). Otherwise the SW writes the new
-`ConversationIndex` and applies the postings diff (D-2). Field provenance (`title` vs `body`) is tracked
-per token so ranking can boost titles and highlighting can target either field.
+`ConversationIndex` and applies the postings diff (D-2). The record now also carries local-only
+organization state — `folderId`, `tags`, and the optional `pinned` / `archived` / `color` fields added
+by conversation-filing and conversation-organization. Indexing is a content operation, so it SHALL
+**preserve** those existing fields on re-index (read-modify-write the stored record, overwriting only
+`title` / `indexedText` / `contentHash` / `updatedAt`) and never clobber a pin, archive, or folder
+assignment. Field provenance (`title` vs `body`) is tracked per token so ranking can boost titles and
+highlighting can target either field.
 
 ### D-4: Synchronous-chunk indexing; expose a progress count
 
@@ -91,39 +104,52 @@ observed/opened), so it never approaches the ~30 s worker-death window. Bulk ind
 or a future "index everything") processes conversations in **synchronous chunks within the index
 message**, yielding between chunks; if the worker dies mid-bulk, already-indexed conversations persist
 and the rest re-index on next visit (best-effort). The indexer exposes a `{ done, total }` progress
-count via `state.changed` so C11's indicator can render it later — but C8 ships no indicator UI. The
+count so C11's indicator can render it later — but C8 ships no indicator UI. The shipped `state.changed`
+broadcast carries only `{ stores: string[] }`, so this change **adds a progress variant to the
+`Broadcast` union** (`{ kind: 'index.progress'; done; total }`, or an optional progress field on
+`state.changed`) to carry it — the broadcast hub exists, the progress payload does not. The
 durable `chrome.alarms` + persisted-cursor model is explicitly deferred (D26).
 
 ### D-5: Query — parse, intersect, rank, highlight, page
 
 `search.run` carries a `Query` (terms + filters). The engine normalizes query terms with the same
-function, loads the relevant shards by prefix, intersects each term's posting lists (AND semantics),
-applies filters, then scores:
+function, loads the relevant shards by prefix, and resolves each query term by **prefix (type-ahead)
+match** — every indexed term that begins with the query term contributes its postings. Because a term is
+sharded by its first two characters, all terms sharing a query term's 2-char prefix live in that one shard,
+so a single shard scan finds every prefix match (a 1-char query term degrades to exact). It then intersects
+each term's resulting posting lists (AND semantics), applies filters, then scores:
 
 ```
 score(doc) = Σ_term  tf(term,doc) · fieldBoost(field)   ·  recency(updatedAt)
              fieldBoost: title 3.0, body 1.0            recency: mild decay, newer ranks higher
 ```
 
-Filters are applied against `ConversationIndex` metadata: `platform`, `updatedAt` range, `folderId`, and
-**`tags`** — the `Query.tag` field and filtering logic exist and are spec'd, but since tag *assignment*
-ships in C7, with no tags present the filter is a no-op (forward-compatible, no hard C7 dependency).
+Filters are applied against `ConversationIndex` metadata: `platform`, `updatedAt` range, `folderId`,
+`archived` (now a real field from conversation-organization — the overlay defaults to hiding archived
+results to match the conversation list's "archived hidden but retained" behavior, while archived
+conversations stay indexed and queryable), and **`tags`** — the `Query.tag` field and filtering logic
+exist and are spec'd, but since tag *assignment* ships in C7, with no tags present the filter is a no-op
+(forward-compatible, no hard C7 dependency).
 Stored `positions` drive in-context snippet highlighting; results are paged (offset/limit) and ordered by
 score. Returned `SearchResult[]` matches the LLD §5 shape.
 
 ### D-6: `searchPostings` reshape — no-data store migration
 
-The schema change (per-term → prefix-shard, `keyPath` `'term'` → `'prefix'`) bumps the IndexedDB version.
-Because indexing has never run, the old store is empty: the migration **drops and recreates**
-`searchPostings` with the new `keyPath` — no row transformation, no rollback risk. `ConversationIndex`
-already exists from C1 and is unchanged. This is the spec-level `workspace-store` modification noted in
+The schema change (per-term → prefix-shard, `keyPath` `'term'` → `'prefix'`) bumps the IndexedDB version
+to v4 by appending one step to the add-only migration list (after v2 `activeConversations` and the v3
+org-state step). Because indexing has never run, the old store is empty: the migration **drops and
+recreates** `searchPostings` with the new `keyPath` — no row transformation, no rollback risk. The
+`conversations` store (holding `ConversationIndex`) already exists from C1 and is unchanged. This is the spec-level `workspace-store` modification noted in
 the proposal.
 
 ### D-7: Overlay UI — palette over `search.run`, tokens only
 
 A command-palette-style overlay mounted through the existing UI harness (shadow DOM, `--sk-*` tokens, no
-host classes, no hard-coded strings): a query input, filter controls (platform / date / folder; a tag
-control present but inert until C7), a results list with highlighted snippets, and an empty state. Fully
+host classes, no hard-coded strings): a query input, filter controls (platform / date / folder / archived;
+a tag control present but inert until C7), a results list with highlighted snippets (each row drawing its
+platform logo via `PlatformLogo` / `PLATFORM_LOGOS` from `ui/components/PlatformLogo.tsx`, with origins/URLs
+from `shared/branding.ts` — the platform-branding capability's logo and origin sources),
+and an empty state. Fully
 keyboard-operable (open, type, arrow through results, Enter to open, Esc to close) and ARIA-labelled. It
 is a pure view over worker state: it issues `search.run` and re-queries on `state.changed`.
 
@@ -148,7 +174,9 @@ is a pure view over worker state: it issues `search.run` and re-queries on `stat
 ## Migration Plan
 
 1. Land the type + schema reshape (D-6): replace `SearchPosting` with `SearchShard`, set
-   `searchPostings.keyPath = 'prefix'`, bump DB version with a drop/recreate migration (no data).
+   `searchPostings.keyPath = 'prefix'`, and **append** a new drop/recreate migration step to the existing
+   ordered list (the DB is currently at v3 — v2 added `activeConversations`, v3 recorded conversation
+   org-state — so this reshape becomes v4), bumping the DB version with no data transformation.
 2. Land `core/conversation-index` (ingest) and `core/search` (shard indexer + query) behind the existing
    `SearchEngine` / `search.run` contracts.
 3. Land the overlay UI.

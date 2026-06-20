@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
 import {
   ConversationList,
+  archivedConversations,
   nonArchivedConversations,
   sortConversations,
   type ConversationListContext,
@@ -106,6 +107,30 @@ describe('ConversationList rendering (4.1)', () => {
   });
 });
 
+describe('ConversationList archived context', () => {
+  const ARCHIVED_CTX: ConversationListContext = { kind: 'archived' };
+
+  it('renders only archived rows (recent-first) and hides non-archived ones', () => {
+    renderList(
+      [
+        conv('live', { title: 'Live', archived: false, updatedAt: 9 }),
+        conv('old-arc', { title: 'Old archived', archived: true, updatedAt: 1 }),
+        conv('new-arc', { title: 'New archived', archived: true, updatedAt: 5 }),
+      ],
+      { context: ARCHIVED_CTX },
+    );
+    const ids = $$('[data-testid=sk-conv-row]').map((r) => r.dataset.conversationId);
+    // Archived only, recent-first; the non-archived 'live' row is hidden.
+    expect(ids).toEqual(['new-arc', 'old-arc']);
+  });
+
+  it('shows the archived empty copy when there are no archived conversations', () => {
+    renderList([conv('a', { archived: false })], { context: ARCHIVED_CTX });
+    expect($('[data-testid=sk-conv-row]')).toBeNull();
+    expect($('[data-testid=sk-conv-empty]')!.textContent).toContain('No archived conversations');
+  });
+});
+
 describe('ConversationList open', () => {
   it('activating a row opens that conversation in the active tab', () => {
     const onOpen = vi.fn();
@@ -155,6 +180,16 @@ describe('ConversationList sort/hide helpers (3.1, 3.3)', () => {
     sortConversations(input);
     expect(input.map((c) => c.id)).toEqual(['a', 'b']);
   });
+
+  it('archivedConversations keeps only archived conversations', () => {
+    const kept = archivedConversations([
+      conv('a'),
+      conv('b', { archived: true }),
+      conv('c', { archived: false }),
+      conv('d', { archived: true }),
+    ]);
+    expect(kept.map((c) => c.id)).toEqual(['b', 'd']);
+  });
 });
 
 describe('ConversationList list reflects pin/archive (3.2)', () => {
@@ -168,12 +203,31 @@ describe('ConversationList list reflects pin/archive (3.2)', () => {
     expect(ids).toEqual(['p', 'a']); // pinned first, archived 'z' hidden
   });
 
-  it('shows a colour indicator on a coloured row', () => {
-    renderList([conv('a', { color: '#5aa9e6' }), conv('b')]);
-    const rowA = $$('[data-testid=sk-conv-row]').find((r) => r.dataset.conversationId === 'a')!;
-    const rowB = $$('[data-testid=sk-conv-row]').find((r) => r.dataset.conversationId === 'b')!;
-    expect(rowA.querySelector('.sk-conv-row__dot')).toBeTruthy();
-    expect(rowB.querySelector('.sk-conv-row__dot')).toBeNull();
+  it('leads each row with its platform brand logo (no colour dot)', () => {
+    renderList([conv('a', { platform: 'claude' }), conv('b', { platform: 'gemini' })]);
+    const rows = $$('[data-testid=sk-conv-row]');
+    for (const row of rows) {
+      const logo = row.querySelector('[data-testid=sk-conv-logo]')!;
+      expect(logo).toBeTruthy();
+      expect(logo.querySelector('svg')).toBeTruthy();
+      // The retired per-conversation colour dot is gone.
+      expect(row.querySelector('.sk-conv-row__dot')).toBeNull();
+    }
+  });
+
+  it('renders a pin badge on a pinned row only (not on unpinned rows)', () => {
+    renderList([
+      conv('p', { title: 'Pinned', pinned: true }),
+      conv('u', { title: 'Unpinned' }),
+    ]);
+    const rows = $$('[data-testid=sk-conv-row]');
+    const pinned = rows.find((r) => r.dataset.conversationId === 'p')!;
+    const unpinned = rows.find((r) => r.dataset.conversationId === 'u')!;
+    const badge = pinned.querySelector('[data-testid=sk-conv-pinned]')!;
+    expect(badge).toBeTruthy();
+    expect(badge.getAttribute('aria-label')).toBe('Pinned');
+    expect(badge.querySelector('svg')).toBeTruthy();
+    expect(unpinned.querySelector('[data-testid=sk-conv-pinned]')).toBeNull();
   });
 });
 
@@ -184,7 +238,7 @@ describe('ConversationList context menu (4.1–4.3, 5.1)', () => {
     await flush();
   };
 
-  it('opens a menu listing Move / Pin / Archive + colours, with no Rename or Delete', async () => {
+  it('opens a menu listing Move / Pin / Archive, with no colours, Rename or Delete', async () => {
     renderList([conv('a', { title: 'Alpha' })]);
     await openMenu();
     const menu = $('[data-testid=sk-conv-context-menu]');
@@ -192,8 +246,9 @@ describe('ConversationList context menu (4.1–4.3, 5.1)', () => {
     expect($('[data-testid=sk-conv-menu-move]')).toBeTruthy();
     expect($('[data-testid=sk-conv-menu-pin]')!.textContent).toBe('Pin to top');
     expect($('[data-testid=sk-conv-menu-archive]')!.textContent).toBe('Archive');
-    expect($$('[data-testid=sk-conv-color]').length).toBeGreaterThan(0);
-    expect($('[data-testid=sk-conv-color-clear]')).toBeTruthy();
+    // The colour affordance is retired from the row menu.
+    expect($$('[data-testid=sk-conv-color]')).toHaveLength(0);
+    expect($('[data-testid=sk-conv-color-clear]')).toBeNull();
     expect(menu!.textContent).not.toContain('Rename');
     expect(menu!.textContent).not.toContain('Delete');
   });
@@ -222,23 +277,6 @@ describe('ConversationList context menu (4.1–4.3, 5.1)', () => {
     expect(mutate).toHaveBeenCalledWith({ op: 'conversation.archive', conversationId: 'a', archived: true });
   });
 
-  it('picking a colour swatch issues a recolor mutation; clear removes it', async () => {
-    const mutate = vi.fn(async (_op: MutationOp) => ({ ok: true, applied: true }));
-    renderList([conv('a', { title: 'Alpha' })], { mutate });
-    await openMenu();
-    ($$('[data-testid=sk-conv-color]')[0] as HTMLElement).click();
-    await flush();
-    expect(mutate).toHaveBeenCalledWith(
-      expect.objectContaining({ op: 'conversation.recolor', conversationId: 'a' }),
-    );
-    const firstOp = mutate.mock.calls[0][0] as Extract<MutationOp, { op: 'conversation.recolor' }>;
-    expect(firstOp.color).toMatch(/^#/);
-
-    await openMenu();
-    ($('[data-testid=sk-conv-color-clear]') as HTMLElement).click();
-    await flush();
-    expect(mutate).toHaveBeenLastCalledWith({ op: 'conversation.recolor', conversationId: 'a', color: undefined });
-  });
 });
 
 describe('ConversationList filing (4.2, 4.6)', () => {

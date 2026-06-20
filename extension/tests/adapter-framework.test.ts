@@ -3,11 +3,12 @@
 // contract harness proving it is config-driven (T1.3) against a *synthetic*
 // platform distinct from Claude.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { isValidationErrors, validateAdapterConfig } from '../src/adapters/runtime/validate';
 import { loadConfig } from '../src/adapters/runtime/loader';
 import { matchPlatform, matchesHostPattern } from '../src/adapters/runtime/host-match';
-import type { AdapterConfig, PlatformId } from '../src/adapters/types';
+import { createAdapter } from '../src/adapters/runtime/adapter';
+import type { AdapterConfig, AdapterEvent, PlatformId } from '../src/adapters/types';
 import { runAdapterContract } from './adapter-contract';
 
 function makeConfig(overrides: Partial<AdapterConfig> = {}): AdapterConfig {
@@ -63,6 +64,126 @@ describe('AdapterConfig validation (T1.1)', () => {
     (cfg.behaviors as unknown as Record<string, unknown>).insertMode = 'telepathy';
     const result = validateAdapterConfig(cfg);
     expect(isValidationErrors(result)).toBe(true);
+  });
+
+  it('accepts an optional conversationUrlPattern', () => {
+    const cfg = makeConfig();
+    cfg.selectors.conversationUrlPattern = '/app/[^/?#]+';
+    expect(isValidationErrors(validateAdapterConfig(cfg))).toBe(false);
+  });
+
+  it('rejects an invalid conversationUrlPattern regex', () => {
+    const cfg = makeConfig();
+    cfg.selectors.conversationUrlPattern = '(';
+    const result = validateAdapterConfig(cfg);
+    expect(isValidationErrors(result)).toBe(true);
+    if (isValidationErrors(result)) {
+      expect(result.some((e) => e.path === 'selectors.conversationUrlPattern')).toBe(true);
+    }
+  });
+});
+
+describe('detectConversation: URL fallback when the list has no DOM item', () => {
+  const config = makeConfig({
+    selectors: { ...makeConfig().selectors, conversationIdAttr: 'href', conversationUrlPattern: '/app/[^/?#]+' },
+  });
+  // A collapsed/virtualized host: the required anchors exist but the conversation
+  // list renders no items, so `activeItem()` finds nothing (the real Gemini bug).
+  const html = `
+    <div class="list"></div>
+    <div class="sidebar"></div>
+    <div class="input-bar"><textarea class="composer"></textarea><button class="send"></button></div>
+  `;
+
+  function adapterAt(url: string) {
+    const root = document.createElement('div');
+    root.innerHTML = html;
+    return createAdapter(config, { root, getUrl: () => url });
+  }
+
+  it('derives the open conversation id straight from the URL', () => {
+    const ref = adapterAt('https://gemini.google.com/app/conv-9').detectConversation();
+    expect(ref?.nativeId).toBe('/app/conv-9');
+  });
+
+  it('titles the open conversation from its first user turn when no list item exists', () => {
+    // The collapsed list yields no item, so without a fallback the active
+    // conversation surfaces titleless in Unfiled (the reported Gemini bug). The
+    // first rendered user message stands in until the list renders its real title.
+    const root = document.createElement('div');
+    root.innerHTML = `
+      <div class="list"></div>
+      <div class="sidebar"></div>
+      <div class="chat"><div class="msg-user">When will you be able to do that?</div></div>
+      <div class="input-bar"><textarea class="composer"></textarea><button class="send"></button></div>
+    `;
+    const ref = createAdapter(config, {
+      root,
+      getUrl: () => 'https://gemini.google.com/app/conv-9',
+    }).detectConversation();
+    expect(ref).toMatchObject({ nativeId: '/app/conv-9', title: 'When will you be able to do that?' });
+  });
+
+  it('caps an overlong first-message fallback title', () => {
+    const root = document.createElement('div');
+    root.innerHTML = `
+      <div class="list"></div>
+      <div class="sidebar"></div>
+      <div class="chat"><div class="msg-user">${'x'.repeat(200)}</div></div>
+      <div class="input-bar"><textarea class="composer"></textarea><button class="send"></button></div>
+    `;
+    const title = createAdapter(config, {
+      root,
+      getUrl: () => 'https://gemini.google.com/app/conv-9',
+    }).detectConversation()?.title;
+    expect(title).toHaveLength(80); // 79 chars + ellipsis
+    expect(title?.endsWith('…')).toBe(true);
+  });
+
+  it('leaves the title empty when neither a list item nor a user message exists', () => {
+    // No fallback is better than a wrong one: the id still drives highlighting, and
+    // the real title arrives once the list renders.
+    const ref = adapterAt('https://gemini.google.com/app/conv-9').detectConversation();
+    expect(ref).toMatchObject({ nativeId: '/app/conv-9', title: '' });
+  });
+
+  it('returns null on a URL with no conversation (e.g. a new chat)', () => {
+    expect(adapterAt('https://gemini.google.com/app').detectConversation()).toBeNull();
+  });
+
+  it('observe emits a null ref when the tab leaves a conversation for a new chat', async () => {
+    let url = 'https://gemini.google.com/app/conv-9';
+    const root = document.createElement('div');
+    root.innerHTML = html;
+    const adapter = createAdapter(config, { root, getUrl: () => url });
+    const seen: AdapterEvent[] = [];
+    const dispose = adapter.observe((e) => seen.push(e));
+
+    // Navigate to a new-chat/home page (no conversation in the URL) and poke the DOM
+    // so the observer re-evaluates the active conversation.
+    url = 'https://gemini.google.com/app';
+    root.querySelector('.list')!.appendChild(document.createElement('span'));
+
+    await vi.waitFor(() =>
+      expect(seen).toContainEqual(
+        expect.objectContaining({ type: 'conversation-changed', ref: null }),
+      ),
+    );
+    dispose();
+  });
+
+  it('does not use the URL fallback when an active item is present', () => {
+    const root = document.createElement('div');
+    root.innerHTML = `
+      <div class="list">
+        <a class="item" href="/app/conv-1" aria-current="page"><span class="title">First</span></a>
+      </div>
+      <div class="sidebar"></div>
+      <div class="input-bar"><textarea class="composer"></textarea><button class="send"></button></div>
+    `;
+    const adapter = createAdapter(config, { root, getUrl: () => 'https://gemini.google.com/app/conv-9' });
+    // The marked DOM item wins; the URL is only the no-item fallback.
+    expect(adapter.detectConversation()?.nativeId).toBe('/app/conv-1');
   });
 });
 

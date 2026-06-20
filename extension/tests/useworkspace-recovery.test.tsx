@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
 import type { WorkspaceSelector, WorkspaceSnapshot, MutationOp } from '../src/shared/workspace';
 import type { Response } from '../src/shared/messages';
-import type { Folder, FolderTreeNode } from '../src/shared/types';
+import type { Folder, FolderTreeNode, PlatformId } from '../src/shared/types';
 
 vi.mock('../src/core/folders', () => ({
   queryWorkspaceRemote: vi.fn(),
@@ -53,7 +53,7 @@ function wireQueries(treeIds: string[] | null, treeError = 'no_response') {
 
 // --- probe harness ----------------------------------------------------------
 let latest: WorkspaceView | null = null;
-function Probe({ platform = 'claude' as const }) {
+function Probe({ platform = 'claude' as const }: { platform?: PlatformId }) {
   const ws = useWorkspace(platform);
   latest = ws;
   return <div data-testid="probe" data-status={ws.status} data-active={String(ws.tree.active.length)} />;
@@ -180,6 +180,146 @@ describe('useWorkspace reconcile on visibility/focus (7.6)', () => {
     const before = mockQuery.mock.calls.length;
 
     window.dispatchEvent(new Event('focus'));
+    await flush();
+
+    expect(mockQuery.mock.calls.length).toBeGreaterThan(before);
+  });
+});
+
+describe('useWorkspace re-scopes the active card on a platform switch', () => {
+  // A deferred promise holds the previous platform's active read "in flight" across
+  // the platform change, reproducing the stale-closure race the coalesced loop must
+  // not fall into: the swallowed-then-trailing re-run must read the NEW platform.
+  function deferred(): { promise: Promise<void>; resolve: () => void } {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  const activeResp = (platform: PlatformId): Response<WorkspaceSnapshot> => ({
+    ok: true,
+    data: {
+      kind: 'conversation.active',
+      active: { platform, nativeId: `${platform}-1`, title: platform, updatedAt: 0 },
+    },
+  });
+
+  it('a trailing re-run after a platform switch reads the NEW platform, not the old', async () => {
+    const gate = deferred();
+    let geminiActiveCalls = 0;
+    mockQuery.mockImplementation((sel: WorkspaceSelector) => {
+      if (sel.kind === 'folder.tree') return Promise.resolve(treeSnap(['a']));
+      if (sel.kind === 'conversation.list') return Promise.resolve(convSnap);
+      // conversation.active, keyed by the requested platform.
+      if (sel.platform === 'gemini') {
+        geminiActiveCalls += 1;
+        // Park only the FIRST gemini active read (the one running when the user
+        // switches tabs); any later call resolves immediately.
+        return geminiActiveCalls === 1
+          ? gate.promise.then(() => activeResp('gemini'))
+          : Promise.resolve(activeResp('gemini'));
+      }
+      return Promise.resolve(activeResp('perplexity'));
+    });
+
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    render(<Probe platform="gemini" />, container);
+    await flush(); // gemini read starts; its active read is parked on `gate`
+
+    // The active tab switches platforms before the gemini read resolves.
+    render(<Probe platform="perplexity" />, container);
+    await flush();
+
+    // Release the parked gemini read: its trailing re-run must reconcile to the
+    // CURRENT platform (perplexity), never clobber the view back to gemini's card.
+    gate.resolve();
+    await flush();
+
+    expect(latest!.active?.platform).toBe('perplexity');
+  });
+
+  it('a prior platform’s late-resolving read never overwrites the switched-to card', async () => {
+    // Park BOTH platforms' active reads so we can observe the window between the old
+    // read resolving and the new read landing — the moment a stale write would flash.
+    const geminiGate = deferred();
+    const perplexityGate = deferred();
+    let geminiCalls = 0;
+    let perplexityCalls = 0;
+    mockQuery.mockImplementation((sel: WorkspaceSelector) => {
+      if (sel.kind === 'folder.tree') return Promise.resolve(treeSnap(['a']));
+      if (sel.kind === 'conversation.list') return Promise.resolve(convSnap);
+      if (sel.platform === 'gemini') {
+        geminiCalls += 1;
+        return geminiCalls === 1 ? geminiGate.promise.then(() => activeResp('gemini')) : Promise.resolve(activeResp('gemini'));
+      }
+      perplexityCalls += 1;
+      return perplexityCalls === 1 ? perplexityGate.promise.then(() => activeResp('perplexity')) : Promise.resolve(activeResp('perplexity'));
+    });
+
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    render(<Probe platform="gemini" />, container);
+    await flush(); // gemini active read parked
+
+    render(<Probe platform="perplexity" />, container);
+    await flush(); // setActive(null); the new read is swallowed (gemini still in flight)
+
+    // The gemini read resolves first. Its trailing re-run then dispatches the
+    // perplexity read, which is still parked — so the view must show NO active card
+    // (the cleared null), never gemini's stale card.
+    geminiGate.resolve();
+    await flush();
+    expect(latest!.active).toBeNull();
+
+    // The perplexity read finally lands → the correct card appears.
+    perplexityGate.resolve();
+    await flush();
+    expect(latest!.active?.platform).toBe('perplexity');
+  });
+});
+
+describe('useWorkspace reconcile on tab switch (side panel)', () => {
+  // The always-open side panel gets no focus/visibility event when the user switches
+  // the active browser tab — so it must re-read on chrome.tabs activation/update.
+  type Emit = () => void;
+  function stubTabs() {
+    let onActivated: Emit | null = null;
+    let onUpdated: Emit | null = null;
+    (globalThis as { chrome?: unknown }).chrome = {
+      tabs: {
+        onActivated: { addListener: (cb: Emit) => (onActivated = cb), removeListener: () => (onActivated = null) },
+        onUpdated: { addListener: (cb: Emit) => (onUpdated = cb), removeListener: () => (onUpdated = null) },
+      },
+    };
+    return { fireActivated: () => onActivated?.(), fireUpdated: () => onUpdated?.() };
+  }
+
+  afterEach(() => {
+    delete (globalThis as { chrome?: unknown }).chrome;
+  });
+
+  it('tabs.onActivated triggers a reconcile read', async () => {
+    const { fireActivated } = stubTabs();
+    wireQueries(['a']);
+    mount();
+    await flush();
+    const before = mockQuery.mock.calls.length;
+
+    fireActivated();
+    await flush();
+
+    expect(mockQuery.mock.calls.length).toBeGreaterThan(before);
+  });
+
+  it('tabs.onUpdated triggers a reconcile read', async () => {
+    const { fireUpdated } = stubTabs();
+    wireQueries(['a']);
+    mount();
+    await flush();
+    const before = mockQuery.mock.calls.length;
+
+    fireUpdated();
     await flush();
 
     expect(mockQuery.mock.calls.length).toBeGreaterThan(before);

@@ -102,13 +102,97 @@ describe('MoveToFolderPicker filtering (2.1)', () => {
     expect(opts[0].dataset.folderId).toBe('drafts');
   });
 
-  it('shows a neutral no-matches state rather than nothing', async () => {
+  it('offers a "Create" row instead of an empty state when nothing matches', async () => {
     renderPicker(unfiled);
     await flush();
     typeFilter('zzz');
     await flush();
-    expect($('[data-testid=sk-move-empty]')).toBeTruthy();
     expect($$('[data-testid=sk-move-option]')).toHaveLength(0);
+    const create = $('[data-testid=sk-move-create]');
+    expect(create).toBeTruthy();
+    expect(create!.textContent).toContain('zzz');
+    // The dead empty state is replaced by the actionable create row.
+    expect($('[data-testid=sk-move-empty]')).toBeNull();
+  });
+});
+
+describe('MoveToFolderPicker inline create (quick-file)', () => {
+  it('creates a folder with defaults then files the conversation into it, and closes', async () => {
+    const onSubmit = vi.fn(async () => ({ ok: true, applied: true }));
+    const onClose = vi.fn();
+    renderPicker(unfiled, onSubmit, onClose);
+    await flush();
+    typeFilter('  Recipes  '); // trims to "Recipes"
+    await flush();
+    $('[data-testid=sk-move-create]')!.click();
+    await flush();
+
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+    const create = onSubmit.mock.calls[0][0] as Record<string, unknown>;
+    expect(create).toMatchObject({
+      op: 'folder.create',
+      name: 'Recipes',
+      parentId: null,
+      platformScope: 'unified',
+    });
+    expect(typeof create.id).toBe('string');
+    expect(create.color).toBeTruthy();
+    // The second mutation files this conversation into the just-created folder.
+    expect(onSubmit.mock.calls[1][0]).toEqual({
+      op: 'conversation.assign',
+      conversationId: 'claude::c1',
+      folderId: create.id,
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('suppresses the create row on an exact (case-insensitive) name match', async () => {
+    renderPicker(unfiled);
+    await flush();
+    typeFilter('work'); // matches the existing "Work" folder exactly
+    await flush();
+    expect($('[data-testid=sk-move-create]')).toBeNull();
+    expect($$('[data-testid=sk-move-option]').map((o) => o.dataset.folderId)).toEqual(['work']);
+  });
+
+  it('does not file (and keeps the picker open) when the folder create fails', async () => {
+    const onSubmit = vi.fn(async () => ({ ok: false, applied: false }));
+    const onClose = vi.fn();
+    renderPicker(unfiled, onSubmit, onClose);
+    await flush();
+    typeFilter('Recipes');
+    await flush();
+    $('[data-testid=sk-move-create]')!.click();
+    await flush();
+    // Create did not take effect → the assign is skipped, picker stays open.
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ op: 'folder.create' });
+    expect(onClose).not.toHaveBeenCalled();
+    expect($('[data-testid=sk-move-error]')).toBeTruthy();
+  });
+
+  it('reuses the same folder id when a create is retried after a lost ack', async () => {
+    // First attempt: create acked but assign reports not-applied → stays open.
+    const onSubmit = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, applied: true }) // create #1
+      .mockResolvedValueOnce({ ok: false, applied: false }) // assign #1 fails
+      .mockResolvedValue({ ok: true, applied: true }); // retry create + assign
+    const onClose = vi.fn();
+    renderPicker(unfiled, onSubmit, onClose);
+    await flush();
+    typeFilter('Recipes');
+    await flush();
+    $('[data-testid=sk-move-create]')!.click();
+    await flush();
+    expect(onClose).not.toHaveBeenCalled();
+    $('[data-testid=sk-move-create]')!.click();
+    await flush();
+
+    const firstId = (onSubmit.mock.calls[0][0] as { id: string }).id;
+    const retryId = (onSubmit.mock.calls[2][0] as { id: string }).id;
+    expect(retryId).toBe(firstId); // same row overwritten, no duplicate folder
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

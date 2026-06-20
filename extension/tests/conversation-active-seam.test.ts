@@ -90,6 +90,30 @@ describe('active-conversation seam', () => {
     expect(Object.keys(rec ?? {}).sort()).toEqual(['nativeId', 'platform', 'title', 'updatedAt']);
   });
 
+  it('clearActive drops the platform record so the active card reads null again', async () => {
+    const store = await openStore(dbName());
+    await mutateWorkspace(store, {
+      op: 'conversation.reportActive',
+      platform: 'gemini',
+      nativeId: 'g1',
+      title: 'On a chat',
+    });
+    expect(active(await queryWorkspace(store, { kind: 'conversation.active', platform: 'gemini' }))).toMatchObject({
+      nativeId: 'g1',
+    });
+
+    // The tab navigates to a new-chat/home page (no open conversation).
+    const cleared = await mutateWorkspace(store, { op: 'conversation.clearActive', platform: 'gemini' });
+    expect(cleared.stores).toEqual(['activeConversations']);
+    expect(active(await queryWorkspace(store, { kind: 'conversation.active', platform: 'gemini' }))).toBeNull();
+  });
+
+  it('clearActive on a platform with no active record touches no stores (no broadcast)', async () => {
+    const store = await openStore(dbName());
+    const res = await mutateWorkspace(store, { op: 'conversation.clearActive', platform: 'claude' });
+    expect(res.stores).toEqual([]);
+  });
+
   it('an unchanged report touches no stores (no needless broadcast)', async () => {
     const store = await openStore(dbName());
     const first = await mutateWorkspace(store, {
@@ -106,6 +130,46 @@ describe('active-conversation seam', () => {
       nativeId: 'c1',
       title: 'Same',
     });
+    expect(repeat.stores).toEqual([]);
+  });
+
+  it('persists the collapsed-list hint and surfaces it on the active card', async () => {
+    const store = await openStore(dbName());
+    await mutateWorkspace(store, {
+      op: 'conversation.reportActive',
+      platform: 'gemini',
+      nativeId: 'g1',
+      title: 'Collapsed drawer',
+      listCollapsedHint: true,
+    });
+    const card = active(await queryWorkspace(store, { kind: 'conversation.active', platform: 'gemini' }));
+    expect(card).toMatchObject({ nativeId: 'g1', listCollapsedHint: true });
+  });
+
+  it('omits the hint field entirely when not flagged (record stays minimal)', async () => {
+    const store = await openStore(dbName());
+    await mutateWorkspace(store, {
+      op: 'conversation.reportActive',
+      platform: 'gemini',
+      nativeId: 'g1',
+      title: 'Drawer open',
+      listCollapsedHint: false,
+    });
+    const rec = await store.activeConversations.get('gemini');
+    expect(Object.keys(rec ?? {}).sort()).toEqual(['nativeId', 'platform', 'title', 'updatedAt']);
+  });
+
+  it('treats a hint change on an otherwise-unchanged conversation as a write (nudge must update)', async () => {
+    const store = await openStore(dbName());
+    const base = { op: 'conversation.reportActive' as const, platform: 'gemini' as const, nativeId: 'g1', title: 'Same' };
+    // Drawer collapses → hint rises: this is NOT a no-op even though id/title match.
+    const collapsed = await mutateWorkspace(store, { ...base, listCollapsedHint: true });
+    expect(collapsed.stores).toEqual(['activeConversations']);
+    // Drawer opens → hint clears: also a write so the panel drops the nudge.
+    const opened = await mutateWorkspace(store, { ...base, listCollapsedHint: false });
+    expect(opened.stores).toEqual(['activeConversations']);
+    // A genuinely identical repeat (hint unchanged) stays a no-op.
+    const repeat = await mutateWorkspace(store, { ...base, listCollapsedHint: false });
     expect(repeat.stores).toEqual([]);
   });
 });

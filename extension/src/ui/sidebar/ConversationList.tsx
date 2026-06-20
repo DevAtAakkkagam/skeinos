@@ -1,26 +1,30 @@
 // The inline conversation list (conversation-filing, path A): the conversations
 // belonging to one folder (or the "Unfiled" node), rendered *inside* the folder
 // tree when that node is expanded — not a standalone "Conversations" section.
-// Activating a row opens that conversation in the active tab (the row's title is a
-// button — the keyboard path). Each row carries a context menu (right-click + a
-// keyboard-reachable `⋯` trigger) mirroring the folder menu in `Sidebar.tsx`:
-// Move to… (the existing filing picker), Pin to top, Archive, and an inline colour
-// swatch row. Pinned conversations sort to the top; archived ones are hidden. A row
-// can also be dragged onto a folder node (a pointer enhancement — never the only
-// route, honoring the PREACT "everything keyboard-operable" rule). The conversation
-// open in the active tab is highlighted (`aria-current`). It is a pure view: rows
-// come from the caller (scoped by folder) and every action dispatches a worker
-// mutation. Tokens only, no hard-coded strings.
+// Each row leads with its platform brand logo (the row's at-a-glance identity).
+// Activating a row opens that conversation via platform-aware routing (same tab
+// when it belongs to the active-tab platform, else a side-by-side window) — the
+// row's title is a button (the keyboard path). Each row carries an actions menu
+// opened from a `⋯` button (revealed on row hover / keyboard focus) mirroring the
+// folder menu in `Sidebar.tsx`: Move to… (the existing filing picker), Pin to top,
+// and Archive.
+// Pinned conversations sort to the top; archived ones are hidden. A row can also be
+// dragged onto a folder node (a pointer enhancement — never the only route,
+// honoring the PREACT "everything keyboard-operable" rule). The conversation open
+// in the active tab is highlighted (`aria-current`). It is a pure view: rows come
+// from the caller (scoped by folder) and every action dispatches a worker mutation.
+// Tokens only, no hard-coded strings.
 
 import { useRef, useState } from 'preact/hooks';
-import type { ActiveConversation, ConversationIndex } from '../../shared/types';
+import type { ActiveConversation, ConversationIndex, PlatformId } from '../../shared/types';
 import { conversationId, type FolderTreeSnapshot, type MutationOp } from '../../shared/workspace';
-import { MoreIcon } from '../components/Icon';
+import { MoreIcon, PinIcon } from '../components/Icon';
+import { PlatformLogo } from '../components/PlatformLogo';
 import { useMenu, mergeProps, getNodeRoot } from '../primitives';
-import { FOLDER_COLORS } from './palette';
 import { MoveToFolderPicker } from './MoveToFolderPicker';
 import { openConversation } from './openConversation';
 import { DRAG_MIME, type DragPayload } from './drag';
+import { formatRelativeTime } from './relativeTime';
 import type { MutateResult } from './useWorkspace';
 
 // Cap the rendered rows so a folder with hundreds of ingested conversations does
@@ -36,18 +40,23 @@ const STR = {
   move: 'Move to folder',
   pin: 'Pin to top',
   unpin: 'Unpin',
+  pinnedBadge: 'Pinned',
   archiveAction: 'Archive',
   unarchive: 'Unarchive',
-  color: 'Colour',
-  clearColor: 'No colour',
+  emptyArchived: 'No archived conversations',
   capNote: 'Showing the most recent',
   of: 'of',
+  // Relative-time units for the row's timestamp (kept terse to fit the meta line).
+  justNow: 'just now',
+  minute: 'm',
+  hour: 'h',
+  day: 'd',
+  week: 'w',
+  ago: 'ago',
 } as const;
 
 // Context-menu action values (the menu item `value`s the Zag menu reports back).
-// Colour choices ride the same channel as `color:<hex>` / `color:clear`.
-const COLOR_PREFIX = 'color:';
-type ConvMenuAction = 'move' | 'pin' | 'archive' | `${typeof COLOR_PREFIX}${string}`;
+type ConvMenuAction = 'move' | 'pin' | 'archive';
 
 /** Hide archived conversations from the main list (they remain in the store). */
 export function nonArchivedConversations(convs: ConversationIndex[]): ConversationIndex[] {
@@ -62,8 +71,17 @@ export function sortConversations(convs: ConversationIndex[]): ConversationIndex
   });
 }
 
-/** What this list is the contents of — drives the empty-state copy. */
-export type ConversationListContext = { kind: 'folder'; name: string } | { kind: 'unfiled' };
+/** Keep only archived conversations (the dedicated Archived section's contents). */
+export function archivedConversations(convs: ConversationIndex[]): ConversationIndex[] {
+  return convs.filter((c) => c.archived);
+}
+
+/** What this list is the contents of — drives the empty-state copy and whether the
+ *  list shows the live (`folder`/`unfiled`) set or the archived set. */
+export type ConversationListContext =
+  | { kind: 'folder'; name: string }
+  | { kind: 'unfiled' }
+  | { kind: 'archived' };
 
 export interface ConversationListProps {
   /** Conversations already scoped to this node (one folder, or the unfiled set). */
@@ -73,8 +91,11 @@ export interface ConversationListProps {
   tree: FolderTreeSnapshot;
   mutate: (op: MutationOp) => Promise<MutateResult>;
   context: ConversationListContext;
-  /** Open a conversation in the active tab. Defaults to the live tab-navigation
-   *  helper; injectable for tests. */
+  /** The panel's active-tab platform — drives open routing (same tab vs side by
+   *  side) in the default `onOpen`. */
+  activePlatform?: PlatformId;
+  /** Open a conversation. Defaults to the platform-aware routing helper; injectable
+   *  for tests. */
   onOpen?: (conv: ConversationIndex) => void;
 }
 
@@ -84,15 +105,20 @@ export function ConversationList({
   tree,
   mutate,
   context,
-  onOpen = (c) => void openConversation(c),
+  activePlatform,
+  onOpen = (c) => void openConversation(c, activePlatform),
 }: ConversationListProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [pickingId, setPickingId] = useState<string | null>(null);
   // Which conversation the open context menu acts on (the row last triggered).
   const [menuTargetId, setMenuTargetId] = useState<string | null>(null);
 
-  // Hide archived, then pinned-to-top / recent-within-group; cap the result.
-  const ordered = sortConversations(nonArchivedConversations(conversations));
+  // The Archived section lists archived rows (recent-first); every other context
+  // hides archived, then sorts pinned-to-top / recent-within-group. Cap the result.
+  const ordered =
+    context.kind === 'archived'
+      ? sortConversations(archivedConversations(conversations))
+      : sortConversations(nonArchivedConversations(conversations));
   const rows = ordered.slice(0, RENDER_CAP);
   const activeId = active ? conversationId(active.platform, active.nativeId) : null;
   const picking = pickingId ? conversations.find((c) => c.id === pickingId) : undefined;
@@ -117,19 +143,12 @@ export function ConversationList({
       void mutate({ op: 'conversation.pin', conversationId: conv.id, pinned: !conv.pinned });
     } else if (value === 'archive') {
       void mutate({ op: 'conversation.archive', conversationId: conv.id, archived: !conv.archived });
-    } else if (value.startsWith(COLOR_PREFIX)) {
-      const picked = value.slice(COLOR_PREFIX.length);
-      void mutate({
-        op: 'conversation.recolor',
-        conversationId: conv.id,
-        color: picked === 'clear' ? undefined : picked,
-      });
     }
   };
 
-  // One menu machine for this list; each row is both a context trigger (right-click)
-  // and a keyboard/click trigger (the `⋯` button). Zag owns positioning, roving
-  // focus, dismissal, ARIA, and focus restoration.
+  // One menu machine for this list; each row's `⋯` button is the trigger (click +
+  // keyboard). Zag owns positioning, roving focus, dismissal, ARIA, and focus
+  // restoration.
   const menu = useMenu({
     getRootNode: () => getNodeRoot(rootRef.current),
     onSelect: (value) => performMenuAction(value as ConvMenuAction),
@@ -139,8 +158,12 @@ export function ConversationList({
   const itemProps = (value: ConvMenuAction) =>
     mergeProps(menu.getItemProps({ value }), { onClick: () => performMenuAction(value) });
 
+  // A single render-time clock so every row's relative timestamp is consistent.
+  const now = Date.now();
+
   const renderRow = (c: ConversationIndex) => {
     const isActive = c.id === activeId;
+    const when = formatRelativeTime(c.updatedAt, now, STR);
     return (
       <li
         key={c.id}
@@ -155,9 +178,6 @@ export function ConversationList({
             JSON.stringify({ type: 'conversation', id: c.id } satisfies DragPayload),
           )
         }
-        {...mergeProps(menu.getContextTriggerProps({ value: c.id }), {
-          onContextMenu: () => setMenuTargetId(c.id),
-        })}
       >
         <button
           class="sk-conv-row__main"
@@ -167,13 +187,34 @@ export function ConversationList({
           title={c.title}
           onClick={() => onOpen(c)}
         >
-          {c.color ? (
-            <span class="sk-conv-row__dot" aria-hidden="true" style={{ background: c.color }} />
-          ) : null}
-          <span class="sk-conv-row__title" data-testid="sk-conv-title">{c.title}</span>
+          <span class="sk-conv-row__logo" data-testid="sk-conv-logo" aria-hidden="true">
+            <PlatformLogo platform={c.platform} size={16} />
+          </span>
+          <span class="sk-conv-row__text">
+            <span class="sk-conv-row__title" data-testid="sk-conv-title">{c.title}</span>
+            <span class="sk-conv-row__meta">
+              <time
+                class="sk-conv-row__time"
+                data-testid="sk-conv-time"
+                dateTime={new Date(c.updatedAt).toISOString()}
+              >
+                {when}
+              </time>
+            </span>
+          </span>
         </button>
+        {c.pinned && (
+          <span
+            class="sk-conv-row__pin"
+            data-testid="sk-conv-pinned"
+            aria-label={STR.pinnedBadge}
+            title={STR.pinnedBadge}
+          >
+            <PinIcon size={12} />
+          </span>
+        )}
         <button
-          class="sk-icon-btn"
+          class="sk-icon-btn sk-row-menu"
           data-testid="sk-conv-menu"
           aria-label={STR.menuTrigger}
           title={STR.menuTrigger}
@@ -193,7 +234,11 @@ export function ConversationList({
         <ul class="sk-conv-list__items">{rows.map(renderRow)}</ul>
       ) : (
         <p class="sk-empty__body" data-testid="sk-conv-empty">
-          {context.kind === 'unfiled' ? STR.emptyUnfiled : STR.emptyFolder}
+          {context.kind === 'unfiled'
+            ? STR.emptyUnfiled
+            : context.kind === 'archived'
+              ? STR.emptyArchived
+              : STR.emptyFolder}
         </p>
       )}
 
@@ -215,24 +260,6 @@ export function ConversationList({
             <button class="sk-menu__item" data-testid="sk-conv-menu-archive" {...itemProps('archive')}>
               {menuTarget.archived ? STR.unarchive : STR.archiveAction}
             </button>
-            <div class="sk-menu__swatches" role="group" aria-label={STR.color} data-testid="sk-conv-colors">
-              <button
-                {...itemProps('color:clear')}
-                class={`sk-swatch sk-swatch--clear${menuTarget.color ? '' : ' sk-swatch--selected'}`}
-                data-testid="sk-conv-color-clear"
-                aria-label={STR.clearColor}
-              />
-              {FOLDER_COLORS.map((col) => (
-                <button
-                  {...itemProps(`${COLOR_PREFIX}${col}`)}
-                  key={col}
-                  class={`sk-swatch${menuTarget.color === col ? ' sk-swatch--selected' : ''}`}
-                  style={{ background: col }}
-                  data-testid="sk-conv-color"
-                  aria-label={col}
-                />
-              ))}
-            </div>
           </div>
         </div>
       )}

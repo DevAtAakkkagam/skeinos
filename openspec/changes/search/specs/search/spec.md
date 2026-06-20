@@ -40,21 +40,43 @@ document-to-terms reverse index.
 ### Requirement: Query parses terms and filters and returns ranked results
 
 The engine SHALL accept a `Query` of normalized terms plus optional filters (platform, date range, folder,
-and tag), intersect the matching postings with AND semantics, apply the filters against `ConversationIndex`
-metadata, and return ranked, paged `SearchResult`s. Ranking SHALL score by term frequency with a field
-boost favoring title over body and a recency factor favoring more recently updated conversations.
+archived state, and tag), intersect the matching postings with AND semantics, apply the filters against
+`ConversationIndex` metadata, and return ranked, paged `SearchResult`s. Each query term SHALL match indexed
+terms by **prefix** (type-ahead): a query term matches any indexed term that begins with it, so an
+in-progress word such as `ite` matches `iterative`. AND semantics still require every query term to match
+some term in a document. Ranking SHALL score by term frequency with a field boost favoring title over body
+and a recency factor favoring more recently updated conversations.
 
 #### Scenario: Ranked results are correct
 
 - **WHEN** a multi-term query is run over an indexed corpus
-- **THEN** only conversations containing all query terms are returned
+- **THEN** only conversations in which every query term prefix-matches some indexed term are returned
 - **AND** results are ordered by the term-frequency, field-boost, and recency score, title matches
   outranking equivalent body matches
+
+#### Scenario: A typed prefix matches a longer indexed term
+
+- **WHEN** a query term is a prefix of an indexed term (e.g. `ite` against a conversation containing
+  `iterative`)
+- **THEN** that conversation is returned, with the full matched word highlighted in its snippet
 
 #### Scenario: Filters constrain results
 
 - **WHEN** a query is run with a platform, date-range, and folder filter
 - **THEN** only conversations matching all supplied filters appear in the results
+
+### Requirement: Archived conversations stay indexed but are hidden by default
+
+Archived conversations (conversation-organization) SHALL remain indexed and queryable — archiving SHALL
+NOT remove a conversation's postings. The query SHALL expose an archived filter dimension; by default a
+query SHALL exclude archived conversations from results, matching the conversation list's "archived hidden
+but retained" behavior, and SHALL include them only when the archived filter explicitly requests them.
+
+#### Scenario: Archived results are excluded by default
+
+- **WHEN** a query matches both archived and non-archived conversations and no archived filter is supplied
+- **THEN** only the non-archived conversations appear in the results
+- **AND** the archived conversations remain indexed and are returned when the archived filter requests them
 
 #### Scenario: Results are paged
 
@@ -96,9 +118,11 @@ synthetic-corpus benchmark run in CI as a merge gate.
 
 The system SHALL provide a search overlay mounted in the shadow-DOM UI harness that issues queries through
 the `search.run` request and renders highlighted, paged results, filter controls (platform, date, folder,
-and an inert tag control), and an empty state. The overlay SHALL style only from `--sk-*` tokens, use no
-host classes or hard-coded user-facing strings, and be fully keyboard-operable and ARIA-labelled. It SHALL
-be a pure view over worker state, re-querying on the `state.changed` broadcast.
+archived, and an inert tag control), and an empty state. Each result row SHALL show its conversation's
+platform logo drawn from the platform-branding registry (the single source of truth for platform logos and
+origins), and SHALL be openable to its conversation. The overlay SHALL style only from `--sk-*` tokens, use
+no host classes or hard-coded user-facing strings, and be fully keyboard-operable and ARIA-labelled. It
+SHALL be a pure view over worker state, re-querying on the `state.changed` broadcast.
 
 #### Scenario: Keyboard-only search returns highlighted results
 

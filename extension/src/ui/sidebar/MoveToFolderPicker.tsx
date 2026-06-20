@@ -11,7 +11,9 @@
 import { useMemo, useRef, useState } from 'preact/hooks';
 import type { Folder, FolderTreeNode } from '../../shared/types';
 import type { FolderTreeSnapshot, MutationOp } from '../../shared/workspace';
+import { FOLDER_ICON_SENTINEL, FolderRowIcon, PlusIcon } from '../components/Icon';
 import { Dialog } from '../primitives';
+import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
 import type { MutateResult } from './useWorkspace';
 
 const STR = {
@@ -20,6 +22,7 @@ const STR = {
   filterPlaceholder: 'Search folders…',
   unfile: 'Remove from folder',
   noMatches: 'No folders match',
+  create: 'Create',
   error: 'Couldn’t file this conversation. Try again.',
   in: 'in',
 } as const;
@@ -55,7 +58,10 @@ function flattenCandidates(nodes: FolderTreeNode[], ancestors: string[] = []): C
   return out;
 }
 
-type Option = { kind: 'unfile' } | { kind: 'folder'; candidate: Candidate };
+type Option =
+  | { kind: 'unfile' }
+  | { kind: 'folder'; candidate: Candidate }
+  | { kind: 'create'; name: string };
 
 export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: MoveToFolderPickerProps) {
   const [query, setQuery] = useState('');
@@ -67,16 +73,23 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
   const candidates = useMemo(() => flattenCandidates(tree.active), [tree]);
 
   // The "Remove from folder" choice is pinned to the top whenever the conversation
-  // is currently filed; the folder list below narrows as the user types.
+  // is currently filed; the folder list below narrows as the user types. When the
+  // query names no existing folder, a "Create …" row at the bottom creates a folder
+  // with defaults and files this conversation into it in one keystroke.
   const options = useMemo<Option[]>(() => {
-    const q = query.trim().toLowerCase();
+    const trimmed = query.trim();
+    const q = trimmed.toLowerCase();
     const matches = q
       ? candidates.filter((c) => c.folder.name.toLowerCase().includes(q))
       : candidates;
+    // Suppress the create row on an exact (case-insensitive) name match: surface the
+    // existing folder so users file into it rather than fragmenting into duplicates.
+    const exact = q.length > 0 && candidates.some((c) => c.folder.name.trim().toLowerCase() === q);
     const filed = conversation.folderId != null;
     return [
       ...(filed ? [{ kind: 'unfile' } as const] : []),
       ...matches.map((candidate) => ({ kind: 'folder', candidate }) as const),
+      ...(trimmed.length > 0 && !exact ? [{ kind: 'create', name: trimmed } as const] : []),
     ];
   }, [candidates, query, conversation.folderId]);
 
@@ -84,16 +97,52 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
   const activeIndex = options.length === 0 ? -1 : Math.min(highlight, options.length - 1);
   const optionId = (i: number) => `${listId}-opt-${i}`;
 
+  const took = (r: MutateResult) => r.ok || r.applied;
+
+  // A new folder's id is fixed per name, so retrying a create after a possibly-
+  // committed-but-unacknowledged attempt overwrites the same row (and re-files into
+  // it) instead of duplicating the folder.
+  const createIds = useRef(new Map<string, string>());
+  const idForName = (name: string): string => {
+    const m = createIds.current;
+    let id = m.get(name);
+    if (!id) {
+      id = makeFolderId();
+      m.set(name, id);
+    }
+    return id;
+  };
+
+  const assign = async (folderId: string | null): Promise<MutateResult> =>
+    onSubmit({ op: 'conversation.assign', conversationId: conversation.id, folderId });
+
   const confirm = async (opt: Option | undefined) => {
     if (!opt || busy) return;
-    const folderId = opt.kind === 'unfile' ? null : opt.candidate.folder.id;
     setFailed(false);
     setBusy(true);
-    const r = await onSubmit({ op: 'conversation.assign', conversationId: conversation.id, folderId });
+    let ok: boolean;
+    if (opt.kind === 'create') {
+      // Two UI mutations: create the folder with defaults, then file this
+      // conversation into it. Skip the assign if the create never took effect.
+      const id = idForName(opt.name);
+      const created = await onSubmit({
+        op: 'folder.create',
+        id,
+        name: opt.name,
+        parentId: null,
+        color: DEFAULT_FOLDER_COLOR,
+        icon: FOLDER_ICON_SENTINEL,
+        // Folders are platform-agnostic in the unified model (D28 / D-FSR4).
+        platformScope: 'unified',
+      });
+      ok = took(created) && took(await assign(id));
+    } else {
+      ok = took(await assign(opt.kind === 'unfile' ? null : opt.candidate.folder.id));
+    }
     setBusy(false);
     // Close when it took effect; otherwise keep the picker open and surface the
     // failure rather than silently dropping the action.
-    if (r.ok || r.applied) onClose();
+    if (ok) onClose();
     else setFailed(true);
   };
 
@@ -158,6 +207,23 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
                   </li>
                 );
               }
+              if (opt.kind === 'create') {
+                return (
+                  <li
+                    key="create"
+                    id={optionId(i)}
+                    class={`sk-picker__option sk-picker__option--create${selected ? ' sk-picker__option--active' : ''}`}
+                    data-testid="sk-move-create"
+                    role="option"
+                    aria-selected={selected}
+                    onMouseEnter={() => setHighlight(i)}
+                    onClick={() => void confirm(opt)}
+                  >
+                    <PlusIcon size={16} />
+                    <span class="sk-picker__label">{`${STR.create} “${opt.name}”`}</span>
+                  </li>
+                );
+              }
               const { folder, path } = opt.candidate;
               return (
                 <li
@@ -171,7 +237,7 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
                   onMouseEnter={() => setHighlight(i)}
                   onClick={() => void confirm(opt)}
                 >
-                  {folder.icon ? <span class="sk-row__icon" aria-hidden="true">{folder.icon}</span> : null}
+                  <FolderRowIcon folder={folder} />
                   <span class="sk-picker__label" style={folder.color ? { color: folder.color } : undefined}>
                     {folder.name}
                   </span>

@@ -4,7 +4,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
-import { Sidebar } from '../src/ui/sidebar/Sidebar';
+import { Sidebar, FOLDER_ICON_SENTINEL } from '../src/ui/sidebar/Sidebar';
 import type { WorkspaceView } from '../src/ui/sidebar/useWorkspace';
 import type { ActiveConversation, ConversationIndex, Folder, FolderTreeNode } from '../src/shared/types';
 import { conversationId, type FolderTreeSnapshot } from '../src/shared/workspace';
@@ -108,6 +108,50 @@ describe('Sidebar pinned & archive rows (folders delta)', () => {
     expect(row.querySelector('[data-testid=sk-folder-count]')!.textContent).toBe('5');
   });
 
+  it('renders the default folder icon as a tintable SVG in the folder colour', () => {
+    const def = folder('d1', { name: 'Branded', icon: FOLDER_ICON_SENTINEL, color: '#5aa9e6', pinned: true });
+    renderSidebar(makeView({ active: [], pinned: [def], archived: [] }));
+    const tinted = $('[data-pinned-id=d1] [data-testid=sk-row-folder-icon]') as HTMLElement;
+    expect(tinted).toBeTruthy();
+    expect(tinted.querySelector('svg')).toBeTruthy();
+    // Tinted in the folder's colour (not a plain emoji glyph).
+    expect(tinted.style.color).toBeTruthy();
+  });
+
+  it('renders an emoji icon un-tinted (no folder-icon SVG, no colour tint)', () => {
+    const pin = folder('e1', { name: 'Emoji', icon: '📌', color: '#f80', pinned: true });
+    renderSidebar(makeView({ active: [], pinned: [pin], archived: [] }));
+    const row = $('[data-pinned-id=e1]')!;
+    expect(row.querySelector('[data-testid=sk-row-folder-icon]')).toBeNull();
+    const glyph = row.querySelector('.sk-row__icon') as HTMLElement;
+    expect(glyph.textContent).toBe('📌');
+    expect(glyph.querySelector('svg')).toBeNull();
+  });
+
+  it('clicking a pinned row jumps to the folder’s canonical tree copy (expands its path)', async () => {
+    const f = folder('p1', { name: 'Launch brief', pinned: true });
+    // p1 is both pinned (the shortcut) and present in the active tree (its canonical,
+    // expandable copy), with one filed conversation that is hidden until expanded.
+    renderSidebar(
+      makeView(
+        { active: [node(f)], pinned: [f], archived: [] },
+        {},
+        { conversations: convsIn('p1', 1) },
+      ),
+    );
+
+    // Collapsed by default: the canonical row exists, but its conversation is hidden.
+    const canonical = $('[data-folder-id=p1]')!;
+    expect(canonical).toBeTruthy();
+    expect(canonical.parentElement!.querySelector('.sk-conv-row')).toBeNull();
+
+    $('[data-pinned-id=p1]')!.click();
+    await flush();
+
+    // The path expanded, so the conversation under the canonical copy now renders.
+    expect($('[data-folder-id=p1]')!.parentElement!.querySelector('.sk-conv-row')).toBeTruthy();
+  });
+
   it('an archive row shows the folder count', () => {
     const arc = folder('a1', { name: 'Old work', archived: true });
     renderSidebar(
@@ -130,6 +174,60 @@ describe('Sidebar pinned & archive rows (folders delta)', () => {
   });
 });
 
+describe('Sidebar folder dialog defaults (folders / D5)', () => {
+  const openCreate = async () => {
+    renderSidebar(makeView({ active: [], pinned: [], archived: [] }));
+    $('[data-testid=sk-empty-new-folder]')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+  };
+
+  it('preselects the folder icon and the blue colour for a new folder', async () => {
+    await openCreate();
+    const def = $('[data-testid=sk-folder-icon-default]') as HTMLButtonElement;
+    expect(def).toBeTruthy();
+    expect(def.getAttribute('aria-pressed')).toBe('true');
+    expect(def.querySelector('svg')).toBeTruthy();
+    // Blue swatch (#5aa9e6) preselected; the "no colour" clear chip is not.
+    const blue = $('[aria-label="#5aa9e6"]') as HTMLButtonElement;
+    expect(blue.getAttribute('aria-pressed')).toBe('true');
+    const clearColor = $('[data-testid=sk-folder-colors] .sk-swatch--clear') as HTMLButtonElement;
+    expect(clearColor.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('keeps the clear/"no icon" and clear/"no colour" options reachable', async () => {
+    await openCreate();
+    const clearIcon = $('[data-testid=sk-folder-icons] .sk-icon-option--clear') as HTMLButtonElement;
+    clearIcon.click();
+    await new Promise((r) => setTimeout(r, 0));
+    // Clearing deselects the default folder-icon slot (cleared ≠ default).
+    expect(($('[data-testid=sk-folder-icon-default]') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('false');
+    expect(clearIcon.getAttribute('aria-pressed')).toBe('true');
+
+    const clearColor = $('[data-testid=sk-folder-colors] .sk-swatch--clear') as HTMLButtonElement;
+    clearColor.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(clearColor.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('creates a folder carrying the folder-icon sentinel and blue by default', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(makeView({ active: [], pinned: [], archived: [] }, {}, { mutate }));
+    $('[data-testid=sk-empty-new-folder]')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    const input = $('[data-testid=sk-folder-name]') as HTMLInputElement;
+    input.value = 'Research';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
+    const form = $('.sk-dialog__body') as HTMLFormElement;
+    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+    else form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r, 0));
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ op: 'folder.create', name: 'Research', icon: FOLDER_ICON_SENTINEL, color: '#5aa9e6' }),
+    );
+  });
+});
+
 describe('Sidebar inline expansion (drill-in)', () => {
   it('reveals a folder’s conversations only after expanding it', async () => {
     renderSidebar(
@@ -147,6 +245,51 @@ describe('Sidebar inline expansion (drill-in)', () => {
     expect(rows[0].querySelector('[data-testid=sk-conv-title]')!.textContent).toBe('Alpha');
   });
 
+  it('expand-all opens every folder (nested + archived) but leaves the Archive dock as-is', async () => {
+    const child = node(folder('child', { name: 'Child', parentId: 'parent' }));
+    child.depth = 2;
+    renderSidebar(
+      makeView(
+        {
+          active: [node(folder('parent', { name: 'Parent' }), [child])],
+          pinned: [],
+          archived: [folder('arch', { name: 'Archived', archived: true })],
+        },
+        {},
+        {
+          conversations: [
+            conv('a', { folderId: 'parent', title: 'Alpha' }),
+            conv('b', { folderId: 'child', title: 'Beta' }),
+            conv('c', { folderId: 'arch', title: 'Gamma' }),
+            conv('u', { folderId: null, title: 'Loose' }),
+          ],
+        },
+      ),
+    );
+    // Nothing is expanded initially, and the Archive dock is collapsed.
+    expect($$('[data-testid=sk-conv-row]')).toHaveLength(0);
+    const archive = $('[data-testid=sk-archive]') as HTMLDetailsElement;
+    expect(archive.open).toBe(false);
+
+    ($('[data-testid=sk-expand-all]') as HTMLElement).click();
+    await flush();
+    // The Archive dock is left untouched (still closed) — only its inner folders'
+    // expansion state is set. The active tree + Unfiled bodies are revealed now.
+    expect(archive.open).toBe(false);
+    const titles = $$('[data-testid=sk-conv-title]').map((e) => e.textContent);
+    expect(titles).toEqual(expect.arrayContaining(['Alpha', 'Beta', 'Loose']));
+
+    // Opening the Archive dock now reveals its folder already expanded.
+    archive.open = true;
+    archive.dispatchEvent(new Event('toggle'));
+    await flush();
+    expect($('[data-testid=sk-archive] [data-testid=sk-conv-title]')!.textContent).toBe('Gamma');
+
+    ($('[data-testid=sk-collapse-all]') as HTMLElement).click();
+    await flush();
+    expect($$('[data-testid=sk-conv-row]')).toHaveLength(0);
+  });
+
   it('lists unfiled conversations under the Unfiled node when expanded', async () => {
     renderSidebar(
       makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
@@ -161,6 +304,41 @@ describe('Sidebar inline expansion (drill-in)', () => {
     ($('[data-testid=sk-unfiled-caret]') as HTMLElement).click();
     await flush();
     expect($$('[data-testid=sk-conv-row]')).toHaveLength(1);
+  });
+
+  it('excludes archived conversations from a folder badge and its rendered rows', async () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, {
+        conversations: [
+          conv('a', { folderId: 'x', title: 'Alpha' }),
+          conv('b', { folderId: 'x', title: 'Beta', archived: true }),
+        ],
+      }),
+    );
+    // The archived chat is dropped from the count (2 filed, but 1 archived → 1).
+    expect($('[data-folder-id=x] [data-testid=sk-folder-count]')!.textContent).toBe('1');
+
+    ($('[data-testid=sk-folder-caret]') as HTMLElement).click();
+    await flush();
+    // Scope to the folder's own body — the archived chat surfaces only in the
+    // dedicated Archived section, never inside its origin folder.
+    const folderRows = [
+      ...$('[data-folder-id=x]')!.parentElement!.querySelectorAll('[data-testid=sk-conv-row]'),
+    ] as HTMLElement[];
+    expect(folderRows).toHaveLength(1);
+    expect(folderRows[0].querySelector('[data-testid=sk-conv-title]')!.textContent).toBe('Alpha');
+  });
+
+  it('excludes archived conversations from the Unfiled count', () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
+        conversations: [
+          conv('u1', { folderId: null, title: 'Loose' }),
+          conv('u2', { folderId: null, title: 'Stowed', archived: true }),
+        ],
+      }),
+    );
+    expect($('[data-testid=sk-unfiled-count]')!.textContent).toBe('1');
   });
 
   it('omits the Unfiled node when every conversation is filed', () => {
@@ -193,6 +371,66 @@ describe('Sidebar inline expansion (drill-in)', () => {
     const activeRow = $$('[data-testid=sk-conv-row]').find((r) => r.getAttribute('aria-current') === 'true');
     expect(activeRow).toBeTruthy();
     expect(activeRow!.querySelector('[data-testid=sk-conv-title]')!.textContent).toBe('Latency');
+  });
+});
+
+describe('Sidebar archive dock (bottom-pinned archive)', () => {
+  it('renders no archive dock when nothing is archived', () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
+        conversations: [conv('a', { folderId: 'x' })],
+      }),
+    );
+    expect($('[data-testid=sk-archive-dock]')).toBeNull();
+    expect($('[data-testid=sk-archive]')).toBeNull();
+  });
+
+  it('shows the Archive section, holding archived chats, when a chat is archived', () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
+        conversations: [
+          conv('a', { folderId: 'x', title: 'Alpha' }),
+          conv('b', { folderId: 'x', title: 'Beta', archived: true }),
+        ],
+      }),
+    );
+    const dock = $('[data-testid=sk-archive-dock]');
+    expect(dock).toBeTruthy();
+    // The unified Archive section lives inside the dock; its badge counts archived
+    // folders + chats (here: one archived chat).
+    const archive = $('[data-testid=sk-archive]');
+    expect(archive).toBeTruthy();
+    expect(dock!.contains(archive)).toBe(true);
+    expect($('[data-testid=sk-archive-count]')!.textContent).toBe('1');
+  });
+
+  it('places the live tree in the scroll region, separate from the archive dock', () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, {
+        conversations: [conv('b', { folderId: 'x', archived: true })],
+      }),
+    );
+    const scroll = $('[data-testid=sk-sidebar-scroll]')!;
+    const dock = $('[data-testid=sk-archive-dock]')!;
+    // The Folders tree renders inside the scroll region; the archive dock does not.
+    expect(scroll.querySelector('[data-folder-id=x]')).toBeTruthy();
+    expect(dock.querySelector('[data-folder-id=x]')).toBeNull();
+    expect(scroll.contains(dock)).toBe(false);
+  });
+
+  it('docks the Archive section for an archived folder even without archived chats', () => {
+    const arc = folder('a1', { name: 'Old work', archived: true });
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [arc] }, {}, {
+        conversations: [conv('a', { folderId: 'x' })],
+      }),
+    );
+    const dock = $('[data-testid=sk-archive-dock]')!;
+    expect(dock).toBeTruthy();
+    // No archived chats, one archived folder: the section docks and its badge counts
+    // the lone archived folder.
+    expect(dock.querySelector('[data-testid=sk-archive]')).toBeTruthy();
+    expect($('[data-testid=sk-archive-count]')!.textContent).toBe('1');
   });
 });
 
@@ -280,6 +518,179 @@ describe('Sidebar create-dialog failure (workspace-view-recovery 7.5)', () => {
 
     expect(mutate).toHaveBeenCalledTimes(1);
     expect($('[data-testid=sk-folder-dialog]')).toBeNull();
+  });
+});
+
+describe('Sidebar folder actions menu (⋯ button)', () => {
+  // The folder actions menu is opened from a per-row `⋯` button (not right-click);
+  // the button is always in the DOM (revealed on hover/focus via CSS) so tests can
+  // click it directly. Clicking it sets the menu target and opens the Zag menu.
+  const openMenu = (rowSel: string) => {
+    const row = $(rowSel)!;
+    const btn = row.querySelector('[data-testid=sk-folder-menu]') as HTMLElement;
+    btn.click();
+  };
+
+  it('renders a ⋯ actions button after the count on an active-tree folder row', () => {
+    renderSidebar(makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }));
+    const row = $('[data-folder-id=x]')!;
+    const btn = row.querySelector('[data-testid=sk-folder-menu]') as HTMLElement;
+    expect(btn).toBeTruthy();
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('aria-label')).toBe('Folder actions');
+    // The button sits after the count span in the row.
+    const kids = [...row.children];
+    expect(kids.indexOf(row.querySelector('[data-testid=sk-folder-count]')!)).toBeLessThan(kids.indexOf(btn));
+  });
+
+  it('clicking the ⋯ button opens the folder actions menu', async () => {
+    renderSidebar(makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }));
+    expect($('[data-testid=sk-context-menu]')).toBeNull();
+    openMenu('[data-folder-id=x]');
+    await flush();
+    const menu = $('[data-testid=sk-context-menu]');
+    expect(menu).toBeTruthy();
+    expect($('[data-testid=sk-menu-rename]')).toBeTruthy();
+    expect($('[data-testid=sk-menu-pin]')).toBeTruthy();
+    expect($('[data-testid=sk-menu-archive]')).toBeTruthy();
+    expect($('[data-testid=sk-menu-move-top]')).toBeTruthy();
+    expect($('[data-testid=sk-menu-delete]')).toBeTruthy();
+  });
+
+  it('clicking the ⋯ button does not toggle the folder’s expansion', async () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, {
+        conversations: [conv('a', { folderId: 'x', title: 'Alpha' })],
+      }),
+    );
+    openMenu('[data-folder-id=x]');
+    await flush();
+    // The menu opened but the folder stayed collapsed (no conversation rows revealed).
+    expect($('[data-testid=sk-context-menu]')).toBeTruthy();
+    expect($('[data-testid=sk-conv-row]')).toBeNull();
+  });
+
+  it('Pin from the menu fires a folder.pin mutation toggling the state', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, { mutate }),
+    );
+    openMenu('[data-folder-id=x]');
+    await flush();
+    ($('[data-testid=sk-menu-pin]') as HTMLElement).click();
+    await flush();
+    expect(mutate).toHaveBeenCalledWith({ op: 'folder.pin', id: 'x', pinned: true });
+  });
+
+  it('Delete from the menu fires a folder.delete mutation', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, { mutate }),
+    );
+    openMenu('[data-folder-id=x]');
+    await flush();
+    ($('[data-testid=sk-menu-delete]') as HTMLElement).click();
+    await flush();
+    expect(mutate).toHaveBeenCalledWith({ op: 'folder.delete', id: 'x' });
+  });
+
+  it('Rename from the menu opens the edit dialog for that folder', async () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }),
+    );
+    openMenu('[data-folder-id=x]');
+    await flush();
+    ($('[data-testid=sk-menu-rename]') as HTMLElement).click();
+    await flush();
+    const dialog = $('[data-testid=sk-folder-dialog]');
+    expect(dialog).toBeTruthy();
+    expect(($('[data-testid=sk-folder-name]') as HTMLInputElement).value).toBe('Research');
+  });
+
+  it('a pinned leaf row exposes the ⋯ button and its menu acts on the folder', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    // A pinned folder is mirrored in the active tree (resolveFolder reads it there);
+    // the pinned leaf is its second surface in the rail.
+    const pin = folder('p1', { name: 'Launch brief', pinned: true });
+    renderSidebar(makeView({ active: [node(pin)], pinned: [pin], archived: [] }, {}, { mutate }));
+    expect($('[data-pinned-id=p1] [data-testid=sk-folder-menu]')).toBeTruthy();
+    openMenu('[data-pinned-id=p1]');
+    await flush();
+    // A pinned folder's action reads "Unpin"; clicking it un-pins.
+    expect($('[data-testid=sk-menu-pin]')!.textContent).toBe('Unpin');
+    ($('[data-testid=sk-menu-pin]') as HTMLElement).click();
+    await flush();
+    expect(mutate).toHaveBeenCalledWith({ op: 'folder.pin', id: 'p1', pinned: false });
+  });
+
+  it('an archived leaf row exposes the ⋯ button and can be unarchived from its menu', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    const arc = folder('a1', { name: 'Old work', archived: true });
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [arc] }, {}, { mutate }),
+    );
+    expect($('[data-archived-id=a1] [data-testid=sk-folder-menu]')).toBeTruthy();
+    openMenu('[data-archived-id=a1]');
+    await flush();
+    // An archived folder's action reads "Unarchive"; clicking it un-archives.
+    expect($('[data-testid=sk-menu-archive]')!.textContent).toBe('Unarchive');
+    ($('[data-testid=sk-menu-archive]') as HTMLElement).click();
+    await flush();
+    expect(mutate).toHaveBeenCalledWith({ op: 'folder.archive', id: 'a1', archived: false });
+  });
+});
+
+describe('Sidebar archived conversations section', () => {
+  it('does not render the archived section when no conversation is archived', () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
+        conversations: [conv('a', { folderId: 'x', title: 'Alpha' })],
+      }),
+    );
+    expect($('[data-testid=sk-archive]')).toBeNull();
+  });
+
+  it('renders the archived section with a count and the archived rows when they exist', () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
+        conversations: [
+          conv('a', { folderId: 'x', title: 'Alpha' }),
+          conv('z1', { folderId: 'x', title: 'Stowed one', archived: true }),
+          conv('z2', { folderId: null, title: 'Stowed two', archived: true }),
+        ],
+      }),
+    );
+    const section = $('[data-testid=sk-archive]')!;
+    expect(section).toBeTruthy();
+    expect(section.querySelector('summary')!.textContent).toContain('Archive');
+    expect($('[data-testid=sk-archive-count]')!.textContent).toBe('2');
+    const ids = [...section.querySelectorAll('[data-testid=sk-conv-row]')].map(
+      (r) => (r as HTMLElement).dataset.conversationId,
+    );
+    expect(ids.sort()).toEqual(['z1', 'z2']);
+    // The live (non-archived) row is not duplicated into the archived section.
+    expect(ids).not.toContain('a');
+  });
+
+  it('Unarchive from an archived row’s menu fires an unarchive mutation', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(
+      makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
+        conversations: [conv('z1', { folderId: 'x', title: 'Stowed', archived: true })],
+        mutate,
+      }),
+    );
+    const section = $('[data-testid=sk-archive]')!;
+    const row = [...section.querySelectorAll('[data-testid=sk-conv-row]')].find(
+      (r) => (r as HTMLElement).dataset.conversationId === 'z1',
+    ) as HTMLElement;
+    (row.querySelector('[data-testid=sk-conv-menu]') as HTMLElement).click();
+    await flush();
+    // An archived conversation's action reads "Unarchive"; clicking it un-archives.
+    expect($('[data-testid=sk-conv-menu-archive]')!.textContent).toBe('Unarchive');
+    ($('[data-testid=sk-conv-menu-archive]') as HTMLElement).click();
+    await flush();
+    expect(mutate).toHaveBeenCalledWith({ op: 'conversation.archive', conversationId: 'z1', archived: false });
   });
 });
 

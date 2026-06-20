@@ -122,12 +122,13 @@ describe('Framed shell (6.1)', () => {
 });
 
 describe('Disabled feature stubs (6.2)', () => {
-  it('search, Prompts/Profiles tabs, PRO badge, and sync are present and inert', async () => {
+  it('Prompts/Profiles tabs, PRO badge, and sync are present and inert', async () => {
     await mountShell();
-    const search = $('[data-testid=sk-search]') as HTMLButtonElement;
     const prompts = $('[data-testid=sk-tab-prompts]') as HTMLButtonElement;
     const profiles = $('[data-testid=sk-tab-profiles]') as HTMLButtonElement;
-    expect(search.disabled).toBe(true);
+    // Search is now live (C8) — the launcher opens the overlay rather than being inert.
+    const search = $('[data-testid=sk-search]') as HTMLButtonElement;
+    expect(search.disabled).toBe(false);
     expect(container.textContent).toContain('⌘K');
     expect(prompts.disabled).toBe(true);
     expect(prompts.getAttribute('aria-disabled')).toBe('true');
@@ -192,6 +193,11 @@ describe('Platform view-filter chip group (sidebar-shell / D28)', () => {
     expect(claudeChip.disabled).toBe(false);
     // A platform with no conversations gets no chip.
     expect($('[data-testid=sk-platform-perplexity]')).toBeNull();
+
+    // Each platform chip leads with its brand logo; "All" stays neutral (no logo).
+    expect(claudeChip.querySelector('.sk-chip__logo svg')).toBeTruthy();
+    expect(geminiChip.querySelector('.sk-chip__logo svg')).toBeTruthy();
+    expect(all.querySelector('.sk-chip__logo')).toBeNull();
   });
 
   it('clicking a platform chip narrows the filter; "All" restores the unified view (5.3 wiring)', async () => {
@@ -209,5 +215,37 @@ describe('Platform view-filter chip group (sidebar-shell / D28)', () => {
     await mountWith({ ...multiPlatform, platformFilter: 'gemini' });
     expect(($('[data-testid=sk-platform-all]') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('false');
     expect(($('[data-testid=sk-platform-gemini]') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
+  });
+});
+
+describe('Collapsed-list nudge (sidebar-shell)', () => {
+  async function mountWith(v: WorkspaceView): Promise<void> {
+    render(<SidebarShell platform="gemini" view={v} />, container);
+    await flush();
+  }
+
+  it('shows a platform-named nudge when the active record flags a collapsed list', async () => {
+    await mountWith({
+      ...view,
+      active: { platform: 'gemini', nativeId: 'g1', title: 'A chat', updatedAt: 0, listCollapsedHint: true },
+    });
+    const nudge = $('[data-testid=sk-collapsed-list-nudge]');
+    expect(nudge).toBeTruthy();
+    expect(nudge!.getAttribute('role')).toBe('status'); // announced, not alarming
+    expect(nudge!.textContent).toContain('Gemini');
+    expect(nudge!.querySelector('.sk-nudge__logo svg')).toBeTruthy();
+  });
+
+  it('renders no nudge when there is no active conversation', async () => {
+    await mountWith({ ...view, active: null });
+    expect($('[data-testid=sk-collapsed-list-nudge]')).toBeNull();
+  });
+
+  it('renders no nudge when the active conversation does not flag a collapsed list', async () => {
+    await mountWith({
+      ...view,
+      active: { platform: 'gemini', nativeId: 'g1', title: 'A chat', updatedAt: 0 },
+    });
+    expect($('[data-testid=sk-collapsed-list-nudge]')).toBeNull();
   });
 });

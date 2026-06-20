@@ -32,5 +32,13 @@ export const skeinosManifest = {
   // state. This is the minimum permission surface (spec: "minimum required"),
   // keeping the privacy-first posture intact. Anything added later must be
   // justified against that posture and store review.
-  permissions: ['alarms', 'sidePanel'] as string[],
+  //
+  // `scripting` lets the worker inject the content script into supported tabs that
+  // were ALREADY OPEN when the extension is installed/updated (content scripts
+  // otherwise only auto-inject on a fresh page load). It grants no new host reach —
+  // injection is still bounded by the `host_permissions` above, so it can only run
+  // on the three P0 hosts — and carries no credentials. Without it, a user's open
+  // Claude/Gemini/Perplexity chats stay un-indexed until they manually reload each
+  // tab, breaking the "your open chats just appear" promise.
+  permissions: ['alarms', 'sidePanel', 'scripting'] as string[],
 };

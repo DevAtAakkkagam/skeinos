@@ -7,6 +7,7 @@
     "conversationItem": "a[href^=\"/app/\"]",
     "conversationTitle": ".title-text",
     "conversationIdAttr": "href",
+    "conversationUrlPattern": "/app/[^/?#]+",
     "messageUser": "user-query",
     "messageAssistant": "model-response",
     "composer": ".ql-editor",
@@ -17,6 +18,7 @@
   "behaviors": {
     "insertMode": "execCommand",
     "submitMode": "click",
-    "supportsSystemPrompt": false
+    "supportsSystemPrompt": false,
+    "listHiddenWhenCollapsed": true
   }
 }

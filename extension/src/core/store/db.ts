@@ -46,6 +46,24 @@ export const MIGRATIONS: Migration[] = [
     // Intentionally empty — additive optional record fields require no structural
     // change to the (schemaless-per-record) IndexedDB object store.
   },
+  // v4 — reshape `searchPostings` from the shipped per-term layout (keyPath
+  // `term`) to the prefix-shard layout (keyPath `prefix`) per D26/D6/LLD §8.1.
+  // Indexing has never run, so the store is empty: drop and recreate with the new
+  // key path — no row transformation, no rollback risk. `conversations` (holding
+  // `ConversationIndex`) and every syncable store are untouched.
+  //
+  // Guarded by `oldVersion` so this is idempotent for a *fresh* install: there the
+  // v1 step already created `searchPostings` with keyPath `prefix` from the current
+  // `ALL_STORES`, so the reshape is a no-op (mirroring the v2 `activeConversations`
+  // presence guard's intent). Only an existing pre-v4 database — created when the
+  // key path was `term` — is dropped and recreated here.
+  (db, _tx, oldVersion) => {
+    if (oldVersion === 0) return; // fresh install already has the new key path
+    if (db.objectStoreNames.contains('searchPostings')) {
+      db.deleteObjectStore('searchPostings');
+    }
+    db.createObjectStore('searchPostings', { keyPath: 'prefix' });
+  },
 ];
 
 /**

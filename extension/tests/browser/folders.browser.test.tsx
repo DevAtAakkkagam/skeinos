@@ -2,7 +2,7 @@
 // Mounts the real Sidebar over the real worker handlers and a real IndexedDB,
 // wired together by an in-page loopback that stands in for chrome messaging — so
 // these exercise the genuine UI → message → single-writer → broadcast → re-render
-// path. Maps to the "Sidebar tree with drag-drop and context menu" scenarios.
+// path. Maps to the "Sidebar tree with drag-drop and actions menu" scenarios.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deleteDB } from 'idb';
@@ -125,29 +125,29 @@ describe('folders sidebar (real browser)', () => {
     });
   });
 
-  it('pins and archives a folder from the context menu', async () => {
+  it('pins and archives a folder from the ⋯ actions menu', async () => {
     await createFolder('Work');
-    folderRow('Work').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    folderRow('Work').querySelector<HTMLElement>('[data-testid=sk-folder-menu]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-context-menu]')).toBeTruthy());
     $('[data-testid=sk-menu-pin]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-pinned]')?.textContent).toContain('Work'));
 
-    folderRow('Work').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    folderRow('Work').querySelector<HTMLElement>('[data-testid=sk-folder-menu]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-context-menu]')).toBeTruthy());
     $('[data-testid=sk-menu-archive]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-archive]')?.textContent).toContain('Work'));
   });
 
-  it('unarchives a folder from the archived row context menu', async () => {
+  it('unarchives a folder from the archived row ⋯ actions menu', async () => {
     await createFolder('Stale');
-    folderRow('Stale').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    folderRow('Stale').querySelector<HTMLElement>('[data-testid=sk-folder-menu]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-context-menu]')).toBeTruthy());
     $('[data-testid=sk-menu-archive]')!.click();
     await vi.waitFor(() => expect($('[data-archived-id]')?.textContent).toContain('Stale'));
 
-    // Right-click the archived row and Unarchive it: the archive menu item flips
+    // Open the archived row's ⋯ menu and Unarchive it: the archive menu item flips
     // its label, and the folder returns to the active tree.
-    $('[data-archived-id]')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true }));
+    $('[data-archived-id]')!.querySelector<HTMLElement>('[data-testid=sk-folder-menu]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-menu-archive]')?.textContent).toBe('Unarchive'));
     $('[data-testid=sk-menu-archive]')!.click();
 

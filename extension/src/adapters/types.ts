@@ -30,7 +30,10 @@ export interface SelfCheckResult {
 
 /** Live signals an adapter emits so the overlay tracks host-page changes. */
 export type AdapterEvent =
-  | { type: 'conversation-changed'; ref: ConversationRef }
+  // `ref` is null when the active tab leaves a conversation (e.g. a "new chat"/home
+  // page) — the consumer clears the active-conversation state rather than keeping a
+  // stale one.
+  | { type: 'conversation-changed'; ref: ConversationRef | null }
   | { type: 'list-changed' }
   | { type: 'composer-ready' };
 
@@ -63,7 +66,18 @@ export interface AdapterSelectors {
   conversationList: string;
   conversationItem: string;
   conversationTitle: string;
+  /** Optional attribute on the item (or its title element) that carries the title
+   *  text when it is NOT the element's `textContent` — e.g. Perplexity files the id
+   *  on an overlay `<a>` whose label sits in its `aria-label`, not its text. Read
+   *  after `conversationTitle`'s text and before the item's own text. */
+  conversationTitleAttr?: string;
   conversationIdAttr: string;
+  /** Optional regex (as a string) that extracts the open conversation's `nativeId`
+   *  straight from the page URL — the reliable signal when the host collapses or
+   *  virtualizes its list so the open chat has no DOM item to mark. Capture group 1
+   *  is used when present, else the whole match. The result must equal the
+   *  `conversationIdAttr` value the list items carry, so highlighting matches. */
+  conversationUrlPattern?: string;
   messageUser: string;
   messageAssistant: string;
   composer: string;
@@ -77,6 +91,12 @@ export interface AdapterBehaviors {
   insertMode: InsertMode;
   submitMode: SubmitMode;
   supportsSystemPrompt: boolean;
+  // The host renders its conversation list ONLY while its side drawer is expanded
+  // (Gemini), so a collapsed drawer leaves `listConversations()` empty even though
+  // chats exist. When true, the content script flags this state so the side panel
+  // can nudge the user to open the drawer once to sync. Platforms that keep their
+  // list in the DOM when collapsed (Claude, Perplexity) omit it. Optional/additive.
+  listHiddenWhenCollapsed?: boolean;
 }
 
 /**
