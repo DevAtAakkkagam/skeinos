@@ -23,7 +23,7 @@ const SIDEBAR_FEATURE_CSS = `
 .sk-sidebar__section { display: flex; flex-direction: column; gap: var(--sk-space-1); }
 /* Overline · dot font · 13 · +34% track (Lattice). Pushed toward fg + weight 600
    so it reads as a structural label, not a faint caption. */
-.sk-sidebar__heading { font-family: var(--sk-font-label); color: color-mix(in srgb, var(--sk-color-muted) 60%, var(--sk-color-fg)); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.2em; margin: var(--sk-space-2) 0 0; }
+.sk-sidebar__heading { font-family: var(--sk-font-label); color: color-mix(in srgb, var(--sk-color-muted) 60%, var(--sk-color-fg)); font-size: var(--sk-text-sm); font-weight: 500; text-transform: uppercase; letter-spacing: 0.2em; margin: var(--sk-space-2) 0 0; }
 /* A standalone heading (PINNED) sits directly in the section, not inside a padded
    .sk-row like FOLDERS/ARCHIVE — so add the row's inline padding to line its label
    up with the other section labels. */
@@ -108,8 +108,8 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 @media (prefers-reduced-motion: reduce) { .sk-row-menu { transition: none; } }
 .sk-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--sk-space-2); padding: var(--sk-space-3) var(--sk-space-2); }
 .sk-empty__icon { display: inline-flex; color: var(--sk-color-muted); }
-.sk-empty__title { font-weight: 600; font-size: 15px; margin: 0; }
-.sk-empty__body { color: var(--sk-color-muted); font-size: 13px; margin: 0; }
+.sk-empty__title { font-weight: 600; font-size: var(--sk-text-title); margin: 0; }
+.sk-empty__body { color: var(--sk-color-muted); font-size: var(--sk-text-base); margin: 0; }
 /* Demoted create affordance: when there are no folders yet but the user already
    has unfiled/archived conversations, the full blank-slate card would wrongly lead
    over real content. Instead a slim dashed "New folder" row sits under the FOLDERS
@@ -124,7 +124,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 @keyframes sk-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .sk-spinner { animation-duration: 1.6s; } }
 /* Inline form error (folder dialog): kept input + a surfaced failure (PRIV). */
-.sk-dialog__error { color: var(--sk-color-danger, #d4504e); font-size: 13px; margin: 0; }
+.sk-dialog__error { color: var(--sk-color-danger, #d4504e); font-size: var(--sk-text-base); margin: 0; }
 /* The context menu and folder dialog surfaces now come from the interaction-
    primitives layer (PRIMITIVES_CSS); only the folder form's own layout lives here. */
 .sk-dialog__body { display: flex; flex-direction: column; gap: var(--sk-space-2); }
@@ -135,7 +135,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 /* --- create / edit folder dialog (design 03·05) ---------------------------- */
 .sk-folder-form { min-width: 300px; gap: var(--sk-space-3); }
 .sk-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sk-space-2); }
-.sk-dialog__title { font-size: 16px; font-weight: 600; margin: 0; }
+.sk-dialog__title { font-size: var(--sk-text-title); font-weight: 600; margin: 0; }
 /* Fieldsets carry the swatch/icon groups but must not draw the native frame. */
 .sk-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .sk-fieldset legend { padding: 0; }
@@ -161,7 +161,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 
 /* --- Move-to-folder picker (conversation-filing) --------------------------- */
 .sk-picker { display: flex; flex-direction: column; gap: var(--sk-space-2); min-width: 280px; }
-.sk-picker__title { font-weight: 600; font-size: 15px; margin: 0; }
+.sk-picker__title { font-weight: 600; font-size: var(--sk-text-title); margin: 0; }
 .sk-picker__input { width: 100%; box-sizing: border-box; }
 .sk-picker__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow: auto; scrollbar-gutter: stable; }
 .sk-picker__option { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-1) var(--sk-space-2); border-radius: var(--sk-radius); cursor: pointer; }
@@ -169,8 +169,8 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-picker__option--unfile { color: var(--sk-color-muted); }
 .sk-picker__option--create { color: var(--sk-color-accent); }
 .sk-picker__label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sk-picker__path { color: var(--sk-color-muted); font-size: 12px; white-space: nowrap; }
-.sk-picker__empty { padding: var(--sk-space-2); color: var(--sk-color-muted); font-size: 13px; }
+.sk-picker__path { color: var(--sk-color-muted); font-size: var(--sk-text-sm); white-space: nowrap; }
+.sk-picker__empty { padding: var(--sk-space-2); color: var(--sk-color-muted); font-size: var(--sk-text-base); }
 
 /* --- conversations list (inline, nested under an expanded node) ------------- */
 .sk-conv-list { display: flex; flex-direction: column; gap: var(--sk-space-1); }
@@ -192,7 +192,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-conv-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .sk-conv-row__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-conv-row__meta { display: flex; align-items: center; gap: var(--sk-space-1); min-width: 0; }
-.sk-conv-row__time { color: var(--sk-color-muted); font-size: 12px; line-height: 1; white-space: nowrap; }
+.sk-conv-row__time { color: var(--sk-color-muted); font-size: var(--sk-text-sm); line-height: 1; white-space: nowrap; }
 /* Platform brand logo: the row's leading mark (always present), keyed by the
    conversation's platform. Fixed box so titles align regardless of glyph. */
 .sk-conv-row__logo { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-top: 2px; }
@@ -201,7 +201,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
    the accent colour, so a pinned row reads as pinned at a glance. */
 .sk-conv-row__pin { flex: none; display: inline-flex; align-items: center; justify-content: center; color: var(--sk-color-accent); }
 .sk-conv-row__pin svg { display: block; }
-.sk-conv-list__cap { color: var(--sk-color-muted); font-size: 12px; margin: var(--sk-space-1) 0 0; }
+.sk-conv-list__cap { color: var(--sk-color-muted); font-size: var(--sk-text-sm); margin: var(--sk-space-1) 0 0; }
 
 /* --- shell frame (header · search · tabs · filters · body · footer) --------- */
 .sk-shell { position: relative; display: flex; flex-direction: column; height: 100%; min-width: 260px; background: var(--sk-color-bg); color: var(--sk-color-fg); }
@@ -209,7 +209,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 /* The expanded header shows only the workspace label — the app name/glyph live in
    the browser's native side-panel title bar (see SidebarShell), not here. */
 .sk-brand { display: flex; align-items: center; gap: var(--sk-space-2); }
-.sk-brand__sub { display: inline-flex; align-items: center; gap: var(--sk-space-2); color: color-mix(in srgb, var(--sk-color-muted) 45%, var(--sk-color-fg)); font-size: 12px; font-weight: 600; letter-spacing: 0.01em; }
+.sk-brand__sub { display: inline-flex; align-items: center; gap: var(--sk-space-2); color: color-mix(in srgb, var(--sk-color-muted) 45%, var(--sk-color-fg)); font-size: var(--sk-text-sm); font-weight: 600; letter-spacing: 0.01em; }
 /* Presence dot: the workspace is live/local (design 02 mint indicator). A soft halo
    ring lifts it off the header so "live" reads at a glance. */
 .sk-brand__status { width: 7px; height: 7px; border-radius: 50%; background: var(--sk-color-success); flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--sk-color-success) 22%, transparent); }
@@ -217,7 +217,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-search__icon { display: inline-flex; align-items: center; color: var(--sk-color-muted); }
 .sk-search__icon svg { display: block; }
 .sk-search__placeholder { flex: 1; text-align: left; }
-.sk-search__kbd { font-family: var(--sk-font-system); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); font-size: 11px; }
+.sk-search__kbd { font-family: var(--sk-font-system); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); font-size: var(--sk-text-xs); }
 .sk-tabs { display: flex; gap: var(--sk-space-1); padding: var(--sk-space-2) var(--sk-space-3) 0; }
 .sk-tab { flex: 1; text-align: center; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--sk-color-muted); font: inherit; padding: var(--sk-space-1) var(--sk-space-2); cursor: pointer; }
 .sk-tab:not([disabled]):hover { color: var(--sk-color-fg); }
@@ -228,7 +228,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-filter-row__chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sk-space-1); }
 /* Live filter chips (D28): pointer, hover lift, and a visible focus ring; the active
    chip keeps its accent tint through hover. The disabled "+ Tag" seam opts out below. */
-.sk-chip { background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); border: 0; border-radius: 999px; color: var(--sk-color-muted); font: inherit; font-size: 12px; padding: 2px var(--sk-space-2); cursor: pointer; }
+.sk-chip { background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); border: 0; border-radius: 999px; color: var(--sk-color-muted); font: inherit; font-size: var(--sk-text-sm); padding: 2px var(--sk-space-2); cursor: pointer; }
 .sk-chip:not([disabled]):hover { color: var(--sk-color-fg); }
 .sk-chip--active { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); }
 .sk-chip--active:hover { color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); }
@@ -244,13 +244,13 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-nudge { display: flex; align-items: flex-start; gap: var(--sk-space-2); margin: var(--sk-space-2) var(--sk-space-3) 0; padding: var(--sk-space-2); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 35%, transparent); background: color-mix(in srgb, var(--sk-color-accent) 10%, transparent); border-radius: var(--sk-radius); }
 .sk-nudge__logo { display: inline-flex; flex: none; margin-top: 1px; }
 .sk-nudge__logo svg { display: block; }
-.sk-nudge__text { color: var(--sk-color-fg); font-size: 12px; line-height: 1.4; }
+.sk-nudge__text { color: var(--sk-color-fg); font-size: var(--sk-text-sm); line-height: 1.4; }
 /* The body delegates scrolling to the sidebar's own scroll region so the archive
    dock can stay pinned to the bottom; it only frames the sidebar to fill height. */
 .sk-shell__body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sk-shell__footer { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-2) var(--sk-space-3); border-top: 1px solid var(--sk-color-border); }
-.sk-badge { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 40%, transparent); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); }
-.sk-sync { flex: 1; color: var(--sk-color-muted); font-size: 12px; }
+.sk-badge { font-size: var(--sk-text-xs); font-weight: 700; letter-spacing: 0.04em; color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 40%, transparent); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); }
+.sk-sync { flex: 1; color: var(--sk-color-muted); font-size: var(--sk-text-sm); }
 
 /* --- disabled feature stubs: present but visibly inert --------------------- */
 .sk-search[disabled], .sk-tab[disabled], .sk-chip[disabled] { opacity: 0.55; cursor: not-allowed; }

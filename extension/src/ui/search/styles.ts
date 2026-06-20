@@ -41,7 +41,7 @@ export const SEARCH_CSS = `
   outline: none;
   color: var(--sk-color-fg);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--sk-text-title);
 }
 .sk-search-panel__input::placeholder { color: var(--sk-color-muted); }
 
@@ -52,7 +52,7 @@ export const SEARCH_CSS = `
   padding: var(--sk-space-2);
   border-bottom: 1px solid var(--sk-color-border);
 }
-.sk-search-filter { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.sk-search-filter { display: flex; flex-direction: column; gap: 2px; font-size: var(--sk-text-sm); }
 .sk-search-filter--check { flex-direction: row; align-items: center; gap: var(--sk-space-1); align-self: end; }
 .sk-search-filter__label { color: var(--sk-color-muted); }
 .sk-search-filter__control {
@@ -62,7 +62,7 @@ export const SEARCH_CSS = `
   border-radius: var(--sk-radius);
   padding: 2px var(--sk-space-1);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--sk-text-sm);
 }
 .sk-search-filter input:disabled,
 .sk-search-filter--check[title] input:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -75,7 +75,7 @@ export const SEARCH_CSS = `
    listbox. A presentation row (not an option), so it never takes keyboard focus. */
 .sk-search-group {
   color: var(--sk-color-muted);
-  font-size: 11px;
+  font-size: var(--sk-text-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -95,7 +95,7 @@ export const SEARCH_CSS = `
 .sk-sr__logo svg { display: block; }
 .sk-sr__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sk-sr__title { font-weight: 600; color: var(--sk-color-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sk-sr__snippet { color: var(--sk-color-muted); font-size: 12px; line-height: 1.4; }
+.sk-sr__snippet { color: var(--sk-color-muted); font-size: var(--sk-text-sm); line-height: 1.4; }
 .sk-sr__hit { background: color-mix(in srgb, var(--sk-color-accent) 30%, transparent); color: var(--sk-color-fg); border-radius: 2px; }
 .sk-sr__meta {
   display: flex;
@@ -103,7 +103,7 @@ export const SEARCH_CSS = `
   gap: var(--sk-space-1);
   margin-top: 2px;
   color: var(--sk-color-muted);
-  font-size: 11px;
+  font-size: var(--sk-text-xs);
   min-width: 0;
 }
 .sk-sr__folder {
@@ -130,7 +130,7 @@ export const SEARCH_CSS = `
   padding: var(--sk-space-1) var(--sk-space-2);
   border-top: 1px solid var(--sk-color-border);
   color: var(--sk-color-muted);
-  font-size: 11px;
+  font-size: var(--sk-text-xs);
 }
 .sk-search-foot__hints { display: flex; align-items: center; gap: var(--sk-space-2); }
 .sk-search-foot__hint { display: inline-flex; align-items: center; gap: 4px; }

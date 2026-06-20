@@ -16,8 +16,8 @@ export const PROMPTS_CSS = `
 
 /* TEMPORARY starter-prompt control (prompt-seed-catalog) — removed with the onboarding picker. */
 .sk-prompts__starter { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sk-space-2); padding: 0 var(--sk-space-1) var(--sk-space-2); }
-.sk-prompts__starter-label { font-size: 12px; color: var(--sk-color-muted); }
-.sk-prompts__starter-status { flex-basis: 100%; font-size: 12px; color: var(--sk-color-muted); }
+.sk-prompts__starter-label { font-size: var(--sk-text-sm); color: var(--sk-color-muted); }
+.sk-prompts__starter-status { flex-basis: 100%; font-size: var(--sk-text-sm); color: var(--sk-color-muted); }
 
 /* A chip's trailing client-derived count (category + tag filters). */
 .sk-chip__count { margin-left: 4px; font-variant-numeric: tabular-nums; opacity: 0.75; }
@@ -89,11 +89,11 @@ export const PROMPTS_CSS = `
 .sk-field__label { font-size: var(--sk-text-sm); font-weight: 600; color: var(--sk-color-muted); }
 .sk-prompt-editor__body { resize: vertical; min-height: 96px; font-family: inherit; line-height: 1.45; }
 .sk-prompt-editor__vars { display: flex; flex-direction: column; gap: var(--sk-space-1); }
-.sk-prompt-editor__vars-empty { font-size: 12px; margin: 0; }
+.sk-prompt-editor__vars-empty { font-size: var(--sk-text-sm); margin: 0; }
 .sk-prompt-editor__var-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--sk-space-1); }
-.sk-prompt-editor__var { display: inline-flex; align-items: center; gap: var(--sk-space-1); font-size: 12px; }
-.sk-prompt-editor__var-type { color: var(--sk-color-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
-.sk-prompt-editor__var-default { color: var(--sk-color-muted); font-size: 11px; }
+.sk-prompt-editor__var { display: inline-flex; align-items: center; gap: var(--sk-space-1); font-size: var(--sk-text-sm); }
+.sk-prompt-editor__var-type { color: var(--sk-color-muted); font-size: var(--sk-text-xs); text-transform: uppercase; letter-spacing: 0.04em; }
+.sk-prompt-editor__var-default { color: var(--sk-color-muted); font-size: var(--sk-text-xs); }
 .sk-prompt-editor__targets { display: flex; flex-wrap: wrap; gap: var(--sk-space-1); }
 .sk-prompt-editor__row { display: flex; gap: var(--sk-space-2); }
 .sk-prompt-editor__col { flex: 1 1 0; min-width: 0; }
