@@ -28,6 +28,13 @@ import type { FolderTreeSnapshot, MutationOp } from '../../shared/workspace';
 
 const EMPTY_TREE: FolderTreeSnapshot = { active: [], pinned: [], archived: [] };
 
+/** The slice of a `chrome.tabs` event we use: add/remove an argument-agnostic
+ *  listener. The panel ignores the event payload — it just re-reads worker state. */
+interface ChromeEvent {
+  addListener(cb: () => void): void;
+  removeListener(cb: () => void): void;
+}
+
 /** The folder view's load status. `loading` until the first tree read resolves;
  *  `ready` once a read succeeds; `error` only if the first read fails after the
  *  transport's retry budget (a later reconcile failure keeps the last good tree). */
@@ -160,18 +167,44 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
   // failure degrades to the last/default value and never flips the whole view to
   // `error`. The list is unified (no platform arg); only the active card is keyed
   // by the active tab's platform.
+  // Always reflects the latest active-tab platform, so an in-flight `readAux` from a
+  // prior platform can detect that it is stale and skip its `setActive`.
+  const platformRef = useRef(platform);
+  platformRef.current = platform;
+
   const readAux = useCallback(async () => {
     const [convRes, activeRes] = await Promise.all([
       queryWorkspaceRemote({ kind: 'conversation.list' }),
       queryWorkspaceRemote({ kind: 'conversation.active', platform }),
     ]);
+    // The list is unified (platform-agnostic), so a late-resolving read is always
+    // safe to apply.
     if (convRes.ok && convRes.data.kind === 'conversation.list') {
       setConversations(convRes.data.conversations);
     }
-    if (activeRes.ok && activeRes.data.kind === 'conversation.active') {
+    // The active card is keyed by `platform`. Drop this result if the active tab's
+    // platform has since changed: a read dispatched for the PREVIOUS platform must
+    // not resolve late and overwrite the new platform's card (or the `setActive(null)`
+    // the switch just applied). `platform` here is the closure's captured platform.
+    if (
+      activeRes.ok &&
+      activeRes.data.kind === 'conversation.active' &&
+      platformRef.current === platform
+    ) {
       setActive(activeRes.data.active);
     }
   }, [platform]);
+
+  // The coalesced loop reads through refs so a trailing re-run always uses the
+  // LATEST platform's readers — not the closure captured when the loop began. On a
+  // platform switch (gemini→perplexity) the previous platform's read may still be in
+  // flight when `platform` changes; without this, the swallowed-then-trailing re-run
+  // would re-read the OLD platform's active card and leave the panel highlighting the
+  // prior tab's conversation.
+  const readTreeRef = useRef(readTree);
+  readTreeRef.current = readTree;
+  const readAuxRef = useRef(readAux);
+  readAuxRef.current = readAux;
 
   // Coalesced reconcile: one read in flight at a time; trailing calls collapse to
   // a single re-run, so rapid triggers (focus + visibility + broadcast) never fan
@@ -188,27 +221,37 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
       try {
         do {
           trailing.current = false;
-          await Promise.all([readTree(), readAux()]);
+          await Promise.all([readTreeRef.current(), readAuxRef.current()]);
         } while (trailing.current);
       } finally {
         inFlight.current = false;
       }
     })();
-  }, [readTree, readAux]);
+  }, []);
 
   const retry = useCallback(() => {
     setStatus('loading');
     refresh();
   }, [refresh]);
 
+  // Subscribe once: the worker fans `state.changed` after every mutation (from any
+  // tab); re-read on each. `refresh` is stable, so this attaches a single listener.
   useEffect(() => {
-    refresh();
-    // The worker fans `state.changed` after every mutation (from any tab); re-read.
     const dispose = subscribe((msg) => {
       if (msg.kind === 'state.changed') refresh();
     });
     return dispose;
   }, [refresh]);
+
+  // Initial load, and re-read whenever the active-tab platform changes. The active-
+  // conversation card is keyed by `platform`, so drop the previous platform's card
+  // immediately — never linger on the prior tab's highlight — and reconcile the new
+  // platform's card from the worker. The unified tree/list are platform-agnostic, so
+  // they are simply re-read (not cleared) by the same `refresh`.
+  useEffect(() => {
+    setActive(null);
+    refresh();
+  }, [platform, refresh]);
 
   // Reconcile when the panel returns to view or regains focus. Broadcast delivery
   // is best-effort and the MV3 worker is torn down on idle, so a panel left open
@@ -227,6 +270,26 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
     return () => {
       doc?.removeEventListener('visibilitychange', onVisible);
       win?.removeEventListener('focus', refresh);
+    };
+  }, [refresh]);
+
+  // Switching the active browser tab (or the active tab navigating) changes which
+  // conversation is "current", but fires NO focus/visibilitychange on the always-
+  // open side panel — so the active-conversation highlight would otherwise go stale
+  // until the user clicks the panel. Re-read on tab activation/update so the
+  // highlight tracks the focused tab. Coalesced by `refresh`, so the chatty
+  // `onUpdated` (any tab's load progress) collapses to one read. Guarded for
+  // non-extension/test contexts. (PRIV: this reads no tab content.)
+  useEffect(() => {
+    const tabs = (
+      globalThis as { chrome?: { tabs?: { onActivated?: ChromeEvent; onUpdated?: ChromeEvent } } }
+    ).chrome?.tabs;
+    if (!tabs) return;
+    tabs.onActivated?.addListener(refresh);
+    tabs.onUpdated?.addListener(refresh);
+    return () => {
+      tabs.onActivated?.removeListener(refresh);
+      tabs.onUpdated?.removeListener(refresh);
     };
   }, [refresh]);
 

@@ -69,7 +69,15 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
   function refFromItem(item: Element): ConversationRef {
     const nativeId = item.getAttribute(selectors.conversationIdAttr) ?? '';
     const titleEl = item.querySelector(selectors.conversationTitle);
-    const title = (titleEl?.textContent ?? item.textContent ?? '').trim();
+    // Prefer the title element's text; then a configured title attribute (for hosts
+    // that label an item via an attribute rather than text); then the item's text.
+    const titleAttr = selectors.conversationTitleAttr;
+    const title = (
+      titleEl?.textContent ??
+      (titleAttr ? item.getAttribute(titleAttr) : null) ??
+      item.textContent ??
+      ''
+    ).trim();
     const url =
       item.getAttribute('href') ?? item.querySelector('a')?.getAttribute('href') ?? '';
     return { nativeId, title, url };
@@ -95,9 +103,49 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return { ok: missing.length === 0, missing: [...missing] };
   }
 
+  // A human title for the open conversation when no list item supplies one — the
+  // host has collapsed or virtualized its conversation list (Gemini renders the
+  // list only while its side drawer is open), so `refFromUrl` has the id but no
+  // list title. These chat apps auto-title a conversation from its opening user
+  // turn, so the first rendered user message is the natural, content-free fallback
+  // — far better than the empty title that otherwise surfaces in Unfiled. Capped so
+  // a long first message doesn't become an unwieldy title. PRIV-1 holds: this id +
+  // short title behaves exactly like a list ref and is corrected to the real list
+  // title the moment the list renders (the title-index path is read-modify-write).
+  function firstUserTitle(): string {
+    const el = q(selectors.messageUser);
+    const text = (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+  }
+
+  // Derive the open conversation's id straight from the URL via the config's
+  // `conversationUrlPattern`. This is the reliable signal when the host hides,
+  // collapses, or virtualizes its list so the open chat has no DOM item for
+  // `activeItem()` to find (otherwise detection returns null and the side panel
+  // highlights a stale conversation). Title comes from a matching list item when
+  // one is present, else from the open chat's first user turn (`firstUserTitle`).
+  function refFromUrl(): ConversationRef | null {
+    const pattern = selectors.conversationUrlPattern;
+    if (!pattern) return null;
+    const url = getUrl();
+    let m: RegExpMatchArray | null = null;
+    try {
+      m = url.match(new RegExp(pattern));
+    } catch {
+      return null; // a malformed pattern disables URL detection rather than throwing
+    }
+    if (!m) return null;
+    const nativeId = m[1] ?? m[0];
+    const item = itemElements().find(
+      (el) => el.getAttribute(selectors.conversationIdAttr) === nativeId,
+    );
+    return { nativeId, title: item ? refFromItem(item).title : firstUserTitle(), url };
+  }
+
   function detectConversation(): ConversationRef | null {
     const item = activeItem();
-    return item ? refFromItem(item) : null;
+    if (item) return refFromItem(item);
+    return refFromUrl();
   }
 
   function listConversations(): ConversationRef[] {
@@ -176,7 +224,10 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
       const active = ref?.nativeId ?? null;
       if (active !== lastActive) {
         lastActive = active;
-        if (ref) emit({ type: 'conversation-changed', ref });
+        // Emit on every transition — including to `null` (the user left a
+        // conversation for a new-chat/home page) so the consumer clears its
+        // active-conversation state instead of keeping a stale highlight.
+        emit({ type: 'conversation-changed', ref });
       }
     });
     mo.observe(target, {

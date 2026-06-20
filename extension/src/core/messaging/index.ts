@@ -17,6 +17,7 @@ export {
   type BroadcastHandler,
   type RetryOptions,
 } from './client';
+export { isContextValid } from './chrome';
 export { broadcast, dispatch, installMessageHub } from './hub';
 export { registerHandler, getHandler, type Handler } from './registry';
 export { appError, toAppError } from './errors';

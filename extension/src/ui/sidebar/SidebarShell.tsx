@@ -7,10 +7,14 @@
 // The only live interaction here is the settings gear (opens the options page).
 // Everything draws from `--sk-*` tokens and is keyboard-operable and ARIA-labelled.
 
-import type { PlatformId } from '../../shared/types';
+import { useState } from 'preact/hooks';
+import type { Folder, PlatformId } from '../../shared/types';
 import { SearchIcon, SettingsIcon } from '../components/Icon';
+import { PlatformLogo } from '../components/PlatformLogo';
+import { SearchOverlay } from '../search/SearchOverlay';
 import { Sidebar } from './Sidebar';
 import { useWorkspace, type WorkspaceView } from './useWorkspace';
+import type { FolderTreeSnapshot } from '../../shared/workspace';
 
 /** Display labels for the platform view-filter chips (i18n-ready; no inline
  *  literals in markup). Keyed by `PlatformId`. */
@@ -34,17 +38,22 @@ const STR = {
   tabFolders: 'Folders',
   tabPrompts: 'Prompts',
   tabProfiles: 'Profiles',
-  tagAll: 'All',
-  tagAdd: '+ tag',
-  tagFilter: 'Tag filter',
+  tagAdd: '+ Tag',
   platformAll: 'All',
-  platformFilter: 'Filter by platform',
+  filterLabel: 'Filter conversations',
   sections: 'Sidebar sections',
   tier: 'PRO',
   synced: 'Synced',
   settings: 'Settings',
   comingSoon: 'Coming soon',
 } as const;
+
+/** The collapsed-list nudge copy (i18n-ready: the platform name is interpolated,
+ *  not concatenated from fragments). Shown when the active tab's platform reports
+ *  an open conversation but an empty list — its side drawer is collapsed and it
+ *  hides the list when collapsed (Gemini). */
+const collapsedListNudge = (label: string): string =>
+  `${label}'s chat list is hidden while its sidebar is collapsed. Open it once to sync all your conversations here.`;
 
 /** Open the extension options page. Guarded so a non-extension context (tests
  *  without a chrome shim) is a no-op rather than a throw. */
@@ -59,12 +68,39 @@ export interface SidebarShellProps {
   view?: WorkspaceView;
 }
 
+/** Flatten the folder tree snapshot into a flat list for the search folder filter
+ *  (active subtree + pinned + archived, de-duplicated by id). */
+function flattenFolders(tree: FolderTreeSnapshot): Folder[] {
+  const out: Folder[] = [];
+  const seen = new Set<string>();
+  const push = (f: Folder) => {
+    if (!seen.has(f.id)) {
+      seen.add(f.id);
+      out.push(f);
+    }
+  };
+  const walk = (nodes: FolderTreeSnapshot['active']) => {
+    for (const n of nodes) {
+      push(n.folder);
+      walk(n.children);
+    }
+  };
+  walk(tree.active);
+  tree.pinned.forEach(push);
+  tree.archived.forEach(push);
+  return out;
+}
+
 export function SidebarShell({ platform, view }: SidebarShellProps) {
   // One workspace view feeds the Folders tab's tree (folders + inline
   // conversations + the Unfiled node), so nothing opens competing subscriptions or
   // diverges. Tests inject `view`; production uses the live worker-backed view.
   const live = useWorkspace(platform);
   const ws = view ?? live;
+
+  // The search overlay (C8) is opened from the search launcher; it is a pure view
+  // over worker state and holds no workspace data of its own.
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // The platform view-filter chips (D28): "All" (unified) plus one chip per
   // platform actually present in the workspace, so the control never offers a
@@ -108,9 +144,10 @@ export function SidebarShell({ platform, view }: SidebarShellProps) {
         class="sk-search"
         type="button"
         data-testid="sk-search"
-        disabled
-        aria-disabled="true"
-        title={STR.comingSoon}
+        aria-haspopup="dialog"
+        aria-expanded={searchOpen}
+        title={STR.search}
+        onClick={() => setSearchOpen(true)}
       >
         <span class="sk-search__icon" aria-hidden="true"><SearchIcon size={16} /></span>
         <span class="sk-search__placeholder">{STR.searchPlaceholder}</span>
@@ -129,39 +166,53 @@ export function SidebarShell({ platform, view }: SidebarShellProps) {
         </button>
       </nav>
 
-      <div class="sk-tags" data-testid="sk-tags" aria-label={STR.tagFilter}>
-        <button class="sk-chip sk-chip--active" type="button" disabled aria-disabled="true" title={STR.comingSoon}>{STR.tagAll}</button>
-        <button class="sk-chip sk-chip--add" type="button" disabled aria-disabled="true" title={STR.comingSoon}>{STR.tagAdd}</button>
+      {/* One unified filter row (no Platform/Tags split): the "All" reset chip, one
+          live chip per platform present in the workspace (D28), then the inert "+ Tag"
+          ghost marking where tag chips will join the same flow when C7/M2 lands. A
+          single "All" lives here, so no leading captions are needed to disambiguate. */}
+      <div class="sk-filters" data-testid="sk-filters">
+        <div
+          class="sk-filter-row__chips"
+          data-testid="sk-platforms"
+          role="group"
+          aria-label={STR.filterLabel}
+        >
+          <button
+            class={`sk-chip${ws.platformFilter === 'all' ? ' sk-chip--active' : ''}`}
+            type="button"
+            data-testid="sk-platform-all"
+            aria-pressed={ws.platformFilter === 'all'}
+            onClick={() => ws.setPlatformFilter('all')}
+          >
+            {STR.platformAll}
+          </button>
+          {presentPlatforms.map((p) => (
+            <button
+              key={p}
+              class={`sk-chip${ws.platformFilter === p ? ' sk-chip--active' : ''}`}
+              type="button"
+              data-testid={`sk-platform-${p}`}
+              aria-pressed={ws.platformFilter === p}
+              onClick={() => ws.setPlatformFilter(p)}
+            >
+              <span class="sk-chip__logo" aria-hidden="true"><PlatformLogo platform={p} size={14} /></span>
+              {PLATFORM_LABELS[p]}
+            </button>
+          ))}
+          <button class="sk-chip sk-chip--add" type="button" data-testid="sk-tag-add" disabled aria-disabled="true" title={STR.comingSoon}>{STR.tagAdd}</button>
+        </div>
       </div>
 
-      <div
-        class="sk-platforms"
-        data-testid="sk-platforms"
-        role="group"
-        aria-label={STR.platformFilter}
-      >
-        <button
-          class={`sk-chip${ws.platformFilter === 'all' ? ' sk-chip--active' : ''}`}
-          type="button"
-          data-testid="sk-platform-all"
-          aria-pressed={ws.platformFilter === 'all'}
-          onClick={() => ws.setPlatformFilter('all')}
-        >
-          {STR.platformAll}
-        </button>
-        {presentPlatforms.map((p) => (
-          <button
-            key={p}
-            class={`sk-chip${ws.platformFilter === p ? ' sk-chip--active' : ''}`}
-            type="button"
-            data-testid={`sk-platform-${p}`}
-            aria-pressed={ws.platformFilter === p}
-            onClick={() => ws.setPlatformFilter(p)}
-          >
-            {PLATFORM_LABELS[p]}
-          </button>
-        ))}
-      </div>
+      {ws.active?.listCollapsedHint && (
+        <div class="sk-nudge" role="status" data-testid="sk-collapsed-list-nudge">
+          <span class="sk-nudge__logo" aria-hidden="true">
+            <PlatformLogo platform={ws.active.platform} size={16} />
+          </span>
+          <span class="sk-nudge__text">
+            {collapsedListNudge(PLATFORM_LABELS[ws.active.platform])}
+          </span>
+        </div>
+      )}
 
       <div class="sk-shell__body" role="tabpanel">
         <Sidebar platform={platform} view={ws} />
@@ -181,6 +232,15 @@ export function SidebarShell({ platform, view }: SidebarShellProps) {
           <SettingsIcon size={16} />
         </button>
       </footer>
+
+      {searchOpen && (
+        <SearchOverlay
+          activePlatform={platform}
+          folders={flattenFolders(ws.tree)}
+          platforms={presentPlatforms}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@
 
 import { broadcast, registerHandler } from '../../core/messaging';
 import { workspaceStore, type WorkspaceStore } from '../../core/store';
+import { indexConversationTitle } from '../conversation-index/pipeline';
 import type { ConversationIndex, Folder } from '../../shared/types';
 import {
   conversationId,
@@ -172,30 +173,21 @@ export async function mutateWorkspace(
       return { stores: ['folders'] };
     }
     case 'conversation.ingest': {
-      // Upsert a minimal ConversationIndex per host conversation, PRESERVING the
-      // existing `folderId` so re-ingesting on every page load never unfiles a
-      // conversation. Search-index fields stay empty here — indexing is C8.
+      // Upsert a ConversationIndex per host conversation and index its TITLE (C8),
+      // so every listed conversation is search-findable by title immediately —
+      // before it is ever opened. The title-index path is idempotent (content-hash
+      // gated), preserves the existing `folderId` / pin / archive / colour / tags
+      // (read-modify-write), and never clobbers a body already indexed from a full
+      // read. Message bodies are indexed separately when a conversation is opened.
       for (const ref of op.refs) {
-        const id = conversationId(op.platform, ref.nativeId);
-        const prev = (await store.conversations.get(id)) as ConversationIndex | undefined;
-        await store.conversations.put({
-          id,
+        await indexConversationTitle(store, {
+          id: conversationId(op.platform, ref.nativeId),
           platform: op.platform,
           nativeId: ref.nativeId,
           title: ref.title,
-          folderId: prev?.folderId ?? null,
-          tags: prev?.tags ?? [],
-          indexedText: prev?.indexedText ?? '',
-          contentHash: prev?.contentHash ?? '',
-          // Preserve per-conversation organization state across re-ingest so a page
-          // reload never clobbers pin / archive / colour (conversation-context-menu).
-          pinned: prev?.pinned,
-          archived: prev?.archived,
-          color: prev?.color,
-          updatedAt: Date.now(),
         });
       }
-      return { stores: ['conversations'] };
+      return { stores: ['conversations', 'searchPostings'] };
     }
     case 'conversation.assign': {
       const conv = (await store.conversations.get(op.conversationId)) as
@@ -226,7 +218,11 @@ export async function mutateWorkspace(
       // per platform so the side panel's card survives worker death (SW-2). When
       // nothing changed, return no touched stores so we skip a needless broadcast.
       const prev = await store.activeConversations.get(op.platform);
-      if (prev && prev.nativeId === op.nativeId && prev.title === op.title) {
+      const hint = op.listCollapsedHint ?? false;
+      // Dedup includes the collapsed-list hint: the open conversation can be
+      // unchanged while the drawer is opened/closed, and that transition must still
+      // update (or clear) the panel's nudge rather than being skipped as a no-op.
+      if (prev && prev.nativeId === op.nativeId && prev.title === op.title && (prev.listCollapsedHint ?? false) === hint) {
         return { stores: [] };
       }
       await store.activeConversations.put({
@@ -234,7 +230,19 @@ export async function mutateWorkspace(
         nativeId: op.nativeId,
         title: op.title,
         updatedAt: Date.now(),
+        // Only carry the flag when set, so the common record stays at the minimal
+        // id/title metadata shape (and a cleared nudge leaves no residue).
+        ...(hint ? { listCollapsedHint: true } : {}),
       });
+      return { stores: ['activeConversations'] };
+    }
+    case 'conversation.clearActive': {
+      // The active tab left a conversation (a "new chat"/home page with no open
+      // conversation). Drop the platform's active record so the side panel stops
+      // highlighting a stale chat. No-op (and no broadcast) when none was stored.
+      const prev = await store.activeConversations.get(op.platform);
+      if (!prev) return { stores: [] };
+      await store.activeConversations.delete(op.platform);
       return { stores: ['activeConversations'] };
     }
   }

@@ -25,8 +25,10 @@ describe('manifest permission policy', () => {
     }
   });
 
-  it('requests only the non-credential-bearing alarms + sidePanel permissions', () => {
-    expect(skeinosManifest.permissions).toEqual(['alarms', 'sidePanel']);
+  it('requests only the non-credential-bearing alarms + sidePanel + scripting permissions', () => {
+    // `scripting` injects the content script into already-open supported tabs on
+    // install/update; it is bounded by host_permissions and is not credential-bearing.
+    expect(skeinosManifest.permissions).toEqual(['alarms', 'sidePanel', 'scripting']);
     for (const perm of skeinosManifest.permissions) {
       expect(CREDENTIAL_BEARING).not.toContain(perm);
     }

@@ -102,7 +102,12 @@ export type SyncStatus =
 export type Broadcast =
   | { kind: 'state.changed'; stores: string[] }
   | { kind: 'sync.status'; status: SyncStatus }
-  | { kind: 'platform.degraded'; platform: PlatformId };
+  | { kind: 'platform.degraded'; platform: PlatformId }
+  // Bulk-index progress (D-4). The indexer emits `{ done, total }` as it works so
+  // the downstream "indexing N…" indicator (C11) can render it later; C8 ships the
+  // signal but no indicator UI. A dedicated variant keeps `state.changed`'s payload
+  // unchanged for its many existing re-query subscribers.
+  | { kind: 'index.progress'; done: number; total: number };
 
 /** The `kind` discriminants a {@link Broadcast} can carry. */
 export type BroadcastKind = Broadcast['kind'];

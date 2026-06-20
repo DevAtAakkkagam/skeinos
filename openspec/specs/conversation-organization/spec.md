@@ -2,18 +2,18 @@
 
 ## Purpose
 
-The conversation-organization capability lets a user organize their conversations from the sidebar: setting per-conversation pin, archive, and colour state on the local `ConversationIndex` record through the single-writer service worker, surfacing those actions plus move-to-folder through a keyboard-operable conversation-row context menu, and reflecting pin and archive state in the conversation list (pinned-first ordering, archived hidden but retained). These organization fields are local-only and never synced.
+The conversation-organization capability lets a user organize their conversations from the sidebar: setting per-conversation pin and archive state on the local `ConversationIndex` record through the single-writer service worker, surfacing those actions plus move-to-folder through a keyboard-operable conversation-row context menu, and reflecting pin and archive state in the conversation list (pinned-first ordering, archived hidden but retained). These organization fields are local-only and never synced.
 
 ## Requirements
 
-### Requirement: Conversation pin, archive, and colour state
+### Requirement: Conversation pin and archive state
 
-The system SHALL let a user set per-conversation organization state — pinned, archived, and
-colour — on a conversation's local `ConversationIndex` record. These fields SHALL be optional
-and additive (absent meaning unpinned, not archived, no colour). All three mutations SHALL flow
-through the single-writer service worker via the `conversation.pin`, `conversation.archive`, and
-`conversation.recolor` mutation ops, and SHALL broadcast the changed `conversations` store so
-every open tab updates. These fields are local-only and SHALL never be synced.
+The system SHALL let a user set per-conversation organization state — pinned and archived — on a
+conversation's local `ConversationIndex` record. These fields SHALL be optional and additive
+(absent meaning unpinned, not archived). Both mutations SHALL flow through the single-writer service
+worker via the `conversation.pin` and `conversation.archive` mutation ops, and SHALL broadcast the
+changed `conversations` store so every open tab updates. These fields are local-only and SHALL never
+be synced.
 
 #### Scenario: Pinning a conversation
 
@@ -29,32 +29,26 @@ every open tab updates. These fields are local-only and SHALL never be synced.
   folder assignment are retained (not deleted)
 - **AND** unarchiving sets `archived` to `false`
 
-#### Scenario: Setting a conversation colour
-
-- **WHEN** the user picks a colour for a conversation
-- **THEN** the worker sets the conversation's `color` to that value
-- **AND** choosing the clear/no-colour option removes the colour
-
 #### Scenario: Mutating a missing conversation is rejected
 
-- **WHEN** a pin, archive, or recolor op targets a conversation id that does not exist
+- **WHEN** a pin or archive op targets a conversation id that does not exist
 - **THEN** the worker rejects the mutation with an error and writes nothing
 
 ### Requirement: Conversation row context menu
 
 The conversation row SHALL expose a context menu, openable by right-click and by a
 keyboard-reachable trigger control, that surfaces the conversation organization actions:
-Move to…, Pin to top (toggling to Unpin when pinned), Archive (toggling to Unarchive when
-archived), and Set colour. The Move to… action SHALL reuse the existing move-to-folder
-assignment flow. The menu SHALL be fully keyboard-operable and ARIA-labelled, style only from
-theme tokens, and use no hard-coded user-facing strings. Rename and Delete are out of scope and
-SHALL NOT appear.
+Move to…, Pin to top (toggling to Unpin when pinned), and Archive (toggling to Unarchive when
+archived). The Move to… action SHALL reuse the existing move-to-folder assignment flow. The menu
+SHALL be fully keyboard-operable and ARIA-labelled, style only from theme tokens, and use no
+hard-coded user-facing strings. Set colour, Rename, and Delete are out of scope and SHALL NOT
+appear.
 
 #### Scenario: Opening the menu from a conversation row
 
 - **WHEN** the user right-clicks a conversation row or activates its menu trigger via keyboard
-- **THEN** a context menu opens listing Move to…, Pin to top, Archive, and Set colour
-- **AND** Rename and Delete are not present
+- **THEN** a context menu opens listing Move to…, Pin to top, and Archive
+- **AND** Set colour, Rename, and Delete are not present
 
 #### Scenario: Pin label reflects current state
 
@@ -66,12 +60,6 @@ SHALL NOT appear.
 - **WHEN** the user selects Move to… from the menu
 - **THEN** the existing move-to-folder picker opens for that conversation and assignment
   proceeds through the existing flow
-
-#### Scenario: Set colour offers an inline swatch row
-
-- **WHEN** the user opens the Set colour control in the menu
-- **THEN** an inline row of selectable colour swatches plus a clear/no-colour option is shown
-- **AND** choosing a swatch issues a recolor mutation for that conversation
 
 ### Requirement: Conversation list reflects pin and archive state
 

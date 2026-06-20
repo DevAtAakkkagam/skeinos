@@ -1,6 +1,7 @@
 // The workspace sidebar (LLD T2.2): the folder tree with pinned + archive
 // sections and live counts, drag-drop (conversation→folder assignment, folder
-// re-parenting), a create/edit folder dialog, and a right-click context menu.
+// re-parenting), a create/edit folder dialog, and a per-row actions menu opened
+// from a `⋯` button (revealed on row hover / keyboard focus).
 // It is a pure view: every action dispatches a worker mutation via `useWorkspace`
 // and the tree re-renders from the worker's broadcast — it holds no authoritative
 // folder state of its own (PREACT guardrail).
@@ -10,8 +11,20 @@ import type { ConversationIndex, Folder, FolderTreeNode, PlatformId } from '../.
 import { conversationId, type MutationOp } from '../../shared/workspace';
 import { countByFolder } from '../../core/folders';
 import { Dialog, useMenu, mergeProps, getNodeRoot } from '../primitives';
-import { CheckIcon, ChevronIcon, CloseIcon, FolderIcon, PlusIcon } from '../components/Icon';
+import {
+  CheckIcon,
+  ChevronIcon,
+  CloseIcon,
+  CollapseAllIcon,
+  ExpandAllIcon,
+  FOLDER_ICON_SENTINEL,
+  FolderIcon,
+  FolderRowIcon,
+  MoreIcon,
+  PlusIcon,
+} from '../components/Icon';
 import { ConversationList } from './ConversationList';
+import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
 import { FOLDER_COLORS } from './palette';
 import { DRAG_MIME, type DragPayload } from './drag';
 import { useWorkspace, type MutateResult, type WorkspaceView } from './useWorkspace';
@@ -31,6 +44,8 @@ const STR = {
   pinned: 'Pinned',
   archive: 'Archive',
   newFolder: 'New folder',
+  expandAll: 'Expand all',
+  collapseAll: 'Collapse all',
   noFolders: 'No folders yet',
   emptyBody: 'Create a folder to start organising conversations across every platform.',
   loading: 'Loading your workspace…',
@@ -46,11 +61,12 @@ const STR = {
   topLevel: 'No parent (top level)',
   clearColor: 'No colour',
   clearIcon: 'No icon',
+  folderIcon: 'Folder icon',
   create: 'Create folder',
   save: 'Save changes',
   close: 'Close',
   cancel: 'Cancel',
-  rename: 'Rename',
+  rename: 'Edit',
   pin: 'Pin',
   unpin: 'Unpin',
   archiveAction: 'Archive',
@@ -64,10 +80,16 @@ const STR = {
   unfiled: 'Unfiled',
   expand: 'Expand',
   collapse: 'Collapse',
+  menuTrigger: 'Folder actions',
 } as const;
 
 /** Sentinel expansion key for the (non-folder) "Unfiled" pseudo-node. */
 const UNFILED = 'unfiled';
+
+// `FOLDER_ICON_SENTINEL` (the stored "default folder glyph" marker, design D5) and
+// the row-icon renderer now live in `components/Icon` so the move-to-folder picker
+// can share them without a circular import; re-exported here for existing callers.
+export { FOLDER_ICON_SENTINEL };
 
 interface DialogState {
   mode: 'create' | 'edit';
@@ -90,6 +112,16 @@ function siblingsOf(nodes: FolderTreeNode[], id: string): Folder[] {
     if (found.length) return found;
   }
   return [];
+}
+
+/** Every folder id in the tree (all depths, pre-order) — the expansion keys that
+ *  "expand all" turns on. */
+function allFolderIds(nodes: FolderTreeNode[], acc: string[] = []): string[] {
+  for (const n of nodes) {
+    acc.push(n.folder.id);
+    allFolderIds(n.children, acc);
+  }
+  return acc;
 }
 
 /** The chain of folder ids from a root down to `id` (inclusive), or null if `id`
@@ -127,11 +159,18 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
     platformFilter === 'all'
       ? conversations
       : conversations.filter((c) => c.platform === platformFilter);
-  const counts = countByFolder(visibleConvs);
+  // Archived conversations are hidden from the folder tree, the Unfiled node, AND
+  // the per-folder counts — so a badge always equals the rows the folder renders
+  // (archiving a chat drops the count, never leaves a phantom). They live only in
+  // the Archive section below (alongside archived folders), where they can be
+  // unarchived.
+  const liveConvs = visibleConvs.filter((c) => !c.archived);
+  const archivedConvs = visibleConvs.filter((c) => c.archived);
+  const counts = countByFolder(liveConvs);
 
   // Conversations that belong to no folder — surfaced under the "Unfiled" node so
   // they stay reachable in a folders-only tree (the design has no flat list).
-  const unfiledConvs = visibleConvs.filter((c) => c.folderId == null);
+  const unfiledConvs = liveConvs.filter((c) => c.folderId == null);
   const activeConvId = active ? conversationId(active.platform, active.nativeId) : null;
 
   // The loading indicator is delayed so a warm read (which resolves first) renders
@@ -148,12 +187,15 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
-  // Which folder the open context menu acts on (the row last right-clicked).
+  // Which folder the open actions menu acts on (the row whose ⋯ was last clicked).
   const [menuTargetId, setMenuTargetId] = useState<string | null>(null);
 
   // Which nodes are expanded to reveal their conversations (folder ids + the
   // UNFILED sentinel). Local view state only — never authoritative (PREACT rule).
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // A pinned-row "jump-to" in flight: the canonical tree row to scroll into view
+  // once the path to it has expanded and re-rendered. Cleared by the scroll effect.
+  const [jumpTarget, setJumpTarget] = useState<string | null>(null);
   const toggleExpanded = (id: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -161,6 +203,17 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
       else next.add(id);
       return next;
     });
+
+  // Expand/collapse every folder at once — active tree (all depths), the archived
+  // folders inside the Archive section, and the Unfiled node alike. The Archive
+  // dock's own open/closed state is left untouched: opening it later reveals its
+  // folders already expanded.
+  const expandAll = () => {
+    const ids = [...allFolderIds(tree.active), ...tree.archived.map((f) => f.id)];
+    if (unfiledConvs.length > 0) ids.push(UNFILED);
+    setExpanded(new Set(ids));
+  };
+  const collapseAll = () => setExpanded(new Set());
 
   // Auto-expand the path to the active-tab conversation so it is revealed and
   // highlighted — but only once per active conversation, so a user who collapses
@@ -190,6 +243,41 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   }, [activeConvId, conversations, tree]);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Jump-to: a pinned row is a shortcut to the folder's canonical (expandable)
+  // copy in the active tree — expand the path down to it, then flag it so the
+  // scroll effect reveals and briefly highlights the now-rendered row.
+  const jumpToFolder = (id: string) => {
+    const chain = pathToFolder(tree.active, id);
+    if (!chain) return; // not in the active tree (shouldn't happen for a pinned folder)
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      for (const fid of chain) next.add(fid);
+      return next;
+    });
+    setJumpTarget(id);
+  };
+
+  // After the path expands and the canonical row mounts, scroll it into view and
+  // pulse a highlight, then clear the request. Runs whenever the target or the
+  // expansion set changes so it fires once the row actually exists in the DOM.
+  useEffect(() => {
+    if (!jumpTarget) return;
+    const root = sidebarRef.current;
+    const row = [...(root?.querySelectorAll<HTMLElement>('[data-folder-id]') ?? [])].find(
+      (el) => el.getAttribute('data-folder-id') === jumpTarget,
+    );
+    if (!row) return; // not yet rendered — a later expansion tick will re-run this
+    row.scrollIntoView?.({ block: 'nearest' });
+    // Restart the pulse on every jump — even re-clicking the same folder. A bare
+    // setAttribute is a no-op if the attribute is already present (so the animation
+    // wouldn't replay), so remove it, force a reflow, then re-add. The animation
+    // ends on an invisible keyframe, so the attribute can safely linger afterwards.
+    row.removeAttribute('data-jump-flash');
+    void row.offsetWidth; // reflow: lets the CSS animation play again from the top
+    row.setAttribute('data-jump-flash', '');
+    setJumpTarget(null);
+  }, [jumpTarget, expanded]);
 
   const reorder = (id: string, dir: -1 | 1) => {
     const sibs = siblingsOf(tree.active, id);
@@ -249,8 +337,8 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
     }
   };
 
-  // One menu machine shared by every folder row; each row is a context trigger and
-  // we track which folder it targeted in `menuTargetId`. Zag owns positioning,
+  // One menu machine shared by every folder row; each row's `⋯` button is a trigger
+  // and we track which folder it targeted in `menuTargetId`. Zag owns positioning,
   // keyboard navigation, dismissal, and focus restoration.
   const menu = useMenu({
     getRootNode: () => getNodeRoot(sidebarRef.current),
@@ -260,6 +348,29 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   // A menu item: Zag's accessible item props + our explicit click action.
   const itemProps = (value: MenuAction) =>
     mergeProps(menu.getItemProps({ value }), { onClick: () => performMenuAction(value) });
+
+  // A row's `⋯` actions button: Zag's accessible trigger props + the targeted
+  // folder. stopPropagation keeps a tree row's own onClick (expand) from firing too.
+  const triggerProps = (id: string) =>
+    mergeProps(menu.getTriggerProps({ value: id }), {
+      onClick: (e: MouseEvent) => {
+        e.stopPropagation();
+        setMenuTargetId(id);
+      },
+    });
+
+  const menuButton = (id: string) => (
+    <button
+      class="sk-icon-btn sk-row-menu"
+      type="button"
+      data-testid="sk-folder-menu"
+      aria-label={STR.menuTrigger}
+      title={STR.menuTrigger}
+      {...triggerProps(id)}
+    >
+      <MoreIcon size={16} />
+    </button>
+  );
 
   const onDropOnFolder = (folderId: string, e: DragEvent) => {
     e.preventDefault();
@@ -277,7 +388,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   const renderNode = (node: FolderTreeNode) => {
     const f = node.folder;
     const isOpen = expanded.has(f.id);
-    const folderConvs = visibleConvs.filter((c) => c.folderId === f.id);
+    const folderConvs = liveConvs.filter((c) => c.folderId === f.id);
     return (
       <div key={f.id} class="sk-sidebar__section" style={{ marginLeft: `${(node.depth - 1) * 12}px` }}>
         <div
@@ -298,9 +409,6 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
           }}
           onDragLeave={() => setDropTarget((t) => (t === f.id ? null : t))}
           onDrop={(e) => onDropOnFolder(f.id, e as DragEvent)}
-          {...mergeProps(menu.getContextTriggerProps({ value: f.id }), {
-            onContextMenu: () => setMenuTargetId(f.id),
-          })}
         >
           <button
             class="sk-caret"
@@ -315,9 +423,10 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
           >
             <ChevronIcon size={14} />
           </button>
-          {f.icon ? <span class="sk-row__icon">{f.icon}</span> : null}
+          <FolderRowIcon folder={f} />
           <span class="sk-row__label" style={f.color ? { color: f.color } : undefined}>{f.name}</span>
           <span class="sk-row__count" data-testid="sk-folder-count">{counts[f.id] ?? 0}</span>
+          {menuButton(f.id)}
         </div>
         {isOpen && (
           <div class="sk-node__children">
@@ -328,6 +437,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
               tree={tree}
               mutate={mutate}
               context={{ kind: 'folder', name: f.name }}
+              activePlatform={platform}
               onOpen={onOpenConversation}
             />
           </div>
@@ -336,148 +446,261 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
     );
   };
 
-  // A non-tree folder row (pinned / archive): icon · color · count, like the
-  // active tree but without disclosure/drag affordances.
-  const renderLeaf = (f: Folder, attr: 'data-pinned-id' | 'data-archived-id') => (
+  // The pinned shortcut row: icon · color · count, like the active tree but without
+  // disclosure/drag affordances — the folder's canonical, expandable copy lives in
+  // the tree below, so this row stays a flat jump-to: activating it expands the path
+  // to that folder in the tree and scrolls it into view (see `jumpToFolder`).
+  const renderLeaf = (f: Folder, attr: 'data-pinned-id') => (
     <div
       key={f.id}
-      class="sk-row"
+      class="sk-row sk-row--jump"
       {...{ [attr]: f.id }}
-      {...mergeProps(menu.getContextTriggerProps({ value: f.id }), {
-        onContextMenu: () => setMenuTargetId(f.id),
-      })}
+      role="button"
+      tabIndex={0}
+      aria-label={`${STR.pinned}: ${f.name}`}
+      onClick={() => jumpToFolder(f.id)}
+      onKeyDown={(e) => {
+        const key = (e as KeyboardEvent).key;
+        if (key === 'Enter' || key === ' ') {
+          e.preventDefault();
+          jumpToFolder(f.id);
+        }
+      }}
     >
       <span class="sk-caret-spacer" aria-hidden="true" />
-      {f.icon ? <span class="sk-row__icon">{f.icon}</span> : null}
+      <FolderRowIcon folder={f} />
       <span class="sk-row__label" style={f.color ? { color: f.color } : undefined}>{f.name}</span>
       <span class="sk-row__count" data-testid="sk-folder-count">{counts[f.id] ?? 0}</span>
+      {menuButton(f.id)}
     </div>
   );
 
+  // An archived folder row. Unlike a pinned folder, an archived one is filtered out
+  // of the live tree, so this is its ONLY appearance — making it expandable here is
+  // what keeps its count honest: the badge promises N chats, and the caret reveals
+  // them (rather than a dead-end count). Reuses the tree's disclosure state so the
+  // open/closed flag survives a re-render alongside the live folders.
+  const renderArchivedFolder = (f: Folder) => {
+    const isOpen = expanded.has(f.id);
+    const folderConvs = liveConvs.filter((c) => c.folderId === f.id);
+    return (
+      <div key={f.id} class="sk-sidebar__section">
+        <div class="sk-row" data-archived-id={f.id} onClick={() => toggleExpanded(f.id)}>
+          <button
+            class="sk-caret"
+            type="button"
+            data-testid="sk-archived-caret"
+            aria-expanded={isOpen}
+            aria-label={isOpen ? STR.collapse : STR.expand}
+            onClick={(e) => {
+              (e as MouseEvent).stopPropagation();
+              toggleExpanded(f.id);
+            }}
+          >
+            <ChevronIcon size={14} />
+          </button>
+          <FolderRowIcon folder={f} />
+          <span class="sk-row__label" style={f.color ? { color: f.color } : undefined}>{f.name}</span>
+          <span class="sk-row__count" data-testid="sk-folder-count">{counts[f.id] ?? 0}</span>
+          {menuButton(f.id)}
+        </div>
+        {isOpen && (
+          <div class="sk-node__children">
+            <ConversationList
+              conversations={folderConvs}
+              active={active}
+              tree={tree}
+              mutate={mutate}
+              context={{ kind: 'folder', name: f.name }}
+              activePlatform={platform}
+              onOpen={onOpenConversation}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const menuTarget = menuTargetId ? resolveFolder(menuTargetId) : undefined;
+
+  // One Archive section — archived folders and archived chats together — docks to
+  // the bottom of the panel instead of scrolling away with the tree: the live
+  // pinned/folders/unfiled sections scroll inside `sk-sidebar__scroll`, while the
+  // archive dock stays pinned below it so the archive is always reachable without
+  // scrolling past a long folder list. Its badge counts both kinds put away.
+  const hasArchive = archivedConvs.length > 0 || tree.archived.length > 0;
+  const archiveCount = tree.archived.length + archivedConvs.length;
 
   return (
     <div ref={sidebarRef} class="sk-sidebar" data-testid="sk-sidebar">
-      {tree.pinned.length > 0 && (
-        <div class="sk-sidebar__section" data-testid="sk-pinned">
-          <p class="sk-sidebar__heading">{STR.pinned}</p>
-          {tree.pinned.map((f) => renderLeaf(f, 'data-pinned-id'))}
-        </div>
-      )}
+      <div class="sk-sidebar__scroll" data-testid="sk-sidebar-scroll">
+        {tree.pinned.length > 0 && (
+          <div class="sk-sidebar__section" data-testid="sk-pinned">
+            <p class="sk-sidebar__heading sk-sidebar__heading--block">{STR.pinned}</p>
+            {tree.pinned.map((f) => renderLeaf(f, 'data-pinned-id'))}
+          </div>
+        )}
 
-      <div class="sk-sidebar__section">
-        <div class="sk-row sk-sidebar__section-head">
-          <span class="sk-sidebar__heading">{STR.folders}</span>
-          <button
-            class="sk-icon-btn"
-            type="button"
-            data-testid="sk-new-folder"
-            aria-label={STR.newFolder}
-            title={STR.newFolder}
-            onClick={(e) => {
-              (e as MouseEvent).stopPropagation();
-              setDialog({ mode: 'create', parentId: null });
-            }}
-          >
-            <PlusIcon size={16} />
-          </button>
-        </div>
-        {tree.active.length > 0
-          ? // Whenever we have folders, show them — never flicker to a load state.
-            tree.active.map(renderNode)
-          : status === 'error'
-            ? // Load failed after the retry budget: offer a retry, not a false empty.
-              (
-                <div class="sk-empty" data-testid="sk-folders-error" role="alert">
-                  <span class="sk-empty__icon" aria-hidden="true">
-                    <FolderIcon size={40} />
-                  </span>
-                  <p class="sk-empty__title">{STR.loadError}</p>
-                  <p class="sk-empty__body">{STR.loadErrorBody}</p>
-                  <button
-                    class="sk-btn sk-btn--icon"
-                    type="button"
-                    data-testid="sk-folders-retry"
-                    onClick={(e) => {
-                      (e as MouseEvent).stopPropagation();
-                      retry();
-                    }}
-                  >
-                    {STR.retry}
-                  </button>
-                </div>
-              )
-            : status === 'ready'
-              ? // A read succeeded and returned nothing: the honest empty state.
+        <div class="sk-sidebar__section">
+          <div class="sk-row sk-sidebar__section-head">
+            <span class="sk-sidebar__heading">{STR.folders}</span>
+            <button
+              class="sk-icon-btn"
+              type="button"
+              data-testid="sk-expand-all"
+              aria-label={STR.expandAll}
+              title={STR.expandAll}
+              onClick={(e) => {
+                (e as MouseEvent).stopPropagation();
+                expandAll();
+              }}
+            >
+              <ExpandAllIcon size={16} />
+            </button>
+            <button
+              class="sk-icon-btn"
+              type="button"
+              data-testid="sk-collapse-all"
+              aria-label={STR.collapseAll}
+              title={STR.collapseAll}
+              onClick={(e) => {
+                (e as MouseEvent).stopPropagation();
+                collapseAll();
+              }}
+            >
+              <CollapseAllIcon size={16} />
+            </button>
+            <button
+              class="sk-icon-btn"
+              type="button"
+              data-testid="sk-new-folder"
+              aria-label={STR.newFolder}
+              title={STR.newFolder}
+              onClick={(e) => {
+                (e as MouseEvent).stopPropagation();
+                setDialog({ mode: 'create', parentId: null });
+              }}
+            >
+              <PlusIcon size={16} />
+            </button>
+          </div>
+          {tree.active.length > 0
+            ? // Whenever we have folders, show them — never flicker to a load state.
+              tree.active.map(renderNode)
+            : status === 'error'
+              ? // Load failed after the retry budget: offer a retry, not a false empty.
                 (
-                  <div class="sk-empty" data-testid="sk-folders-empty">
+                  <div class="sk-empty" data-testid="sk-folders-error" role="alert">
                     <span class="sk-empty__icon" aria-hidden="true">
                       <FolderIcon size={40} />
                     </span>
-                    <p class="sk-empty__title">{STR.noFolders}</p>
-                    <p class="sk-empty__body">{STR.emptyBody}</p>
+                    <p class="sk-empty__title">{STR.loadError}</p>
+                    <p class="sk-empty__body">{STR.loadErrorBody}</p>
                     <button
                       class="sk-btn sk-btn--icon"
                       type="button"
-                      data-testid="sk-empty-new-folder"
+                      data-testid="sk-folders-retry"
                       onClick={(e) => {
                         (e as MouseEvent).stopPropagation();
-                        setDialog({ mode: 'create', parentId: null });
+                        retry();
                       }}
                     >
-                      <PlusIcon size={16} />
-                      {STR.newFolder}
+                      {STR.retry}
                     </button>
                   </div>
                 )
-              : // Still loading: a delayed spinner (nothing on the warm fast path).
-                showSpinner && (
-                  <div class="sk-empty" data-testid="sk-folders-loading" role="status" aria-live="polite">
-                    <span class="sk-spinner" aria-hidden="true" />
-                    <p class="sk-empty__body">{STR.loading}</p>
-                  </div>
-                )}
+              : status === 'ready'
+                ? // A read succeeded and returned nothing: the honest empty state.
+                  (
+                    <div class="sk-empty" data-testid="sk-folders-empty">
+                      <span class="sk-empty__icon" aria-hidden="true">
+                        <FolderIcon size={40} />
+                      </span>
+                      <p class="sk-empty__title">{STR.noFolders}</p>
+                      <p class="sk-empty__body">{STR.emptyBody}</p>
+                      <button
+                        class="sk-btn sk-btn--icon"
+                        type="button"
+                        data-testid="sk-empty-new-folder"
+                        onClick={(e) => {
+                          (e as MouseEvent).stopPropagation();
+                          setDialog({ mode: 'create', parentId: null });
+                        }}
+                      >
+                        <PlusIcon size={16} />
+                        {STR.newFolder}
+                      </button>
+                    </div>
+                  )
+                : // Still loading: a delayed spinner (nothing on the warm fast path).
+                  showSpinner && (
+                    <div class="sk-empty" data-testid="sk-folders-loading" role="status" aria-live="polite">
+                      <span class="sk-spinner" aria-hidden="true" />
+                      <p class="sk-empty__body">{STR.loading}</p>
+                    </div>
+                  )}
+        </div>
+
+        {unfiledConvs.length > 0 && (
+          <div class="sk-sidebar__section" data-testid="sk-unfiled">
+            <div class="sk-row" onClick={() => toggleExpanded(UNFILED)}>
+              <button
+                class="sk-caret"
+                type="button"
+                data-testid="sk-unfiled-caret"
+                aria-expanded={expanded.has(UNFILED)}
+                aria-label={expanded.has(UNFILED) ? STR.collapse : STR.expand}
+                onClick={(e) => {
+                  (e as MouseEvent).stopPropagation();
+                  toggleExpanded(UNFILED);
+                }}
+              >
+                <ChevronIcon size={14} />
+              </button>
+              <span class="sk-row__label">{STR.unfiled}</span>
+              <span class="sk-row__count" data-testid="sk-unfiled-count">{unfiledConvs.length}</span>
+            </div>
+            {expanded.has(UNFILED) && (
+              <div class="sk-node__children">
+                <ConversationList
+                  conversations={unfiledConvs}
+                  active={active}
+                  tree={tree}
+                  mutate={mutate}
+                  context={{ kind: 'unfiled' }}
+                  activePlatform={platform}
+                  onOpen={onOpenConversation}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {unfiledConvs.length > 0 && (
-        <div class="sk-sidebar__section" data-testid="sk-unfiled">
-          <div class="sk-row" onClick={() => toggleExpanded(UNFILED)}>
-            <button
-              class="sk-caret"
-              type="button"
-              data-testid="sk-unfiled-caret"
-              aria-expanded={expanded.has(UNFILED)}
-              aria-label={expanded.has(UNFILED) ? STR.collapse : STR.expand}
-              onClick={(e) => {
-                (e as MouseEvent).stopPropagation();
-                toggleExpanded(UNFILED);
-              }}
-            >
-              <ChevronIcon size={14} />
-            </button>
-            <span class="sk-row__label">{STR.unfiled}</span>
-            <span class="sk-row__count" data-testid="sk-unfiled-count">{unfiledConvs.length}</span>
-          </div>
-          {expanded.has(UNFILED) && (
+      {hasArchive && (
+        <div class="sk-sidebar__dock" data-testid="sk-archive-dock">
+          <details class="sk-sidebar__section" data-testid="sk-archive">
+            <summary class="sk-row sk-sidebar__section-head sk-sidebar__section-summary">
+              <span class="sk-caret sk-section-caret" aria-hidden="true"><ChevronIcon size={14} /></span>
+              <span class="sk-sidebar__heading">{STR.archive}</span>
+              <span class="sk-row__count" data-testid="sk-archive-count">{archiveCount}</span>
+            </summary>
             <div class="sk-node__children">
-              <ConversationList
-                conversations={unfiledConvs}
-                active={active}
-                tree={tree}
-                mutate={mutate}
-                context={{ kind: 'unfiled' }}
-                onOpen={onOpenConversation}
-              />
+              {tree.archived.map(renderArchivedFolder)}
+              {archivedConvs.length > 0 && (
+                <ConversationList
+                  conversations={archivedConvs}
+                  active={active}
+                  tree={tree}
+                  mutate={mutate}
+                  context={{ kind: 'archived' }}
+                  activePlatform={platform}
+                  onOpen={onOpenConversation}
+                />
+              )}
             </div>
-          )}
+          </details>
         </div>
-      )}
-
-      {tree.archived.length > 0 && (
-        <details class="sk-sidebar__section" data-testid="sk-archive">
-          <summary class="sk-sidebar__heading">{STR.archive}</summary>
-          {tree.archived.map((f) => renderLeaf(f, 'data-archived-id'))}
-        </details>
       )}
 
       {menu.open && menuTarget && (
@@ -516,9 +739,11 @@ function findFolder(nodes: FolderTreeNode[], id: string): Folder | undefined {
   }
   return undefined;
 }
-// Curated emoji icon set (the icon grid in design 03·05); the leading "clear"
-// option resets to no icon. Emoji keep the picker zero-asset and theme-agnostic.
-const FOLDER_ICONS = ['📁', '✏️', '📊', '⏱️', '💰', '📚', '🌿', '📷', '🚀', '📞', '🎯', '📌'] as const;
+// Curated emoji icon set (the icon grid in design 03·05). The grid's first slot is
+// the tintable default folder SVG (sentinel) and the leading "clear" option resets
+// to no icon; the emoji here keep the rest of the picker zero-asset and
+// theme-agnostic. (The 📁 emoji is dropped — the tintable folder SVG supersedes it.)
+const FOLDER_ICONS = ['✏️', '📊', '⏱️', '💰', '📚', '🌿', '📷', '🚀', '📞', '🎯', '📌'] as const;
 
 /** A selectable parent option: the folder and its depth-derived indent. */
 interface ParentOption {
@@ -552,8 +777,10 @@ interface FolderDialogProps {
 function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
   const editing = state.mode === 'edit';
   const [name, setName] = useState(state.folder?.name ?? '');
-  const [icon, setIcon] = useState(state.folder?.icon ?? '');
-  const [color, setColor] = useState(state.folder?.color ?? '');
+  // Create mode preselects the folder icon + blue (a branded default); edit mode
+  // reads the folder's stored values. The clear options remain reachable (D5).
+  const [icon, setIcon] = useState(editing ? (state.folder?.icon ?? '') : FOLDER_ICON_SENTINEL);
+  const [color, setColor] = useState(editing ? (state.folder?.color ?? '') : DEFAULT_FOLDER_COLOR);
   const [parentId, setParentId] = useState<string | null>(
     editing ? (state.folder?.parentId ?? null) : state.parentId,
   );
@@ -561,7 +788,7 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
   const [failed, setFailed] = useState(false);
   // A new folder's id is fixed once, so a retry after a (possibly committed but
   // unacknowledged) attempt overwrites the same row instead of duplicating it.
-  const [newId] = useState(makeId);
+  const [newId] = useState(makeFolderId);
 
   // A folder cannot be its own parent or nest under one of its descendants, so
   // prune the edited folder's subtree from the options.
@@ -634,7 +861,13 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
           <span class="sk-sidebar__heading">{STR.name}</span>
           <span class="sk-name-field">
             <span class="sk-name-field__icon" aria-hidden="true">
-              {icon ? icon : <FolderIcon size={16} />}
+              {icon && icon !== FOLDER_ICON_SENTINEL ? (
+                icon
+              ) : (
+                <span style={{ color: color || undefined }}>
+                  <FolderIcon size={16} />
+                </span>
+              )}
             </span>
             <input
               class="sk-name-field__input"
@@ -684,6 +917,17 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
             >
               <CloseIcon size={14} />
             </button>
+            <button
+              type="button"
+              class={`sk-icon-option${icon === FOLDER_ICON_SENTINEL ? ' sk-icon-option--selected' : ''}`}
+              data-testid="sk-folder-icon-default"
+              aria-label={STR.folderIcon}
+              aria-pressed={icon === FOLDER_ICON_SENTINEL}
+              style={{ color: color || undefined }}
+              onClick={() => setIcon(FOLDER_ICON_SENTINEL)}
+            >
+              <FolderIcon size={16} />
+            </button>
             {FOLDER_ICONS.map((g) => (
               <button
                 key={g}
@@ -732,7 +976,3 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
   );
 }
 
-function makeId(): string {
-  const c = (globalThis as { crypto?: Crypto }).crypto;
-  return c?.randomUUID ? c.randomUUID() : `f_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-}

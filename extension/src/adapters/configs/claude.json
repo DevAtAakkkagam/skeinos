@@ -7,6 +7,7 @@
     "conversationItem": "a[href^=\"/chat/\"]",
     "conversationTitle": ".sr-only",
     "conversationIdAttr": "href",
+    "conversationUrlPattern": "/chat/[^/?#]+",
     "messageUser": "[data-testid=\"user-message\"]",
     "messageAssistant": ".font-claude-message",
     "composer": "[data-testid=\"chat-input\"]",

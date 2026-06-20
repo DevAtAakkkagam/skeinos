@@ -59,7 +59,8 @@ export type MutationOp =
   | { op: 'conversation.pin'; conversationId: string; pinned: boolean }
   | { op: 'conversation.archive'; conversationId: string; archived: boolean }
   | { op: 'conversation.recolor'; conversationId: string; color?: string }
-  | { op: 'conversation.reportActive'; platform: PlatformId; nativeId: string; title: string };
+  | { op: 'conversation.reportActive'; platform: PlatformId; nativeId: string; title: string; listCollapsedHint?: boolean }
+  | { op: 'conversation.clearActive'; platform: PlatformId };
 
 /** The result of a successful mutation: the stores that changed (for the broadcast). */
 export interface MutationResult {

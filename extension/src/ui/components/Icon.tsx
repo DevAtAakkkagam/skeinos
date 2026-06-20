@@ -9,6 +9,7 @@
 // `aria-hidden` since every call site already supplies an accessible label.
 
 import type { JSX } from 'preact';
+import type { Folder } from '../../shared/types';
 
 export interface IconProps {
   /** Rendered size in px (applied to width and height). */
@@ -88,6 +89,24 @@ export function ChevronIcon({ size = 16, class: cls }: IconProps) {
   );
 }
 
+/** "Expand all" — two chevrons fanning outward (unfold more). */
+export function ExpandAllIcon({ size = 16, class: cls }: IconProps) {
+  return (
+    <Svg size={size} class={cls}>
+      <path d="m8 9 4-4 4 4M8 15l4 4 4-4" />
+    </Svg>
+  );
+}
+
+/** "Collapse all" — two chevrons folding inward (unfold less). */
+export function CollapseAllIcon({ size = 16, class: cls }: IconProps) {
+  return (
+    <Svg size={size} class={cls}>
+      <path d="m8 5 4 4 4-4M8 19l4-4 4 4" />
+    </Svg>
+  );
+}
+
 export function FolderIcon({ size = 40, class: cls }: IconProps) {
   return (
     <Svg size={size} class={cls}>
@@ -96,12 +115,40 @@ export function FolderIcon({ size = 40, class: cls }: IconProps) {
   );
 }
 
+/** Sentinel `Folder.icon` value meaning "draw the default folder glyph" (vs. an
+ *  emoji the user picked). Stored, so it must stay a stable string. */
+export const FOLDER_ICON_SENTINEL = 'folder';
+
+/** A folder's leading icon for tree/list/picker rows: the default folder glyph in
+ *  the folder's colour for the sentinel, a user-chosen emoji otherwise, or nothing. */
+export function FolderRowIcon({ folder }: { folder: Folder }) {
+  if (folder.icon === FOLDER_ICON_SENTINEL) {
+    return (
+      <span class="sk-row__icon" data-testid="sk-row-folder-icon" style={{ color: folder.color }}>
+        <FolderIcon size={14} />
+      </span>
+    );
+  }
+  if (folder.icon) return <span class="sk-row__icon">{folder.icon}</span>;
+  return null;
+}
+
 export function MoreIcon({ size = 16, class: cls }: IconProps) {
   return (
     <Svg size={size} class={cls}>
       <circle cx="5" cy="12" r="1" />
       <circle cx="12" cy="12" r="1" />
       <circle cx="19" cy="12" r="1" />
+    </Svg>
+  );
+}
+
+/** A filled push-pin badge marking a pinned row. Drawn filled (not stroke-only) so
+ *  it reads as an at-a-glance status marker against the row's text, not an action. */
+export function PinIcon({ size = 12, class: cls }: IconProps) {
+  return (
+    <Svg size={size} class={cls} fill="currentColor" stroke="none">
+      <path d="M14.6 2.6a1 1 0 0 0-1.5 0l-.6.6a2 2 0 0 0-.5 2L8.9 8.3a3 3 0 0 0-2.7.8l-.3.3a1 1 0 0 0 0 1.4l2.7 2.7-4.3 4.3a1 1 0 1 0 1.4 1.4l4.3-4.3 2.7 2.7a1 1 0 0 0 1.4 0l.3-.3a3 3 0 0 0 .8-2.7l3.1-3.1a2 2 0 0 0 2-.5l.6-.6a1 1 0 0 0 0-1.5z" />
     </Svg>
   );
 }

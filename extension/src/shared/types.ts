@@ -61,6 +61,12 @@ export interface ActiveConversation {
   nativeId: string;
   title: string;
   updatedAt: number;
+  // True when this tab has a conversation open but the host rendered no list items
+  // (its drawer is collapsed and it hides the list when collapsed — Gemini). Lets
+  // the side panel nudge the user to open the drawer once so the full list syncs.
+  // Optional/additive — absent means "no nudge" (the common case for every platform
+  // whose list stays in the DOM when collapsed). Local-only metadata, never synced.
+  listCollapsedHint?: boolean;
 }
 
 /** Local only — never synced. */
@@ -73,6 +79,11 @@ export interface ConversationIndex {
   tags: string[];
   indexedText: string;
   contentHash: string;
+  // Token-index boundary within `indexedText`: tokens before it are the title,
+  // tokens at/after it are the body. Lets a title-only re-ingest recover and
+  // preserve a previously-indexed body instead of clobbering it. Optional/additive
+  // — absent on records written before search shipped (treated as "unknown").
+  titleTokenCount?: number;
   updatedAt: number;
   // Per-conversation organization state (conversation-context-menu). Optional and
   // additive — absent means unpinned / not archived / no colour. Local-only like
@@ -141,11 +152,102 @@ export interface Comparison {
 }
 
 /**
- * A shard of the search postings index (LLD §8). Keyed by `term`; the index
- * logic lands in M2 (the `search` change) — the empty store + key shape exist
- * now (D6) so M2 needs no schema bump. Local only — never synced.
+ * One term's occurrences within a single document (LLD §8.1 / D26). `field`
+ * tracks title-vs-body provenance so ranking can boost titles and highlighting
+ * can target the right field; `positions` are token indices into the document's
+ * normalized `indexedText` (a single token stream over title then body), so the
+ * same indices drive both scoring and snippet windows.
  */
-export interface SearchPosting {
-  term: string;
-  docs: { docId: string; field: string; positions: number[] }[];
+export interface Posting {
+  docId: string;
+  field: 'title' | 'body';
+  positions: number[];
+}
+
+/**
+ * A shard of the search postings index (LLD §8.1 / D26), keyed by a 2-char term
+ * **prefix** — each shard record holds many terms, mapping each to its postings.
+ * Prefix sharding keeps individual records small (vs. one monolithic blob) while
+ * avoiding the write amplification of one-record-per-term (the shipped per-term
+ * layout this replaces). Local only — never synced (PRIV-1).
+ */
+export interface SearchShard {
+  /** First two characters of the normalized term, or the whole term when shorter. */
+  prefix: string;
+  /** term → its postings across documents. */
+  terms: Record<string, Posting[]>;
+}
+
+/** One segment of a highlighted snippet: a run of text, flagged if it matched. */
+export interface SnippetSegment {
+  text: string;
+  match: boolean;
+}
+
+/** Optional filters narrowing a {@link Query} against `ConversationIndex` metadata. */
+export interface SearchFilters {
+  platform?: PlatformId;
+  /** Inclusive lower / upper bounds on `updatedAt` (epoch ms). */
+  updatedAfter?: number;
+  updatedBefore?: number;
+  /** `null` matches unfiled conversations; omit to not filter by folder. */
+  folderId?: string | null;
+  /** Include archived conversations when `true`; archived are excluded by default. */
+  archived?: boolean;
+  /** Forward-compatible tag dimension (C7). Inert until tag assignment ships. */
+  tag?: string;
+}
+
+/** A search request: terms (AND semantics) + optional filters + paging. */
+export interface Query {
+  terms: string[];
+  filters?: SearchFilters;
+  offset?: number;
+  limit?: number;
+}
+
+/**
+ * One ranked search hit. Carries the display fields the overlay needs to render a
+ * row (title, platform, nativeId for the logo + open action) alongside the score
+ * and the highlighted snippet — all derived from local-only records, nothing new
+ * crosses the privacy boundary.
+ */
+export interface SearchResult {
+  docId: string;
+  platform: PlatformId;
+  nativeId: string;
+  title: string;
+  score: number;
+  snippet: SnippetSegment[];
+  /** Owning folder (or `null` when unfiled) — drives the result row's folder chip. */
+  folderId: string | null;
+  /** Last-updated epoch ms — drives the result row's relative timestamp. */
+  updatedAt: number;
+}
+
+/** Input for indexing one conversation (content-derived fields only). */
+export interface IndexInput {
+  id: string;
+  platform: PlatformId;
+  nativeId: string;
+  title: string;
+  /** The conversation's message text, concatenated by the caller. */
+  body: string;
+  /** Source timestamp for the recency factor; defaults to now when omitted. */
+  updatedAt?: number;
+}
+
+/**
+ * The query/index contract the rest of the worker programs against (LLD §5),
+ * introduced by the `search` change. Implemented over the `searchPostings` +
+ * `conversations` repos in the service worker (the single writer).
+ */
+export interface SearchEngine {
+  /** Index or re-index one conversation; resolves `true` when it wrote, `false`
+   *  on an idempotent no-op (unchanged `contentHash`). */
+  index(input: IndexInput): Promise<boolean>;
+  /** Remove a conversation's postings and its `ConversationIndex` record. */
+  remove(id: string): Promise<void>;
+  /** Run a query and return ranked, paged results. */
+  search(query: Query): Promise<SearchResult[]>;
 }

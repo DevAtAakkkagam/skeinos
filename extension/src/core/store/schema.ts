@@ -91,10 +91,12 @@ export const STORES = {
     indexes: [],
     synced: false,
   },
-  // Keyed by `term`, sharded by term prefix (D6). Indexing logic lands in M2.
+  // Prefix-shard postings (D6/D26/LLD §8.1): keyed by the 2-char term `prefix`,
+  // each record holding many terms. Reshaped from the shipped per-term layout by
+  // the v4 migration (no-data — indexing had never run). Local-only (PRIV-1).
   searchPostings: {
     name: 'searchPostings',
-    keyPath: 'term',
+    keyPath: 'prefix',
     indexes: [],
     synced: false,
   },

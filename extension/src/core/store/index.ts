@@ -12,7 +12,7 @@ import type {
   InstructionProfile,
   Prompt,
   PromptFolder,
-  SearchPosting,
+  SearchShard,
   Tag,
 } from '../../shared/types';
 import { openDb } from './db';
@@ -35,7 +35,7 @@ export interface WorkspaceStore {
   profiles: Repo<InstructionProfile>;
   tags: Repo<Tag>;
   comparisons: Repo<Comparison>;
-  searchPostings: Repo<SearchPosting>;
+  searchPostings: Repo<SearchShard>;
   activeConversations: Repo<ActiveConversation>;
   /** Names of stores eligible for sync (envelope-carrying). */
   syncableStores(): StoreName[];
@@ -62,7 +62,7 @@ export function makeWorkspaceStore(db: IDBPDatabase): WorkspaceStore {
     profiles: makeRepo<InstructionProfile>(db, STORES.profiles),
     tags: makeRepo<Tag>(db, STORES.tags),
     comparisons: makeRepo<Comparison>(db, STORES.comparisons),
-    searchPostings: makeRepo<SearchPosting>(db, STORES.searchPostings),
+    searchPostings: makeRepo<SearchShard>(db, STORES.searchPostings),
     activeConversations: makeRepo<ActiveConversation>(db, STORES.activeConversations),
     syncableStores,
     async tx(stores, fn) {

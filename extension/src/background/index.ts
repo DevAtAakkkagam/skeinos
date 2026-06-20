@@ -7,7 +7,9 @@
 import { installMessageHub } from '../core/messaging';
 import { registerAdapterHandlers, registerCanary, registerResilienceHandlers } from '../adapters';
 import { registerFolderHandlers } from '../core/folders';
+import { registerSearchHandlers } from '../core/conversation-index';
 import { registerSidePanel } from './sidePanel';
+import { registerInjectOpenTabs } from './injectOpenTabs';
 
 // ALL registration below is a top-level module side effect (SW-3), run on every
 // worker script evaluation. This is load-bearing: MV3 tears the worker down after
@@ -27,11 +29,18 @@ registerCanary();
 // tab listeners must survive every cold start. No-op without `chrome.sidePanel`.
 registerSidePanel();
 
+// On install/update, inject the content script into already-open supported tabs so
+// the user's existing chats start ingesting without a manual tab reload. No-op
+// without `chrome.scripting` (e.g. Firefox MV2).
+registerInjectOpenTabs();
+
 // Request handlers (workspace query/mutate, adapter health/degraded). These MUST
 // be top-level so a woken worker can answer the side panel's first message.
 registerAdapterHandlers();
 registerResilienceHandlers();
 registerFolderHandlers();
+// Search query + indexing (search.run, conversation.index/indexBulk).
+registerSearchHandlers();
 
 // Install the dispatch listener LAST — after every handler is registered — so a
 // woken worker never answers a request before its handlers exist. Worker-only.

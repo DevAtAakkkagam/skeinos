@@ -90,6 +90,36 @@ export function validateAdapterConfig(raw: unknown): AdapterConfig | ValidationE
         errors.push({ path: `selectors.${key}`, message: 'must be a non-empty string' });
       }
     }
+    // Optional: an attribute name carrying the conversation title, when present,
+    // must be a non-empty string.
+    const titleAttr = raw.selectors.conversationTitleAttr;
+    if (titleAttr !== undefined && (typeof titleAttr !== 'string' || titleAttr.length === 0)) {
+      errors.push({
+        path: 'selectors.conversationTitleAttr',
+        message: 'must be a non-empty string when present',
+      });
+    }
+
+    // Optional: a URL pattern for active-conversation detection, when present, must
+    // be a non-empty string and a valid regex.
+    const urlPattern = raw.selectors.conversationUrlPattern;
+    if (urlPattern !== undefined) {
+      if (typeof urlPattern !== 'string' || urlPattern.length === 0) {
+        errors.push({
+          path: 'selectors.conversationUrlPattern',
+          message: 'must be a non-empty string when present',
+        });
+      } else {
+        try {
+          new RegExp(urlPattern);
+        } catch {
+          errors.push({
+            path: 'selectors.conversationUrlPattern',
+            message: 'must be a valid regular expression',
+          });
+        }
+      }
+    }
   }
 
   if (!isRecord(raw.behaviors)) {
@@ -109,6 +139,13 @@ export function validateAdapterConfig(raw: unknown): AdapterConfig | ValidationE
     }
     if (typeof raw.behaviors.supportsSystemPrompt !== 'boolean') {
       errors.push({ path: 'behaviors.supportsSystemPrompt', message: 'must be a boolean' });
+    }
+    // Optional flag: validate only when present so existing configs stay valid.
+    if (
+      raw.behaviors.listHiddenWhenCollapsed !== undefined &&
+      typeof raw.behaviors.listHiddenWhenCollapsed !== 'boolean'
+    ) {
+      errors.push({ path: 'behaviors.listHiddenWhenCollapsed', message: 'must be a boolean' });
     }
   }
 

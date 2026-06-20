@@ -41,6 +41,22 @@ hash differs.
 - **AND** the `ConversationIndex` record is updated and its postings are updated to reflect only the new
   content
 
+### Requirement: Re-indexing preserves local organization state
+
+The pipeline SHALL preserve the local-only organization state that other capabilities set on a
+`ConversationIndex` record — `folderId`, `tags`, and the optional `pinned`, `archived`, and `color` fields
+(conversation-filing / conversation-organization). Because indexing is a content operation, when it
+re-writes a record it SHALL read-modify-write the existing record, overwriting only the content-derived
+fields (`title`, `indexedText`, `contentHash`, `updatedAt`) and leaving the organization-state fields
+unchanged. Indexing SHALL NOT reset a conversation's pin, archive, color, folder assignment, or tags.
+
+#### Scenario: Re-indexing keeps pin, archive, folder, and tags
+
+- **WHEN** a conversation that is pinned, archived, filed into a folder, and tagged is re-indexed after its
+  content changed
+- **THEN** the updated record reflects the new content fields
+- **AND** its `pinned`, `archived`, `color`, `folderId`, and `tags` are unchanged
+
 ### Requirement: Bulk indexing is chunked and best-effort
 
 The pipeline SHALL process bulk indexing of many conversations in synchronous chunks, yielding between

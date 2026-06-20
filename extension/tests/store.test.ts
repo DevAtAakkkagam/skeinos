@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { deleteDB, type IDBPDatabase } from 'idb';
 import {
   makeWorkspaceStore,
+  MIGRATIONS,
   openDb,
   syncableStores,
   type Migration,
@@ -167,6 +168,74 @@ describe('Local-only stores are excluded from sync (4.6)', () => {
     }
     for (const name of ['conversations', 'searchPostings', 'comparisons']) {
       expect(set.has(name as never)).toBe(false);
+    }
+  });
+});
+
+describe('searchPostings prefix-shard reshape (1.4)', () => {
+  it('searchPostings exists with keyPath "prefix" at the current DB version', async () => {
+    const name = `skeinos-postings-${dbCounter++}`;
+    const db = await openDb(name); // real MIGRATIONS, current version
+    try {
+      expect([...db.objectStoreNames]).toContain('searchPostings');
+      const keyPath = db.transaction('searchPostings').store.keyPath;
+      expect(keyPath).toBe('prefix');
+    } finally {
+      db.close();
+      await deleteDB(name);
+    }
+  });
+
+  it('searchPostings stays excluded from the syncable set', () => {
+    expect(syncableStores() as string[]).not.toContain('searchPostings');
+  });
+
+  it('no-data v4 migration reshapes a pre-v4 term-keyed store to prefix without touching other data', async () => {
+    const name = `skeinos-postings-migrate-${dbCounter++}`;
+
+    // Build a pre-v4 history: the real v1..v3 steps, but with searchPostings
+    // created under the SHIPPED per-term layout (keyPath 'term'). This mirrors a
+    // database that exists on disk before the reshape ships.
+    const preV4: Migration[] = [
+      // v1 — create the real stores, but override searchPostings' keyPath to 'term'.
+      (db) => {
+        for (const store of ALL_STORES) {
+          const keyPath = store.name === 'searchPostings' ? 'term' : store.keyPath;
+          const os = db.createObjectStore(store.name, { keyPath });
+          for (const idx of store.indexes) {
+            os.createIndex(idx.name, idx.keyPath, { multiEntry: idx.multiEntry ?? false });
+          }
+        }
+      },
+      // v2 + v3 — replay the real (additive / no-op) steps so the history matches.
+      MIGRATIONS[1],
+      MIGRATIONS[2],
+    ];
+
+    // Create at v3 and seed an unrelated, syncable store; seed NOTHING into
+    // searchPostings (indexing had never run — the reshape is no-data).
+    let db: IDBPDatabase = await openDb(name, preV4, 3);
+    expect(db.transaction('searchPostings').store.keyPath).toBe('term'); // pre-reshape
+    await db.put('folders', { id: 'keep', name: 'survivor' });
+    db.close();
+
+    // Reopen at v4 with the REAL v4 migration appended — this is the shipped step
+    // that drops/recreates searchPostings to keyPath 'prefix'.
+    const withV4: Migration[] = [...preV4, MIGRATIONS[3]];
+    db = await openDb(name, withV4, 4);
+    try {
+      // searchPostings is now keyed by 'prefix'.
+      expect(db.transaction('searchPostings').store.keyPath).toBe('prefix');
+      expect(await db.count('searchPostings')).toBe(0);
+
+      // Other stores and their records are unaffected.
+      const kept = await db.get('folders', 'keep');
+      expect(kept).toMatchObject({ id: 'keep', name: 'survivor' });
+      // conversations (holding ConversationIndex) keeps its original key path.
+      expect(db.transaction('conversations').store.keyPath).toBe('id');
+    } finally {
+      db.close();
+      await deleteDB(name);
     }
   });
 });

@@ -1,0 +1,45 @@
+<!-- Representative Perplexity DOM snapshot, shaped from the live www.perplexity.ai
+     thread + sidebar (captured 2026-06). Threads are `/search/<id>` links inside
+     `nav[aria-label="Main"]`; each is an *overlay* anchor (absolute inset-0) whose
+     title lives in its `aria-label` and in a sibling title div — never in the link's
+     own text — so the config reads the title via `conversationTitleAttr="aria-label"`.
+     The active thread carries aria-current (the contract's accessible convention).
+     Messages are the `group/query` user block and the `markdown-content-<n>` answer
+     container; the composer is the `#ask-input` contenteditable with a `Submit`
+     button. Only framework-stable hooks are used — aria-labels, href prefixes, the
+     `#ask-input` id, the `group/query` + `markdown-content` class/id — never the
+     volatile Tailwind utility classes. See tests/fixtures/README.md. -->
+<div class="app">
+  <nav aria-label="Main" class="group/sidebar">
+    <div class="group/collapsible-sidebar-section">
+      <div class="group/sidebar-sub-menu relative block w-full">
+        <a draggable="false" aria-label="Rump steaks" aria-current="page" class="reset interactable absolute inset-0" href="/search/conv-1"><span></span></a>
+        <div class="flex rounded-lg">
+          <div class="flex-1 truncate text-xs">Rump steaks</div>
+        </div>
+      </div>
+      <div class="group/sidebar-sub-menu relative block w-full">
+        <a draggable="false" aria-label="Cast-iron skillet care" class="reset interactable absolute inset-0" href="/search/conv-2"><span></span></a>
+        <div class="flex rounded-lg">
+          <div class="flex-1 truncate text-xs">Cast-iron skillet care</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="thread">
+      <div class="group/query relative whitespace-pre-line break-words">How do I cook a rump steak?</div>
+      <div class="answer">
+        <div id="markdown-content-0" class="gap-y-md">Sear it hot, then rest it for five minutes.</div>
+      </div>
+    </div>
+
+    <div class="input-region">
+      <div>
+        <div id="ask-input" role="textbox" contenteditable="true"></div>
+      </div>
+      <button aria-label="Submit">Submit</button>
+    </div>
+  </main>
+</div>

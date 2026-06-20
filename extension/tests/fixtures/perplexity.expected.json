@@ -1,0 +1,10 @@
+{
+  "activeUrl": "https://www.perplexity.ai/search/conv-1",
+  "active": { "nativeId": "/search/conv-1", "title": "Rump steaks" },
+  "conversationCount": 2,
+  "messages": [
+    { "role": "user", "text": "How do I cook a rump steak?" },
+    { "role": "assistant", "text": "Sear it hot, then rest it for five minutes." }
+  ],
+  "inserted": "Hello from Skeinos"
+}

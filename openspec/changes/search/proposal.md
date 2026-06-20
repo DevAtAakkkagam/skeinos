@@ -4,8 +4,11 @@ Search is the free tier's second core promise: the host sites give you a flat, u
 conversation list, and Skeinos makes every conversation findable by content with filters and
 in-context highlights. It is the widest remaining M2 unblocker — `loading-states` (C11), `shortcuts`
 (C16), the `a11y` audit (C34), and the `perf-budget` verification (C35) all build on the search engine
-and overlay. With the store (C1) and the Claude adapter (C4) in place, the `searchPostings` store and
-the `SearchEngine` / `search.run` contracts that have been stubbed since M0 can finally be filled in.
+and overlay. With the store (C1) and the Claude adapter (C4) in place, the `searchPostings` store that has
+existed (empty) since M0 and the `SearchEngine` / `search.run` contracts this change introduces can finally
+be filled in: the store shipped the local-only `searchPostings` store + the placeholder `SearchPosting`
+type, messaging shipped the broadcast channel (incl. `state.changed`) plus an *augmentable* request map,
+and the Claude adapter shipped `readMessages` — but no search *behavior* exists yet.
 
 ## What Changes
 
@@ -19,7 +22,7 @@ the `SearchEngine` / `search.run` contracts that have been stubbed since M0 can 
   `SearchPosting` (`{ term, docs[] }`, `keyPath: 'term'`) to a prefix-shard** (`{ prefix, terms: {
   [term]: { docId, field, positions[] }[] } }`, `keyPath: 'prefix'`) per **D26/D6/LLD §8.1**. This is a
   store-schema version bump with **no data migration** — indexing has never run, so there are no rows.
-- Add query + ranking: parse terms + filters (**platform, date range, folder**, and a
+- Add query + ranking: parse terms + filters (**platform, date range, folder, archived state**, and a
   forward-compatible **tag** dimension), intersect postings, score by term frequency with field boosts
   (title > body) and a recency factor, drive in-context highlighting from stored token positions, and
   page results. Target **< 500 ms over 5,000 conversations**, verified by a synthetic-corpus CI
@@ -46,7 +49,7 @@ benchmark); and durable resumable backfill via alarms.
   persisted, idempotent `ConversationIndex` (normalize → tokenize → `contentHash` → store), running in
   the service worker, with a clean seam to the search engine for (re)indexing and removal.
 - `search`: the query layer — the prefix-shard postings build/update over `searchPostings`, query
-  parsing + filters (platform/date/folder, tag forward-compatible), TF + field-boost + recency ranking,
+  parsing + filters (platform/date/folder/archived, tag forward-compatible), TF + field-boost + recency ranking,
   position-driven highlighting and paging under the <500ms@5k budget, and the shadow-DOM search overlay
   (palette, filters, keyboard nav, empty state) over the `search.run` messaging contract.
 
@@ -58,12 +61,18 @@ benchmark); and durable resumable backfill via alarms.
 ## Impact
 
 - **New modules** `extension/src/core/conversation-index/` (ingest pipeline + worker handlers) and
-  `extension/src/core/search/` (shard layout, indexer, query engine), plus a `features/search/` Preact
-  overlay mounted through the UI harness.
+  `extension/src/core/search/` (shard layout, indexer, query engine), plus a search overlay under
+  `extension/src/ui/` mounted through the existing UI harness.
 - **Modified** `extension/src/shared/types.ts` (replace `SearchPosting` with the prefix-shard type; add
-  the `Query` / `SearchResult` shapes) and `extension/src/core/store/schema.ts` (`searchPostings`
-  `keyPath` + DB version bump). The `SearchEngine` interface (LLD §5) and `search.run` request /
-  `state.changed` broadcast (LLD §7) already exist and are wired, not introduced.
+  the `Query` / `SearchResult` shapes and the `SearchEngine` interface) and
+  `extension/src/core/store/schema.ts` (`searchPostings` `keyPath` + DB version bump). The `state.changed`
+  broadcast hub (LLD §7) already exists, but its shipped payload is `{ stores: string[] }` with no slot
+  for progress — so this change also **extends the `Broadcast` union in `shared/messages.ts`** with a
+  bulk-index progress variant (`{ done, total }`) that C11's indicator later reads. The `search.run`
+  request kind is **introduced** by this change,
+  registered on the open `RequestContracts` map via declaration merging (messaging ships no `search.run`
+  handler today — its request map is empty by design and features add their own kinds), and the
+  `SearchEngine` interface (LLD §5) is **introduced** here, not pre-existing.
 - **Consumes existing contracts**: the `conversations` + `searchPostings` repos from `workspace-store`,
   the `messaging` request/response + broadcast hub, and the Claude `platform-adapter` `readMessages`
   read op — no direct DOM access from `core/`.

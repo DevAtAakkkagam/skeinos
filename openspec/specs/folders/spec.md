@@ -174,6 +174,16 @@ conversation list as an assignment within the same document. (Conversations are 
 the keyboard-first Move-to-folder picker defined by the `conversation-filing` capability;
 same-document drag is an enhancement, never the only path.)
 
+The sidebar body SHALL split into a scrolling region holding the live sections (pinned,
+folders, unfiled) and a bottom-docked archive region holding the archive sections (archived
+conversations and archived folders). The archive region SHALL stay pinned to the bottom of
+the panel rather than scrolling away below a long folder list, SHALL be separated from the
+scrolling region by a hairline and an opaque background, and SHALL cap its own height and
+scroll internally when expanded so it never crowds out the live tree above it. The archive
+region SHALL render only when something is archived: the archived-conversations section
+SHALL appear only when at least one (platform-visible) conversation is archived, and the
+archived-folders section only when at least one folder is archived.
+
 #### Scenario: Pinned and archive rows show icon, color, and count
 
 - **WHEN** the sidebar renders a folder in the pinned or archive section
@@ -201,6 +211,20 @@ same-document drag is an enhancement, never the only path.)
 - **WHEN** the user drags a conversation row from the panel's conversation list onto a folder node
 - **THEN** the conversation is assigned to that folder via `conversation.assign`
 - **AND** the same assignment is reachable without a pointer through the Move-to-folder picker
+
+#### Scenario: The archive region docks to the bottom of the panel
+
+- **WHEN** the sidebar renders with archived content and a folder list taller than the panel
+- **THEN** the live sections (pinned, folders, unfiled) scroll within their own region
+- **AND** the archive region stays pinned to the bottom of the panel, reachable without
+  scrolling past the folder list
+
+#### Scenario: The archive region is hidden when nothing is archived
+
+- **WHEN** no conversation and no folder is archived
+- **THEN** the bottom-docked archive region is not rendered
+- **AND** the archived-conversations section appears only once at least one
+  platform-visible conversation is archived
 
 ### Requirement: Folder state is single-writer and multi-tab consistent
 
@@ -275,3 +299,34 @@ not the empty state.
 - **WHEN** the initial read fails after the transient-retry budget is exhausted
 - **THEN** the view shows a "couldn't load" state with a retry action
 - **AND** invoking retry re-reads worker state and renders the result on success
+
+### Requirement: Folder dialog defaults to a folder icon and blue colour
+
+The create-folder dialog SHALL open with a **folder icon** and a **blue colour** preselected by
+default, so a folder created without further choices is branded rather than blank. The default
+folder icon SHALL be a **tintable SVG** stored as a distinct sentinel value (not the empty/"no
+icon" state) so a defaulted folder is distinguishable from one the user explicitly cleared; it
+SHALL render in the folder's colour. The clear/"no icon" and clear/"no colour" options SHALL remain
+available so a user can still opt out. Emoji icons SHALL render as-is (un-tinted).
+
+#### Scenario: New folder dialog preselects folder icon and blue
+
+- **WHEN** the user opens the create-folder dialog
+- **THEN** the folder icon option and the blue colour swatch are preselected
+- **AND** confirming without changing them creates a folder carrying the folder icon and blue colour
+
+#### Scenario: Default folder icon renders tinted in the folder colour
+
+- **WHEN** a folder uses the default folder icon
+- **THEN** the sidebar renders it as the tintable folder SVG in the folder's colour
+
+#### Scenario: Clear options remain available
+
+- **WHEN** the user selects the clear/"no icon" or clear/"no colour" option in the dialog
+- **THEN** the folder is created with no icon or no colour respectively
+- **AND** a cleared folder is distinguishable from a default-iconed folder
+
+#### Scenario: An emoji icon is not tinted
+
+- **WHEN** a folder uses an emoji icon
+- **THEN** the sidebar renders the emoji as-is, without applying the folder colour as a tint

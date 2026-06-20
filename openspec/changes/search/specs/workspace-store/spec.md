@@ -18,7 +18,7 @@ The store SHALL define one versioned IndexedDB database whose object stores and 
 
 #### Scenario: searchPostings reshape is a no-data migration
 
-- **WHEN** the migration that changes `searchPostings` from the per-term layout (keyed by `term`) to the prefix-shard layout (keyed by `prefix`) runs
-- **THEN** the `searchPostings` store is recreated with key path `prefix`
+- **WHEN** the new migration step — appended to the add-only list after the existing `activeConversations` and conversation-organization steps — changes `searchPostings` from the per-term layout (keyed by `term`) to the prefix-shard layout (keyed by `prefix`)
+- **THEN** the `searchPostings` store is dropped and recreated with key path `prefix` at the bumped database version
 - **AND** no posting rows require transformation because indexing has not yet run
-- **AND** all other stores and their records are unaffected
+- **AND** all other stores (including `conversations` and `activeConversations`) and their records are unaffected

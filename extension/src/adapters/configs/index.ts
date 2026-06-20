@@ -6,12 +6,14 @@ import type { PlatformId } from '../../shared/types';
 import type { AdapterConfig } from '../types';
 import claudeConfig from './claude.json';
 import geminiConfig from './gemini.json';
+import perplexityConfig from './perplexity.json';
 
 /** Bundled configs by platform. Only platforms whose adapter has shipped appear. */
 export const BUNDLED_CONFIGS: Partial<Record<PlatformId, AdapterConfig>> = {
   // Trusted (our own bundled file); the loader still re-validates remote configs.
   claude: claudeConfig as unknown as AdapterConfig,
   gemini: geminiConfig as unknown as AdapterConfig,
+  perplexity: perplexityConfig as unknown as AdapterConfig,
 };
 
 /** The bundled config for a platform, or `undefined` if none has shipped yet. */
