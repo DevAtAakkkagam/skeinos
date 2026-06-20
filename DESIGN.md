@@ -166,19 +166,22 @@ overlines (FOLDERS, PROMPTS, ARCHIVE) so it signals structure without becoming d
 ### Hierarchy
 - **Display / Overline** (Handjet, 600, 13px, `letter-spacing: 0.34em`, uppercase): section
   labels only. The wide tracking and dot face make them read as architecture, not captions.
-- **Title** (Urbanist, 600, 16px): dialog and picker titles; empty-state titles step down to
-  15px.
-- **Card Title** (Urbanist, 700, 14px): prompt-card and tree-anchor names. Hierarchy against
-  body is carried by weight (700 vs 500) more than size.
-- **Body** (Urbanist, 500, 13px / 20px): the default. Excerpts relax to `line-height: 1.45`.
+- **Title** (Urbanist, 600, 16px / `--sk-text-title`): dialog and picker titles; empty-state
+  titles step down to 15px.
+- **Card Title** (Urbanist, 700, 16px / `--sk-text-title`): prompt-card titles. Sits a real
+  step above body (~1.23 ratio) and is reinforced by weight (700 vs 500). Dense tree-anchor
+  names stay at body size and lean on weight alone, to keep row height tight.
+- **Body** (Urbanist, 500, 13px / 20px / `--sk-text-base`): the default. Excerpts relax to
+  `line-height: 1.45`.
 - **Label / Meta** (Urbanist, 500–600, 11–12px): counts, relative time, result-group labels,
   variable-type tags. `font-variant-numeric: tabular-nums` on all counts and times.
 
 ### Named Rules
 **The Weight-Carries-Hierarchy Rule.** Title-to-body separation rides on weight (700/600 vs
-500), not size leaps. Current size steps are shallow (14px title over 13px body); when a
-step needs to read louder, raise the weight or lift the title size to restore a ≥1.25 ratio
-rather than recolouring.
+500) plus a real size step, never colour. Sizes come from one ramp (`--sk-text-xs` 11 /
+`--sk-text-sm` 12 / `--sk-text-base` 13 / `--sk-text-title` 16 / `--sk-text-heading` 18);
+when a step must read louder, move up the ramp or add weight, never recolour. Card titles
+use `--sk-text-title` so the step over body is ~1.23, not the muddy 14/13 it replaced.
 
 ## 4. Elevation
 

@@ -46,10 +46,10 @@ export const PROMPTS_CSS = `
   background: var(--sk-color-bg); padding: var(--sk-space-2) var(--sk-space-3);
 }
 .sk-prompt-card__head { display: flex; align-items: center; gap: var(--sk-space-2); }
-.sk-prompt-card__title { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-prompt-card__title { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--sk-text-title); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The inert slash alias (no insertion until C13): a quiet monospace badge. */
 .sk-prompt-card__slug {
-  flex: none; font-family: var(--sk-font-dot, monospace); font-size: 11px; color: var(--sk-color-accent);
+  flex: none; font-family: var(--sk-font-dot, monospace); font-size: var(--sk-text-xs); color: var(--sk-color-accent);
   background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--sk-color-accent) 35%, transparent);
   border-radius: var(--sk-radius); padding: 0 var(--sk-space-1);
@@ -66,12 +66,12 @@ export const PROMPTS_CSS = `
 }
 .sk-prompt-card__menu .sk-btn svg { display: block; }
 .sk-prompt-card__excerpt {
-  margin: 0; color: var(--sk-color-muted); font-size: 13px; line-height: 1.45;
+  margin: 0; color: var(--sk-color-muted); font-size: var(--sk-text-base); line-height: 1.45;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sk-prompt-card__ellipsis { color: var(--sk-color-muted); }
 .sk-prompt-card__foot { display: flex; align-items: center; gap: var(--sk-space-2); }
-.sk-prompt-card__vars { font-size: 12px; color: var(--sk-color-muted); font-variant-numeric: tabular-nums; }
+.sk-prompt-card__vars { font-size: var(--sk-text-sm); color: var(--sk-color-muted); font-variant-numeric: tabular-nums; }
 .sk-prompt-card__logos { display: inline-flex; align-items: center; gap: var(--sk-space-1); margin-left: auto; }
 .sk-prompt-card__logo { display: inline-flex; align-items: center; }
 .sk-prompt-card__logo svg { display: block; }
@@ -86,7 +86,7 @@ export const PROMPTS_CSS = `
 
 /* --- editor dialog --------------------------------------------------------- */
 .sk-prompt-editor { display: flex; flex-direction: column; gap: var(--sk-space-2); min-width: 320px; max-width: 92vw; }
-.sk-field__label { font-size: 12px; font-weight: 600; color: var(--sk-color-muted); }
+.sk-field__label { font-size: var(--sk-text-sm); font-weight: 600; color: var(--sk-color-muted); }
 .sk-prompt-editor__body { resize: vertical; min-height: 96px; font-family: inherit; line-height: 1.45; }
 .sk-prompt-editor__vars { display: flex; flex-direction: column; gap: var(--sk-space-1); }
 .sk-prompt-editor__vars-empty { font-size: 12px; margin: 0; }
