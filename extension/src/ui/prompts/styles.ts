@@ -14,11 +14,6 @@ export const PROMPTS_CSS = `
 .sk-prompts__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sk-space-2); }
 .sk-prompts__item { display: block; }
 
-/* TEMPORARY starter-prompt control (prompt-seed-catalog) — removed with the onboarding picker. */
-.sk-prompts__starter { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sk-space-2); padding: 0 var(--sk-space-1) var(--sk-space-2); }
-.sk-prompts__starter-label { font-size: var(--sk-text-sm); color: var(--sk-color-muted); }
-.sk-prompts__starter-status { flex-basis: 100%; font-size: var(--sk-text-sm); color: var(--sk-color-muted); }
-
 /* A chip's trailing client-derived count (category + tag filters). */
 .sk-chip__count { margin-left: 4px; font-variant-numeric: tabular-nums; opacity: 0.75; }
 
@@ -100,6 +95,18 @@ export const PROMPTS_CSS = `
 .sk-prompt-editor__col .sk-select { width: 100%; box-sizing: border-box; }
 .sk-prompt-editor__new-category { display: flex; align-items: center; gap: var(--sk-space-2); }
 .sk-prompt-editor__new-category .sk-input { flex: 1 1 auto; }
+
+/* --- starter-pack seeding from the empty state (no-domain recovery path) -----
+   Stacked layout (label · full-width picker · full-width action) so the longest
+   domain ("Software engineering") never truncates inside the narrow side panel.
+   Left-aligned as a small form; the parent .sk-empty centers the block itself. */
+.sk-prompts__seed { display: flex; flex-direction: column; gap: var(--sk-space-2); margin-top: var(--sk-space-3); padding-top: var(--sk-space-3); border-top: 1px solid var(--sk-color-border); width: 100%; max-width: 300px; text-align: left; }
+.sk-prompts__seed-label { margin: 0; font-size: var(--sk-text-sm); font-weight: 600; color: var(--sk-color-fg); }
+.sk-prompts__seed-row { display: flex; flex-direction: column; gap: var(--sk-space-2); }
+.sk-prompts__seed-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sk-prompts__seed-field-label { font-size: var(--sk-text-xs); color: var(--sk-color-muted); }
+.sk-prompts__seed-field .sk-select { width: 100%; box-sizing: border-box; }
+.sk-prompts__seed-row .sk-btn { align-self: stretch; justify-content: center; }
 
 /* --- shared button variants (ghost / danger) ------------------------------- */
 .sk-btn--ghost { background: none; color: var(--sk-color-fg); border: 1px solid var(--sk-color-border); }

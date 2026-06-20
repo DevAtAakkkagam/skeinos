@@ -31,16 +31,12 @@ export const STR = {
   firstRunBody: 'Create a reusable prompt with {{variables}} you can fill in later.',
   createFirst: 'Create your first prompt',
 
-  // Starter prompts (TEMPORARY — replaced by the onboarding domain picker later)
-  starterTitle: 'Add starter prompts',
-  starterDomainLabel: 'Domain',
-  starterAdd: 'Add starter prompts',
-  starterAdded: (n: number): string =>
-    n === 0
-      ? 'Starter prompts already added.'
-      : n === 1
-        ? 'Added 1 starter prompt.'
-        : `Added ${n} starter prompts.`,
+  // Starter-pack seeding from the empty state (shown only when no domain is chosen
+  // yet — the recovery path for users who skipped onboarding's domain pick).
+  seedTitle: 'Or start from a starter pack',
+  seedDomainLabel: 'Field',
+  seedAdd: 'Add starter prompts',
+
   noMatchTitle: 'No prompts match this filter',
   noMatchBody: 'Try a different category or tag, or clear the filter.',
   clearFilter: 'Clear filter',

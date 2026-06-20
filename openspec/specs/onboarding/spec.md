@@ -1,17 +1,72 @@
-## MODIFIED Requirements
+# onboarding Specification
+
+## Purpose
+
+The onboarding capability defines the extension's first-run experience: a persisted gate that
+determines whether the user has completed onboarding, the side-panel precedence that shows the
+onboarding surface ahead of the workspace and neutral empty states, and the live completion flow
+that dismisses onboarding without a reload. It is built on the `settings` capability's persisted
+`onboardingCompleted` preference and resolves that state without flashing first-run UI at returning
+users.
+
+## Requirements
+
+### Requirement: First-run gate persisted across reloads
+
+The extension SHALL determine whether first-run onboarding is complete from a persisted
+`onboardingCompleted` preference, and this determination SHALL survive a panel reload and a
+service-worker restart. On a fresh install with nothing stored, onboarding SHALL be considered
+not complete.
+
+#### Scenario: Fresh install is not onboarded
+
+- **WHEN** the onboarding state is resolved with no settings previously stored
+- **THEN** onboarding is reported as not complete
+
+#### Scenario: Completion persists across reload
+
+- **WHEN** onboarding has been marked complete
+- **AND** the extension context is reloaded
+- **THEN** resolving the onboarding state reports it as complete
+
+### Requirement: Side panel shows onboarding before the workspace
+
+When onboarding is not complete, the side panel SHALL render the onboarding surface instead of
+the workspace or the neutral empty state, regardless of whether a supported platform tab is
+active. When onboarding is complete, the side panel SHALL fall through to its existing platform
+behavior (workspace when a supported host is active, neutral empty state otherwise).
+
+#### Scenario: Onboarding takes precedence with no supported tab
+
+- **WHEN** onboarding is not complete
+- **AND** no supported platform tab is active
+- **THEN** the side panel renders the onboarding surface
+- **AND** it does not render the neutral "open a supported chat" empty state
+
+#### Scenario: Onboarding takes precedence with a supported tab
+
+- **WHEN** onboarding is not complete
+- **AND** a supported platform tab is active
+- **THEN** the side panel renders the onboarding surface
+- **AND** it does not render the workspace
+
+#### Scenario: Completed onboarding falls through to the workspace
+
+- **WHEN** onboarding is complete
+- **AND** a supported platform tab is active
+- **THEN** the side panel renders the workspace
 
 ### Requirement: Completing onboarding updates the panel live
 
 The onboarding surface SHALL mark onboarding complete by writing the persisted preference only
 at the terminal actions of the flow — the welcome step's "I already have an account" skip and the
-final step's actions ("Create your first folder", "Open a platform", "Finish setup"). Intermediate
-navigation ("Get started", "Continue", "Back") SHALL NOT mark onboarding complete. After a
-terminal action, the side panel SHALL leave the onboarding surface without requiring a reload.
+final step's actions ("Create your first folder", "Finish setup"). Intermediate navigation
+("Get started", "Continue", "Back") SHALL NOT mark onboarding complete. After a terminal action,
+the side panel SHALL leave the onboarding surface without requiring a reload.
 
 #### Scenario: Final-step action closes the gate live
 
-- **WHEN** a final-step action ("Create your first folder", "Open a platform", or "Finish setup")
-  is invoked
+- **WHEN** a final-step action ("Create your first folder" or "Finish setup") is invoked
 - **THEN** onboarding is marked complete in settings
 - **AND** the side panel stops rendering the onboarding surface without a reload
 
@@ -26,7 +81,16 @@ terminal action, the side panel SHALL leave the onboarding surface without requi
 - **THEN** onboarding is not marked complete
 - **AND** the side panel keeps rendering the onboarding surface
 
-## ADDED Requirements
+### Requirement: Unresolved state does not flash onboarding
+
+While the onboarding state has not yet been resolved from storage, the side panel SHALL NOT
+render the onboarding surface, so a returning, already-onboarded user never sees a flash of
+first-run UI.
+
+#### Scenario: No onboarding flash before settings resolve
+
+- **WHEN** the onboarding state has not yet resolved from storage
+- **THEN** the side panel does not render the onboarding surface
 
 ### Requirement: Four-step onboarding stepper
 
@@ -90,21 +154,17 @@ no duplicates.
 
 ### Requirement: Get-started step offers a first action
 
-The final step SHALL let the user create their first folder, open a supported platform, or finish
-setup. "Create your first folder" SHALL create a folder through the workspace writer. "Open a
-platform" SHALL open a supported platform tab. Each of these actions, and "Finish setup", SHALL
-mark onboarding complete and leave the user on the workspace.
+The final step SHALL let the user create their first folder or finish setup. "Create your first
+folder" SHALL create a folder through the workspace writer, scoped to the active platform. Both
+this action and "Finish setup" SHALL mark onboarding complete; since the onboarding surface is
+only shown while a supported platform is active, the side panel SHALL then land on that
+platform's workspace. There SHALL be no "open a platform" action, because the surface is only
+reachable while the user is already on a supported platform.
 
 #### Scenario: Create first folder completes onboarding
 
 - **WHEN** the user invokes "Create your first folder" on the final step
-- **THEN** a folder is created through the workspace writer
-- **AND** onboarding is marked complete
-
-#### Scenario: Open a platform completes onboarding
-
-- **WHEN** the user invokes "Open a platform" on the final step
-- **THEN** a supported platform tab is opened
+- **THEN** a folder scoped to the active platform is created through the workspace writer
 - **AND** onboarding is marked complete
 
 #### Scenario: Finish setup completes onboarding

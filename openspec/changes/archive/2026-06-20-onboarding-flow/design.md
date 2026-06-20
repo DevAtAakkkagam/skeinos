@@ -11,8 +11,8 @@ the downstream seams the steps need already exist:
 - seeding: `installPromptSeedsRemote(domain)` → worker `prompts.install` → `installSeeds`,
   idempotent, returns the inserted count.
 - domains: `DOMAIN_REGISTRY` / `DomainId` (`shared/domains.ts`).
-- folder create: the `folder.create` workspace mutation (used by `useWorkspace`).
-- open a platform: the tab-routing pattern in `ui/sidebar/openConversation.ts` + `platformOrigin`.
+- folder create: the `folder.create` workspace mutation via `mutateWorkspaceRemote`, with the
+  `folderDefaults` helpers (`makeFolderId`, `DEFAULT_FOLDER_COLOR`).
 
 Decisions carried in from exploration: **Option A** (host-permission priming is informational —
 no manifest change, no `chrome.permissions.request()`), and the starter-library step uses a
@@ -48,7 +48,7 @@ requirements intact — `SidePanelApp` still just asks "complete?" and renders t
 ### D-2: Completion happens only at the terminal actions
 "Get started"/"Continue"/"Back" move between steps without writing settings. `completeOnboarding()`
 is called by exactly: the welcome "I already have an account" skip, and the step-4 actions
-("Create your first folder", "Open a platform", "Finish setup"). This is the behavioral change
+("Create your first folder", "Finish setup"). This is the behavioral change
 from the foundation (where the welcome button completed immediately), captured as a MODIFIED
 requirement. Rationale: a user who abandons mid-flow should see onboarding again next open.
 
@@ -69,13 +69,20 @@ the installer dedupes by `seedId`, re-picking the same domain or revisiting the 
 "Browse library" and "Continue" both leave the step; "Continue" advances to step 4.
 
 ### D-5: Get-started actions reuse existing seams; each completes the gate
-- "Create your first folder" issues the existing `folder.create` mutation, then completes
-  onboarding so the panel lands on the workspace with the new folder. (A name can come from a
-  small inline input or a sensible default — a UI detail, not a contract.)
-- "Open a platform" opens a P0 host tab using the `openConversation`/`platformOrigin` tab pattern,
-  then completes onboarding.
+The side panel is enabled only on supported P0 hosts (`background/sidePanel.ts`:
+`enabled = matchPlatform(url) !== null`), so whenever the onboarding surface is visible the
+active tab IS a supported platform and `SidePanelApp`'s `platform` is resolved. Two consequences:
+there is no "Open a platform" action (the user is already on one — it would be redundant), and a
+completed onboarding reliably lands on that platform's workspace via the foundation's live
+re-scope (no reload), not the neutral empty state.
+
+- "Create your first folder" issues the existing `folder.create` mutation through
+  `mutateWorkspaceRemote` (NOT `useWorkspace`, which is a platform-bound hook), scoped to the
+  active platform (`platformScope: platform`), reusing `folderDefaults` (`makeFolderId` for a
+  retry-stable id, `DEFAULT_FOLDER_COLOR`). This requires `SidePanelApp` to pass its resolved
+  `platform` into `OnboardingSurface` (a one-line prop add). A name comes from a small inline
+  input or a sensible default — a UI detail, not a contract. Then completes onboarding.
 - "Finish setup" just completes onboarding.
-All three end on the workspace via the foundation's live re-scope (no reload).
 
 ### D-6: Remove the temporary seed affordance from PromptsPanel
 The `prompt-seed-catalog` "Add starter prompts" control was always marked temporary, to be
@@ -103,5 +110,6 @@ covered by the foundation suite.
 - **[Trade-off] Permissions screen is informational only and does not literally precede a native
   prompt (there is none under static `host_permissions`)** → satisfies D17's intent; flagged in
   the proposal. Reopening Option B is a separate manifest change.
-- **[Risk] "Open a platform" with no specific host chosen** → default to the primary P0 host
-  (Claude) or offer the three; either way reuse `platformOrigin`, no new permission.
+- **[Risk] First folder scope** → scoped to the active platform (the panel is always platform-
+  scoped while onboarding shows), consistent with the workspace the user immediately lands on;
+  not `'unified'`.

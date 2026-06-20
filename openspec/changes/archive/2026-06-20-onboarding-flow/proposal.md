@@ -21,14 +21,17 @@ gate into the product's actual first-run experience and completing PRD §6.12 / 
      installs that domain's seeds via the existing `installPromptSeedsRemote(domain)` (idempotent),
      persists `Settings.domain`, and shows the confirmation (actual installed count + a sample of
      the seeded prompts). Footer: "Browse library" + "Continue ›".
-  4. **Get started** — "Create your first folder" and "Open a platform" actions, plus
-     "Finish setup". Each path marks onboarding complete and lands the user in the workspace.
+  4. **Get started** — a "Create your first folder" action plus "Finish setup". Each path marks
+     onboarding complete and lands the user on the active platform's workspace. (No "Open a
+     platform" action: the side panel — and thus this surface — is enabled only on supported P0
+     hosts, so the user is already on a platform; opening one would be redundant.)
 - **Stepper mechanics:** progress dots reflect the current step; "Back" returns to the prior
   step; onboarding is marked complete **only** at the end (final-step actions or the welcome
   skip), not on intermediate "Continue".
-- Wire the get-started actions to existing seams: "Create your first folder" issues the
-  `folder.create` workspace op; "Open a platform" opens a P0 host tab (reusing the
-  `openConversation` tab-routing pattern / `platformOrigin`).
+- Wire "Create your first folder" to the existing `folder.create` workspace op via
+  `mutateWorkspaceRemote` (NOT `useWorkspace`, which requires a platform hook), scoped to the
+  active platform, reusing `folderDefaults` (`makeFolderId`, `DEFAULT_FOLDER_COLOR`). This
+  requires `SidePanelApp` to pass its resolved `platform` into `OnboardingSurface`.
 - Remove the temporary "Add starter prompts" affordance from `PromptsPanel` (onboarding now owns
   seeding); the `installSeeds` controller method and the worker `prompts.install` path stay.
 - Tests for all of the above are authored by a sub agent (see tasks.md).
@@ -40,15 +43,16 @@ gate into the product's actual first-run experience and completing PRD §6.12 / 
 - `onboarding`: the first-run surface becomes a four-step stepper (welcome → permissions priming
   → starter-library/domain-picker → get-started). Completion moves to the final step; new
   requirements cover step navigation, the informational permissions screen, domain-pick →
-  seed → confirmation, and the create-folder / open-platform / finish actions. The
+  seed → confirmation, and the create-folder / finish actions. The
   foundation's gate, branch precedence, and no-flash requirements are unchanged.
 
 ## Impact
 
 - **Code:** `ui/onboarding/OnboardingSurface.tsx` (placeholder → stepper) + new per-step
   components and `ui/onboarding/styles.ts`; `ui/onboarding/gate.ts` (a domain-persist helper);
+  `entrypoints/sidepanel/SidePanelApp.tsx` (pass `platform` into `OnboardingSurface`);
   `ui/prompts/PromptsPanel.tsx` + `strings.ts` (drop the temporary affordance). No worker,
-  messaging, or store changes — seeding, folder-create, and tab-open all reuse existing seams.
+  messaging, or store changes — seeding and folder-create reuse existing seams.
 - **Data:** none new — writes the already-defined `Settings.domain` and `onboardingCompleted`;
   seeds become ordinary `Prompt` records via the existing installer. No migration.
 - **Privacy:** none — permissions priming is informational; no new permission request, no

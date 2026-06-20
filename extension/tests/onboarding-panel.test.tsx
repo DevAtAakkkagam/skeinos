@@ -172,9 +172,12 @@ describe('Live re-scope out of onboarding (4.4)', () => {
     expect($('[data-testid=sk-onboarding]')).toBeTruthy();
     expect($('[data-testid=sk-shell]')).toBeNull();
 
-    // Click "Get started" → completeOnboarding writes onboardingCompleted: true,
-    // which broadcasts via storage.onChanged; the subscribed panel re-scopes.
-    const btn = $('[data-testid=sk-onboarding-start]');
+    // Click "I already have an account" (the welcome skip) → completeOnboarding
+    // writes onboardingCompleted: true, which broadcasts via storage.onChanged;
+    // the subscribed panel re-scopes. (Under onboarding-flow's MODIFIED completion
+    // requirement, "Get started" only advances the stepper — the welcome skip and
+    // the final-step actions are the terminal completion triggers.)
+    const btn = $('[data-testid=sk-onboarding-skip]');
     expect(btn).toBeTruthy();
     btn!.click();
     for (let i = 0; i < 6; i++) await flush();

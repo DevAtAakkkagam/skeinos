@@ -94,7 +94,10 @@ export function SidePanelApp() {
   // independent and must show even when no supported tab is active. While the
   // gate is still resolving (`undefined`) render nothing to avoid a flash.
   if (onboarded === undefined) return null;
-  if (!onboarded) return <OnboardingSurface />;
+  // Pass the resolved platform so the get-started step can scope the first folder
+  // to it (D-5). `undefined` (still resolving) collapses to `null` — the surface
+  // simply hides the create-folder action until a supported host is known.
+  if (!onboarded) return <OnboardingSurface platform={platform ?? null} />;
 
   if (platform == null) {
     // Neutral prompt for both "still resolving" and "no supported tab" — either

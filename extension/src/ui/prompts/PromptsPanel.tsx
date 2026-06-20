@@ -10,62 +10,15 @@
 // every mutation, so the chip row and this body can never diverge.
 
 import type { JSX } from 'preact';
-import { useState } from 'preact/hooks';
 import { PlusIcon, PromptIcon } from '../components/Icon';
-import { DOMAIN_REGISTRY, type DomainId } from '../../shared/domains';
 import { PromptCard } from './PromptCard';
 import { PromptEditor } from './PromptEditor';
+import { StarterSeed } from './StarterSeed';
 import { STR } from './strings';
 import type { PromptsController } from './usePromptsController';
 
 export interface PromptsPanelProps {
   controller: PromptsController;
-}
-
-/**
- * TEMPORARY (prompt-seed-catalog, task 5.1): the install trigger for this change — a
- * domain choice plus an "Add starter prompts" button that issues `prompts.install`
- * and lets the controller's observe-don't-replay re-read surface the new rows.
- * Replaced by the onboarding domain-picker in a later change.
- */
-function StarterPromptControl({ controller: c }: { controller: PromptsController }): JSX.Element {
-  const [domain, setDomain] = useState<DomainId>(DOMAIN_REGISTRY[0].id);
-  const [added, setAdded] = useState<number | null>(null);
-  return (
-    <div class="sk-prompts__starter" data-testid="sk-prompts-starter">
-      <label class="sk-prompts__starter-label" for="sk-prompts-starter-domain">
-        {STR.starterDomainLabel}
-      </label>
-      <select
-        id="sk-prompts-starter-domain"
-        class="sk-input"
-        data-testid="sk-prompts-starter-domain"
-        value={domain}
-        onChange={(e) => setDomain((e.currentTarget as HTMLSelectElement).value as DomainId)}
-      >
-        {DOMAIN_REGISTRY.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.label}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        class="sk-btn sk-btn--ghost"
-        data-testid="sk-prompts-starter-add"
-        onClick={() => {
-          void c.installSeeds(domain).then(setAdded);
-        }}
-      >
-        {STR.starterAdd}
-      </button>
-      {added !== null ? (
-        <span class="sk-prompts__starter-status" role="status" aria-live="polite">
-          {STR.starterAdded(added)}
-        </span>
-      ) : null}
-    </div>
-  );
 }
 
 export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element {
@@ -86,8 +39,6 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
               <PlusIcon size={16} />
             </button>
           </div>
-
-          <StarterPromptControl controller={c} />
 
           {c.status === 'loading' ? (
             <div class="sk-empty" data-testid="sk-prompts-loading" role="status" aria-live="polite">
@@ -116,6 +67,9 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
                 <PlusIcon size={16} />
                 {STR.newPromptShort}
               </button>
+              {/* Seeding recovery for users who skipped onboarding's domain pick —
+                  self-hides once a domain has been chosen (StarterSeed). */}
+              <StarterSeed controller={c} />
             </div>
           ) : c.filtered.length === 0 ? (
             <div class="sk-empty" data-testid="sk-prompts-empty-no-match">

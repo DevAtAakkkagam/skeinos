@@ -77,9 +77,12 @@ export interface PromptsController {
   /** Open the editor for this prompt id once the library has it. */
   openPrompt: (id: string) => void;
 
-  // --- starter-prompt install (TEMPORARY — replaced by the onboarding picker) ---
+  // --- starter-prompt install ---
   /** Install a domain's bundled starter prompts via the worker, then reconcile.
-   *  Resolves to the number inserted (0 when already installed). */
+   *  Resolves to the number inserted (0 when already installed). Onboarding's
+   *  domain picker drives seeding via `installPromptSeedsRemote` directly; this
+   *  controller seam is retained as the library-side install path (covered by
+   *  `prompts-panel-no-starter.test.tsx`). */
   installSeeds: (domain: DomainId) => Promise<number>;
 }
 
@@ -266,10 +269,10 @@ export function usePromptsController(view?: PromptLibraryView): PromptsControlle
     setPendingOpenId(id);
   }, []);
 
-  // TEMPORARY (prompt-seed-catalog, task 5.1): the install trigger for this change.
-  // Replaced by the onboarding domain-picker in a later change, which calls the same
-  // worker request. Reconcile via the library's re-read (observe-don't-replay) so the
-  // newly inserted prompts surface without replaying the install.
+  // The library-side starter-prompt install seam. Onboarding's domain picker
+  // (onboarding-flow) seeds via the same worker request from its own surface; this
+  // path is retained for the library. Reconcile via the library's re-read
+  // (observe-don't-replay) so the newly inserted prompts surface without replaying.
   const installSeeds = useCallback(
     async (domain: DomainId): Promise<number> => {
       const res = await installPromptSeedsRemote(domain);
