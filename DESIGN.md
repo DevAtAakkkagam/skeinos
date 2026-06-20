@@ -219,6 +219,11 @@ radius, decisive focus states.
 - **Danger:** Breakage Red fill, brightens 8% on hover. Destructive confirms only.
 - **Icon button:** no border, Muted icon at rest, accent-16%-tint fill on hover/focus (no
   outline ring, to avoid doubling).
+- **Icon button, create variant** (`.sk-icon-btn--accent`): the section-header `+` (new
+  folder / new prompt) is tinted to the accent at rest so the create action reads as the
+  action, not another view toggle beside the muted expand/collapse icons. Both tabs use it,
+  so the persistent create affordance is identical across Folders and Prompts. One accent
+  glyph per header; the big primary button is reserved for the genuinely-empty first run.
 
 ### Chips
 - **Filter chip:** pill (`999px`), `fg 8%` tinted background, Muted text, 12px. A filter

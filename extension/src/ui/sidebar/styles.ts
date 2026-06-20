@@ -92,6 +92,12 @@ details[open] > .sk-sidebar__section-head { border-bottom: 1px solid var(--sk-co
 details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: rotate(90deg); }
 .sk-icon-btn { display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; color: var(--sk-color-muted); font: inherit; line-height: 1; cursor: pointer; padding: var(--sk-space-1); border-radius: var(--sk-radius); }
 .sk-icon-btn:hover, .sk-icon-btn:focus-visible { color: var(--sk-color-fg); background: color-mix(in srgb, var(--sk-color-accent) 16%, transparent); outline: none; }
+/* The create action (＋) in a section header reads as the action, not another view
+   toggle: tinted to the accent at rest so it stands out from the muted expand/collapse
+   icons beside it, while staying a quiet 16px glyph (one accent mark per header). Both
+   tabs' "new" buttons use it, so the create affordance matches across Folders / Prompts. */
+.sk-icon-btn--accent { color: var(--sk-color-accent); }
+.sk-icon-btn--accent:hover, .sk-icon-btn--accent:focus-visible { color: var(--sk-color-accent); }
 /* The per-row actions trigger (⋯) stays out of the resting row: revealed on row
    hover or keyboard focus (and held open while its menu is). Opacity-only so it
    keeps its slot and the count never reflows; flex:none so it never shrinks. */

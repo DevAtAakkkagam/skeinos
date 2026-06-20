@@ -76,7 +76,7 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
           <div class="sk-row sk-sidebar__section-head">
             <span class="sk-sidebar__heading">{STR.sectionTitle}</span>
             <button
-              class="sk-icon-btn"
+              class="sk-icon-btn sk-icon-btn--accent"
               type="button"
               data-testid="sk-prompt-new"
               aria-label={STR.newPromptShort}

@@ -580,7 +580,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
               <CollapseAllIcon size={16} />
             </button>
             <button
-              class="sk-icon-btn"
+              class="sk-icon-btn sk-icon-btn--accent"
               type="button"
               data-testid="sk-new-folder"
               aria-label={STR.newFolder}
