@@ -13,6 +13,33 @@ export const COMPONENT_CSS = `
 .sk-stack { display: flex; flex-direction: column; gap: var(--sk-space-2); }
 .sk-text { color: var(--sk-color-fg); margin: 0; }
 .sk-text--muted { color: var(--sk-color-muted); }
+
+/* Skeleton loader primitive (loading-states, D-1) — a token-styled shimmer block
+   that stands in for a line/row/block while content loads. Tokens only, so it
+   re-themes with the active theme; aria-hidden at the call site. */
+.sk-skeleton {
+  display: block;
+  border-radius: var(--sk-radius);
+  background-color: color-mix(in srgb, var(--sk-color-muted) 22%, transparent);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--sk-color-fg) 8%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: sk-skeleton-shimmer 1.3s ease-in-out infinite;
+}
+.sk-skeleton--line { height: var(--sk-text-base); width: 100%; }
+.sk-skeleton--row { height: 28px; width: 100%; }
+.sk-skeleton--block { height: 48px; width: 100%; }
+@keyframes sk-skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+/* Calmer (not motionless, so it still reads as "working") for reduced-motion. */
+@media (prefers-reduced-motion: reduce) { .sk-skeleton { animation-duration: 2.8s; } }
 .sk-btn {
   background: var(--sk-color-accent);
   color: var(--sk-color-bg);
@@ -34,6 +61,13 @@ export const COMPONENT_CSS = `
   border-radius: var(--sk-radius);
   padding: var(--sk-space-1) var(--sk-space-2);
   font: inherit;
+}
+/* On-brand focus ring (replaces the heavy default UA outline): an accent border +
+   soft ring, consistent with the other interactive controls. */
+.sk-select:focus-visible {
+  outline: none;
+  border-color: var(--sk-color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--sk-color-accent) 35%, transparent);
 }
 /* Compact, centered-top breakage snackbar. Fixed to the viewport (its shadow host
    has no transform, so fixed resolves against the page) and out of the host page's

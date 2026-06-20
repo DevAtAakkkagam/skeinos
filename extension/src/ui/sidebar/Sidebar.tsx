@@ -6,6 +6,7 @@
 // and the tree re-renders from the worker's broadcast — it holds no authoritative
 // folder state of its own (PREACT guardrail).
 
+import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ConversationIndex, Folder, FolderTreeNode, PlatformId } from '../../shared/types';
 import { conversationId, type MutationOp } from '../../shared/workspace';
@@ -23,6 +24,7 @@ import {
   MoreIcon,
   PlusIcon,
 } from '../components/Icon';
+import { Skeleton } from '../components/Skeleton';
 import { ConversationList } from './ConversationList';
 import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
 import { FOLDER_COLORS } from './palette';
@@ -34,9 +36,9 @@ import { useWorkspace, type MutateResult, type WorkspaceView } from './useWorksp
 export { DRAG_MIME } from './drag';
 export type { DragPayload } from './drag';
 
-/** Delay before a loading indicator appears, so a warm read never flashes a
- *  spinner (matches the transport's retry cadence). */
-const SPINNER_DELAY_MS = 150;
+/** How many placeholder rows the loading skeleton shows — a small fixed set that
+ *  fills the list region without claiming to predict the real folder count (D-2). */
+const SKELETON_ROWS = 6;
 
 // User-facing strings in one place (i18n-ready; no inline literals in markup).
 const STR = {
@@ -71,12 +73,26 @@ const STR = {
   unpin: 'Unpin',
   archiveAction: 'Archive',
   unarchive: 'Unarchive',
-  moveUp: 'Move up',
-  moveDown: 'Move down',
   moveTop: 'Move to top level',
   delete: 'Delete',
   createTitle: 'New folder',
   editTitle: 'Edit folder',
+  confirmDeleteTitle: 'Delete folder?',
+  confirmDeleteBody: (name: string) => `Delete “${name}”?`,
+  // The disposition line: what happens to a folder's contents on delete. Built from
+  // the live counts so the user knows nothing is lost — conversations re-home to
+  // Uncategorized, subfolders rise to the top level, and only the folder is removed.
+  confirmDeleteDisposition: (convs: number, subs: number): string => {
+    const parts: string[] = [];
+    if (convs > 0)
+      parts.push(`its ${convs} ${convs === 1 ? 'conversation moves' : 'conversations move'} to Uncategorized`);
+    if (subs > 0)
+      parts.push(subs === 1 ? 'its subfolder moves to the top level' : `its ${subs} subfolders move to the top level`);
+    if (parts.length === 0) return 'This folder is empty.';
+    const joined = parts.join(', and ');
+    return `${joined.charAt(0).toUpperCase()}${joined.slice(1)}. Only the folder is removed.`;
+  },
+  confirmDelete: 'Delete folder',
   unfiled: 'Uncategorized',
   expand: 'Expand',
   collapse: 'Collapse',
@@ -98,20 +114,22 @@ interface DialogState {
 }
 
 // Context-menu action values (the menu item `value`s the Zag menu reports back).
-type MenuAction = 'rename' | 'pin' | 'archive' | 'move-up' | 'move-down' | 'move-top' | 'delete';
+// Sibling reordering is no longer a menu action — it's done by dragging a folder
+// onto a seam between rows (see `repositionFolder` / the `sk-seam` drop zones).
+type MenuAction = 'rename' | 'pin' | 'archive' | 'move-top' | 'delete';
 
-/** Ordered sibling folders of `id` within the active tree (for reorder). */
-function siblingsOf(nodes: FolderTreeNode[], id: string): Folder[] {
-  for (const n of nodes) {
-    if (n.children.some((c) => c.folder.id === id)) return n.children.map((c) => c.folder);
-  }
-  // Root level
-  if (nodes.some((n) => n.folder.id === id)) return nodes.map((n) => n.folder);
-  for (const n of nodes) {
-    const found = siblingsOf(n.children, id);
-    if (found.length) return found;
-  }
-  return [];
+/** New sibling order after dropping `movedId` at insertion slot `dropPos` within a
+ *  group displaying `groupIds` (slots run 0…length: before the first row … after the
+ *  last). Returns null when the drop is a no-op (folder lands in its current slot). */
+function reorderedIds(groupIds: string[], movedId: string, dropPos: number): string[] | null {
+  const from = groupIds.indexOf(movedId);
+  const without = groupIds.filter((id) => id !== movedId);
+  // When the folder already sits before the slot, removing it shifts the target left.
+  let target = from !== -1 && dropPos > from ? dropPos - 1 : dropPos;
+  target = Math.max(0, Math.min(target, without.length));
+  without.splice(target, 0, movedId);
+  if (without.length === groupIds.length && without.every((id, i) => id === groupIds[i])) return null;
+  return without;
 }
 
 /** Every folder id in the tree (all depths, pre-order) — the expansion keys that
@@ -173,22 +191,18 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
   const unfiledConvs = liveConvs.filter((c) => c.folderId == null);
   const activeConvId = active ? conversationId(active.platform, active.nativeId) : null;
 
-  // The loading indicator is delayed so a warm read (which resolves first) renders
-  // the tree/empty state directly without flashing a spinner.
-  const [showSpinner, setShowSpinner] = useState(false);
-  useEffect(() => {
-    if (status !== 'loading') {
-      setShowSpinner(false);
-      return;
-    }
-    const t = setTimeout(() => setShowSpinner(true), SPINNER_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [status]);
-
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   // Which folder the open actions menu acts on (the row whose ⋯ was last clicked).
   const [menuTargetId, setMenuTargetId] = useState<string | null>(null);
+  // A folder awaiting delete confirmation. Delete is destructive and can hold the
+  // user's conversations, so it routes through a confirm dialog (never one-click).
+  const [pendingDelete, setPendingDelete] = useState<Folder | null>(null);
+  // Drag-to-reorder state: the folder currently being dragged (so the reorder seams
+  // between rows only render mid-drag, never at rest), and the seam under the pointer
+  // (so it draws an insertion line). Seams are keyed `${parentId ?? 'root'}:${index}`.
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
+  const [seamTarget, setSeamTarget] = useState<string | null>(null);
 
   // Which nodes are expanded to reveal their conversations (folder ids + the
   // UNFILED sentinel). Local view state only — never authoritative (PREACT rule).
@@ -281,14 +295,34 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
     setJumpTarget(null);
   }, [jumpTarget, expanded]);
 
-  const reorder = (id: string, dir: -1 | 1) => {
-    const sibs = siblingsOf(tree.active, id);
-    const ids = sibs.map((f) => f.id);
-    const i = ids.indexOf(id);
-    const j = i + dir;
-    if (j < 0 || j >= ids.length) return;
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-    void mutate({ op: 'folder.reorder', orderedIds: ids });
+  // Reposition `movedId` to slot `dropPos` within the sibling group whose parent is
+  // `parentId` and whose current order is `groupIds`. Within the same parent this is
+  // a pure reorder; dragged in from another parent it re-parents first (which appends
+  // it), then reorders to land it at the dropped slot. Validation (cycle/depth) is the
+  // worker's via `folder.move`; we only reorder once the move has taken effect.
+  const repositionFolder = async (movedId: string, parentId: string | null, groupIds: string[], dropPos: number) => {
+    if (groupIds.includes(movedId)) {
+      const ordered = reorderedIds(groupIds, movedId, dropPos);
+      if (ordered) await mutate({ op: 'folder.reorder', orderedIds: ordered });
+      return;
+    }
+    const moved = await mutate({ op: 'folder.move', id: movedId, parentId });
+    if (!(moved.ok || moved.applied)) return; // rejected (cycle/depth) — leave as-is
+    const ids = [...groupIds];
+    ids.splice(Math.max(0, Math.min(dropPos, ids.length)), 0, movedId);
+    await mutate({ op: 'folder.reorder', orderedIds: ids });
+  };
+
+  const onDropOnSeam = (parentId: string | null, groupIds: string[], dropPos: number, e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSeamTarget(null);
+    setDraggingFolderId(null);
+    const raw = e.dataTransfer?.getData(DRAG_MIME);
+    if (!raw) return;
+    const payload = JSON.parse(raw) as DragPayload;
+    if (payload.type !== 'folder') return; // seams reorder folders only
+    void repositionFolder(payload.id, parentId, groupIds, dropPos);
   };
 
   // Mouse selection routes through each item's own `onClick` (a bare click never
@@ -324,17 +358,13 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
       case 'archive':
         void mutate({ op: 'folder.archive', id: folder.id, archived: !folder.archived });
         break;
-      case 'move-up':
-        reorder(folder.id, -1);
-        break;
-      case 'move-down':
-        reorder(folder.id, 1);
-        break;
       case 'move-top':
         void mutate({ op: 'folder.move', id: folder.id, parentId: null });
         break;
       case 'delete':
-        void mutate({ op: 'folder.delete', id: folder.id });
+        // Open the confirm dialog rather than deleting inline — the worker re-homes
+        // the folder's conversations to Uncategorized, but the user confirms first.
+        setPendingDelete(folder);
         break;
     }
   };
@@ -399,12 +429,18 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
           data-folder-id={f.id}
           draggable
           onClick={() => toggleExpanded(f.id)}
-          onDragStart={(e) =>
+          onDragStart={(e) => {
             (e as DragEvent).dataTransfer?.setData(
               DRAG_MIME,
               JSON.stringify({ type: 'folder', id: f.id } satisfies DragPayload),
-            )
-          }
+            );
+            // Reveal the reorder seams between rows for the duration of the drag.
+            setDraggingFolderId(f.id);
+          }}
+          onDragEnd={() => {
+            setDraggingFolderId(null);
+            setSeamTarget(null);
+          }}
           onDragOver={(e) => {
             e.preventDefault();
             setDropTarget(f.id);
@@ -432,7 +468,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
         </div>
         {isOpen && (
           <div class="sk-node__children">
-            {node.children.map(renderNode)}
+            {renderGroup(node.children, f.id)}
             <ConversationList
               conversations={folderConvs}
               active={active}
@@ -445,6 +481,48 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
           </div>
         )}
       </div>
+    );
+  };
+
+  // A reorder seam: a thin drop target between sibling folder rows (and at the start
+  // and end of the group). Rendered only mid-drag; dropping a folder here repositions
+  // it to that slot. `depth` aligns the seam's indent with the rows it sits among.
+  const seam = (parentId: string | null, groupIds: string[], dropPos: number, depth: number) => {
+    if (!draggingFolderId) return null;
+    const key = `${parentId ?? 'root'}:${dropPos}`;
+    return (
+      <div
+        class={`sk-seam${seamTarget === key ? ' sk-seam--active' : ''}`}
+        data-testid="sk-folder-seam"
+        data-seam={key}
+        style={{ marginLeft: `${(depth - 1) * 12}px` }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          (e as DragEvent).stopPropagation();
+          setSeamTarget(key);
+        }}
+        onDragLeave={() => setSeamTarget((t) => (t === key ? null : t))}
+        onDrop={(e) => onDropOnSeam(parentId, groupIds, dropPos, e as DragEvent)}
+      />
+    );
+  };
+
+  // Render a sibling group with reorder seams interleaved between its rows. Siblings
+  // share a depth, so the group's indent derives from the first node.
+  const renderGroup = (nodes: FolderTreeNode[], parentId: string | null) => {
+    if (nodes.length === 0) return null;
+    const depth = nodes[0].depth;
+    const ids = nodes.map((n) => n.folder.id);
+    return (
+      <>
+        {nodes.map((n, i) => (
+          <Fragment key={`grp-${n.folder.id}`}>
+            {seam(parentId, ids, i, depth)}
+            {renderNode(n)}
+          </Fragment>
+        ))}
+        {seam(parentId, ids, nodes.length, depth)}
+      </>
     );
   };
 
@@ -595,7 +673,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
           </div>
           {tree.active.length > 0
             ? // Whenever we have folders, show them — never flicker to a load state.
-              tree.active.map(renderNode)
+              renderGroup(tree.active, null)
             : status === 'error'
               ? // Load failed after the retry budget: offer a retry, not a false empty.
                 (
@@ -661,11 +739,23 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                         </button>
                       </div>
                     )
-                : // Still loading: a delayed spinner (nothing on the warm fast path).
-                  showSpinner && (
-                    <div class="sk-empty" data-testid="sk-folders-loading" role="status" aria-live="polite">
-                      <span class="sk-spinner" aria-hidden="true" />
-                      <p class="sk-empty__body">{STR.loading}</p>
+                : // Still loading: skeleton rows in place of the list (D-2), so a
+                  // loading workspace reads as "loading" rather than blank or empty.
+                  // They render only here (no folders + status loading) and are
+                  // replaced the moment the tree resolves to ready/error.
+                  (
+                    <div
+                      class="sk-skeleton-rows"
+                      data-testid="sk-folders-skeleton"
+                      role="status"
+                      aria-label={STR.loading}
+                    >
+                      {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                        <div class="sk-row sk-skeleton-row" key={i} aria-hidden="true">
+                          <Skeleton variant="line" width="14px" height="14px" />
+                          <Skeleton variant="line" width={`${64 - i * 6}%`} class="sk-skeleton-row__label" />
+                        </div>
+                      ))}
                     </div>
                   )}
         </div>
@@ -738,9 +828,8 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
             <button class="sk-menu__item" data-testid="sk-menu-rename" {...itemProps('rename')}>{STR.rename}</button>
             <button class="sk-menu__item" data-testid="sk-menu-pin" {...itemProps('pin')}>{menuTarget.pinned ? STR.unpin : STR.pin}</button>
             <button class="sk-menu__item" data-testid="sk-menu-archive" {...itemProps('archive')}>{menuTarget.archived ? STR.unarchive : STR.archiveAction}</button>
-            <button class="sk-menu__item" {...itemProps('move-up')}>{STR.moveUp}</button>
-            <button class="sk-menu__item" {...itemProps('move-down')}>{STR.moveDown}</button>
             <button class="sk-menu__item" data-testid="sk-menu-move-top" {...itemProps('move-top')}>{STR.moveTop}</button>
+            <div class="sk-menu__divider" role="separator" aria-orientation="horizontal" />
             <button class="sk-menu__item" data-testid="sk-menu-delete" {...itemProps('delete')}>{STR.delete}</button>
           </div>
         </div>
@@ -754,11 +843,68 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
           onSubmit={(op) => mutate(op)}
         />
       )}
+
+      {pendingDelete && (
+        <Dialog
+          open
+          onClose={() => setPendingDelete(null)}
+          ariaLabel={STR.confirmDeleteTitle}
+          contentTestId="sk-folder-delete-confirm"
+        >
+          <div class="sk-dialog__body">
+            <h2 class="sk-dialog__title">{STR.confirmDeleteTitle}</h2>
+            <p class="sk-text sk-text--muted">{STR.confirmDeleteBody(pendingDelete.name)}</p>
+            <p class="sk-text sk-text--muted" data-testid="sk-folder-delete-disposition">
+              {STR.confirmDeleteDisposition(
+                conversations.filter((c) => c.folderId === pendingDelete.id).length,
+                countSubfolders(tree.active, tree.archived, pendingDelete.id),
+              )}
+            </p>
+            <div class="sk-dialog__actions">
+              <button
+                type="button"
+                class="sk-btn sk-btn--ghost"
+                data-testid="sk-folder-delete-cancel"
+                onClick={() => setPendingDelete(null)}
+              >
+                {STR.cancel}
+              </button>
+              <button
+                type="button"
+                class="sk-btn sk-btn--danger"
+                data-testid="sk-folder-delete-confirm-btn"
+                onClick={() => {
+                  const id = pendingDelete.id;
+                  setPendingDelete(null);
+                  void mutate({ op: 'folder.delete', id });
+                }}
+              >
+                {STR.confirmDelete}
+              </button>
+            </div>
+          </div>
+        </Dialog>
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
+
+/** Count a folder's direct subfolders across the active tree and the archived list —
+ *  the "moves to the top level" figure shown in the delete-confirm disposition. */
+function countSubfolders(activeNodes: FolderTreeNode[], archived: Folder[], id: string): number {
+  let n = 0;
+  const walk = (nodes: FolderTreeNode[]): void => {
+    for (const node of nodes) {
+      if (node.folder.parentId === id) n += 1;
+      walk(node.children);
+    }
+  };
+  walk(activeNodes);
+  for (const f of archived) if (f.parentId === id) n += 1;
+  return n;
+}
 
 function findFolder(nodes: FolderTreeNode[], id: string): Folder | undefined {
   for (const n of nodes) {

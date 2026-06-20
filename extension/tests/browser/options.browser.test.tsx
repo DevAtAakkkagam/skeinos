@@ -78,7 +78,7 @@ describe('options page persists a theme change (real browser)', () => {
     await tick();
 
     const panel = handle.shadowRoot.querySelector('.sk-panel') as HTMLElement;
-    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(255, 255, 255)'); // light
+    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(251, 252, 255)'); // light --sk-color-bg #fbfcff
 
     const select = handle.shadowRoot.querySelector(
       '[data-testid="sk-theme-select"]',
@@ -90,8 +90,8 @@ describe('options page persists a theme change (real browser)', () => {
     // Persisted to storage…
     expect((await getSettings()).theme).toBe('dark');
     expect(store[SETTINGS_KEY]).toMatchObject({ theme: 'dark' });
-    // …and the live panel re-resolved the dark tokens.
-    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(26, 26, 26)');
+    // …and the live panel re-resolved the dark tokens (`--sk-color-bg` #191a21).
+    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(25, 26, 33)');
 
     handle.dispose();
 

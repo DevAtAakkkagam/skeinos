@@ -30,7 +30,27 @@ const SIDEBAR_FEATURE_CSS = `
 .sk-sidebar__heading--block { padding-inline: var(--sk-space-2); }
 .sk-row { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-1) var(--sk-space-2); border-radius: var(--sk-radius); cursor: default; }
 .sk-row:hover { background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); }
+/* Loading skeleton rows — reuse the row metrics (height/indent/gap) so the swap to
+   real folder rows is visually stable (loading-states, D-2). No hover affordance. */
+.sk-skeleton-rows { display: flex; flex-direction: column; }
+.sk-skeleton-row:hover { background: none; }
+.sk-skeleton-row__label { max-width: 220px; }
+
+/* Non-blocking indexing indicator (loading-states, D-3): a slim banner below the tab
+   strip with a label/percent line and a thin progress track. In normal flow, so it
+   never overlays or blocks the body. Tokens only. */
+.sk-indexing { display: flex; flex-direction: column; gap: var(--sk-space-1); padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-2); }
+.sk-indexing__line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sk-space-2); }
+.sk-indexing__label { font-size: var(--sk-text-sm); color: var(--sk-color-muted); }
+.sk-indexing__pct { font-size: var(--sk-text-xs); color: var(--sk-color-muted); font-variant-numeric: tabular-nums; }
+.sk-indexing__track { height: 4px; border-radius: 999px; background: color-mix(in srgb, var(--sk-color-muted) 22%, transparent); overflow: hidden; }
+.sk-indexing__bar { height: 100%; border-radius: 999px; background: var(--sk-color-accent); transition: width 0.2s ease-out; }
 .sk-row--drop { outline: 2px solid var(--sk-color-accent); outline-offset: -2px; }
+/* Folder reorder seam: a thin drop strip between sibling rows, present only while a
+   folder is being dragged (so the resting tree never gains gaps). The targeted seam
+   draws a solid accent insertion line; the rest stay invisible hit areas. */
+.sk-seam { height: 5px; border-radius: 999px; flex: none; }
+.sk-seam--active { background: var(--sk-color-accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--sk-color-accent) 30%, transparent); }
 /* A pinned shortcut row jumps to the folder's canonical tree copy — show it is
    activatable, and give keyboard users a visible focus ring. */
 .sk-row--jump { cursor: pointer; }

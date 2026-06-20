@@ -28,8 +28,9 @@ describe('host-CSS isolation (real browser)', () => {
     const panel = handle.shadowRoot.querySelector('.sk-panel') as HTMLElement;
 
     // Extension's own tokens win inside the shadow root, not the host's red/green.
-    expect(getComputedStyle(text).color).toBe('rgb(26, 26, 26)');
-    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(255, 255, 255)');
+    // (`--sk-color-fg` #181a23 / `--sk-color-bg` #fbfcff in the light theme.)
+    expect(getComputedStyle(text).color).toBe('rgb(24, 26, 35)');
+    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(251, 252, 255)');
 
     handle.dispose();
   });

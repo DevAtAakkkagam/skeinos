@@ -17,6 +17,7 @@ import { PromptCategoryChips } from '../prompts/PromptCategoryChips';
 import { usePromptsController } from '../prompts/usePromptsController';
 import type { PromptLibraryView } from '../prompts/usePromptLibrary';
 import { Sidebar } from './Sidebar';
+import { IndexingIndicator } from './IndexingIndicator';
 import { useWorkspace, type WorkspaceView } from './useWorkspace';
 import type { FolderTreeSnapshot } from '../../shared/workspace';
 
@@ -210,6 +211,10 @@ export function SidebarShell({ platform, view, promptView, bindOpenPrompt }: Sid
           {STR.tabProfiles}
         </button>
       </nav>
+
+      {/* Non-blocking bulk-index progress (loading-states, D-3): sits below the tab
+          strip, removes itself when nothing is indexing, and blocks no interaction. */}
+      <IndexingIndicator />
 
       {/* The platform filter row + collapsed-list nudge are folder-specific chrome
           (D-A): rendered only under the Folders tab so they never leak into Prompts.

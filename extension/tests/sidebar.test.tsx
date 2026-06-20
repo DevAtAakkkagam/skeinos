@@ -494,13 +494,12 @@ describe('Sidebar load states (workspace-view-recovery 7.4)', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it('does not flash a loading indicator before the delay, but shows it on a slow read', async () => {
+  it('renders skeleton rows while loading, not the empty state (loading-states D-2)', () => {
+    // The loading affordance is now skeleton rows (replacing the old delayed
+    // spinner): they show immediately on `loading`, never the empty-state card.
     renderSidebar(makeView(EMPTY, {}, { status: 'loading' }));
-    // Immediately after mount: no spinner (a warm read resolves before the delay).
-    expect($('[data-testid=sk-folders-loading]')).toBeNull();
-    // A genuinely slow read keeps loading: the spinner appears only after the delay.
-    await new Promise((r) => setTimeout(r, 200));
-    expect($('[data-testid=sk-folders-loading]')).toBeTruthy();
+    expect($('[data-testid=sk-folders-skeleton]')).toBeTruthy();
+    expect($('[data-testid=sk-folders-empty]')).toBeNull();
   });
 });
 
@@ -592,6 +591,13 @@ describe('Sidebar folder actions menu (⋯ button)', () => {
     expect($('[data-testid=sk-menu-archive]')).toBeTruthy();
     expect($('[data-testid=sk-menu-move-top]')).toBeTruthy();
     expect($('[data-testid=sk-menu-delete]')).toBeTruthy();
+    // Reorder left the menu — it's now drag-only — so the menu is five items, and a
+    // divider sets the destructive Delete apart from the routine actions above it.
+    expect(menu!.querySelectorAll('.sk-menu__item')).toHaveLength(5);
+    const divider = menu!.querySelector('.sk-menu__divider');
+    expect(divider).toBeTruthy();
+    const kids = [...menu!.children];
+    expect(kids.indexOf(divider!)).toBe(kids.indexOf($('[data-testid=sk-menu-delete]')!) - 1);
   });
 
   it('clicking the ⋯ button does not toggle the folder’s expansion', async () => {
@@ -619,7 +625,7 @@ describe('Sidebar folder actions menu (⋯ button)', () => {
     expect(mutate).toHaveBeenCalledWith({ op: 'folder.pin', id: 'x', pinned: true });
   });
 
-  it('Delete from the menu fires a folder.delete mutation', async () => {
+  it('Delete from the menu opens a confirm dialog and does not delete until confirmed', async () => {
     const mutate = vi.fn(async () => ({ ok: true, applied: true }));
     renderSidebar(
       makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, { mutate }),
@@ -628,7 +634,46 @@ describe('Sidebar folder actions menu (⋯ button)', () => {
     await flush();
     ($('[data-testid=sk-menu-delete]') as HTMLElement).click();
     await flush();
+    // Selecting Delete opens a confirm dialog; the mutation has NOT fired yet.
+    expect($('[data-testid=sk-folder-delete-confirm]')).toBeTruthy();
+    expect(mutate).not.toHaveBeenCalled();
+    // Confirming fires the mutation and closes the dialog.
+    ($('[data-testid=sk-folder-delete-confirm-btn]') as HTMLElement).click();
+    await flush();
     expect(mutate).toHaveBeenCalledWith({ op: 'folder.delete', id: 'x' });
+    expect($('[data-testid=sk-folder-delete-confirm]')).toBeNull();
+  });
+
+  it('Cancelling the delete dialog fires no mutation', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, { mutate }),
+    );
+    openMenu('[data-folder-id=x]');
+    await flush();
+    ($('[data-testid=sk-menu-delete]') as HTMLElement).click();
+    await flush();
+    ($('[data-testid=sk-folder-delete-cancel]') as HTMLElement).click();
+    await flush();
+    expect(mutate).not.toHaveBeenCalled();
+    expect($('[data-testid=sk-folder-delete-confirm]')).toBeNull();
+  });
+
+  it('the delete dialog states the disposition of the folder’s conversations', async () => {
+    renderSidebar(
+      makeView({ active: [node(folder('x', { name: 'Research' }))], pinned: [], archived: [] }, {}, {
+        conversations: [
+          conv('a', { folderId: 'x', title: 'Alpha' }),
+          conv('b', { folderId: 'x', title: 'Beta' }),
+        ],
+      }),
+    );
+    openMenu('[data-folder-id=x]');
+    await flush();
+    ($('[data-testid=sk-menu-delete]') as HTMLElement).click();
+    await flush();
+    const disposition = $('[data-testid=sk-folder-delete-disposition]');
+    expect(disposition?.textContent).toContain('2 conversations move to Uncategorized');
   });
 
   it('Rename from the menu opens the edit dialog for that folder', async () => {
@@ -791,5 +836,91 @@ describe('Sidebar unified browser + platform view-filter (folder-scope-reconcili
     await flush();
     activeRow = $$('[data-testid=sk-conv-row]').find((r) => r.getAttribute('aria-current') === 'true');
     expect(activeRow).toBeTruthy();
+  });
+});
+
+describe('Sidebar folder drag-reorder (seams)', () => {
+  // happy-dom's DataTransfer is a no-op, and Preact binds drag listeners under their
+  // capitalized names here, so mirror the conversation-list drag test: a shared stub
+  // records the dragstart payload and replays it to the drop handler.
+  function startFolderDrag(rowSel: string): { setData: (k: string, v: string) => void; getData: (k: string) => string } {
+    const store: Record<string, string> = {};
+    const dt = { setData: (k: string, v: string) => void (store[k] = v), getData: (k: string) => store[k] ?? '' };
+    const ev = new Event('DragStart', { bubbles: true });
+    Object.defineProperty(ev, 'dataTransfer', { value: dt });
+    $(rowSel)!.dispatchEvent(ev);
+    return dt;
+  }
+  function dropOnSeam(seamKey: string, dt: { getData: (k: string) => string }) {
+    const seam = $(`[data-seam="${seamKey}"]`)!;
+    const ev = new Event('Drop', { bubbles: true });
+    Object.defineProperty(ev, 'dataTransfer', { value: dt });
+    seam.dispatchEvent(ev);
+  }
+
+  it('shows no reorder seams at rest, and reveals them once a folder drag starts', async () => {
+    renderSidebar(
+      makeView({ active: [node(folder('a')), node(folder('b')), node(folder('c'))], pinned: [], archived: [] }),
+    );
+    expect($$('[data-testid=sk-folder-seam]')).toHaveLength(0);
+    startFolderDrag('[data-folder-id=a]');
+    await flush();
+    // Three sibling rows → four insertion slots (before each + after the last).
+    expect($$('[data-testid=sk-folder-seam]')).toHaveLength(4);
+  });
+
+  it('dropping a folder on a seam reorders its siblings to that slot', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(
+      makeView(
+        { active: [node(folder('a')), node(folder('b')), node(folder('c'))], pinned: [], archived: [] },
+        {},
+        { mutate },
+      ),
+    );
+    const dt = startFolderDrag('[data-folder-id=a]');
+    await flush();
+    // Drop 'a' before 'c' (slot 2) → ['b','a','c'].
+    dropOnSeam('root:2', dt);
+    await flush();
+    expect(mutate).toHaveBeenCalledWith({ op: 'folder.reorder', orderedIds: ['b', 'a', 'c'] });
+  });
+
+  it('a drop that lands a folder back in its own slot fires no mutation', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(
+      makeView(
+        { active: [node(folder('a')), node(folder('b')), node(folder('c'))], pinned: [], archived: [] },
+        {},
+        { mutate },
+      ),
+    );
+    const dt = startFolderDrag('[data-folder-id=a]');
+    await flush();
+    // Slot 0 and slot 1 both leave 'a' first — a no-op, so nothing is dispatched.
+    dropOnSeam('root:1', dt);
+    await flush();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('dragging a folder into another folder’s child seam re-parents then positions it', async () => {
+    const mutate = vi.fn(async () => ({ ok: true, applied: true }));
+    renderSidebar(
+      makeView(
+        { active: [node(folder('p'), [node(folder('c1'))]), node(folder('q'))], pinned: [], archived: [] },
+        {},
+        { mutate },
+      ),
+    );
+    // Expand 'p' so its child group (and the seams within it) render.
+    ($('[data-folder-id=p]')!.querySelector('[data-testid=sk-folder-caret]') as HTMLElement).click();
+    await flush();
+    const dt = startFolderDrag('[data-folder-id=q]');
+    await flush();
+    // Drop 'q' before 'c1' (slot 0 of p's children): re-parent under p, then order it first.
+    dropOnSeam('p:0', dt);
+    await flush();
+    expect(mutate).toHaveBeenNthCalledWith(1, { op: 'folder.move', id: 'q', parentId: 'p' });
+    expect(mutate).toHaveBeenNthCalledWith(2, { op: 'folder.reorder', orderedIds: ['q', 'c1'] });
   });
 });
