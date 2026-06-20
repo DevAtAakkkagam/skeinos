@@ -32,12 +32,18 @@ export const THEME_CSS = `
   font-weight: 500;
   line-height: 20px;
 
-  --sk-color-bg: #ffffff;
-  --sk-color-fg: #1a1a1a;
-  --sk-color-muted: #6b7280;
+  /* Neutrals are tinted toward the accent hue (~277°), never pure #fff/#000:
+     the surface reads as one woven layer, not stock white + Tailwind gray. Hex
+     here is the canonical OKLCH retuned to sRGB (light bg oklch(99% .004 277),
+     fg oklch(22% .018 277), muted oklch(52% .035 277), border oklch(91% .008 277)).
+     Muted holds AA on bg (5.4:1); accent keeps the brand indigo. */
+  --sk-color-bg: #fbfcff;
+  --sk-color-fg: #181a23;
+  --sk-color-muted: #63677d;
   --sk-color-accent: #4f46e5;
   --sk-color-success: #84c9b0;
-  --sk-color-border: #e5e7eb;
+  --sk-color-danger: #c74b47;
+  --sk-color-border: #e0e1e7;
   --sk-space-1: 4px;
   --sk-space-2: 8px;
   --sk-space-3: 12px;
@@ -47,22 +53,27 @@ export const THEME_CSS = `
 }
 
 :host([data-theme="dark"]) {
-  --sk-color-bg: #1a1a1a;
-  --sk-color-fg: #f5f5f5;
-  --sk-color-muted: #9ca3af;
+  /* Same indigo-tinted neutrals, dark end of the ramp (bg oklch(22% .014 277),
+     fg oklch(96% .005 277), muted oklch(72% .025 277), border oklch(38% .02 277)).
+     Muted holds AA on dark bg (7:1). */
+  --sk-color-bg: #191a21;
+  --sk-color-fg: #f2f3f7;
+  --sk-color-muted: #a0a4b5;
   --sk-color-accent: #818cf8;
   --sk-color-success: #84c9b0;
-  --sk-color-border: #374151;
+  --sk-color-danger: #e66e68;
+  --sk-color-border: #3f424d;
 }
 
 @media (prefers-color-scheme: dark) {
   :host([data-theme="system"]) {
-    --sk-color-bg: #1a1a1a;
-    --sk-color-fg: #f5f5f5;
-    --sk-color-muted: #9ca3af;
+    --sk-color-bg: #191a21;
+    --sk-color-fg: #f2f3f7;
+    --sk-color-muted: #a0a4b5;
     --sk-color-accent: #818cf8;
     --sk-color-success: #84c9b0;
-    --sk-color-border: #374151;
+    --sk-color-danger: #e66e68;
+    --sk-color-border: #3f424d;
   }
 }
 `;

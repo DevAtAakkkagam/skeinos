@@ -18,13 +18,13 @@ describe('theme tokens (real browser)', () => {
     const handle = mount(makeTarget(), h(SamplePanel, {}), { theme: 'light' });
     const panel = handle.shadowRoot.querySelector('.sk-panel') as HTMLElement;
 
-    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(255, 255, 255)'); // light
+    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(251, 252, 255)'); // light (indigo-tinted)
 
     handle.setTheme('dark');
-    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(26, 26, 26)'); // dark
+    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(25, 26, 33)'); // dark (indigo-tinted)
 
     handle.setTheme('light');
-    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(255, 255, 255)');
+    expect(getComputedStyle(panel).backgroundColor).toBe('rgb(251, 252, 255)');
 
     handle.dispose();
   });
@@ -32,7 +32,7 @@ describe('theme tokens (real browser)', () => {
   it('resolves tokens on the shadow host but leaves the host document root untouched', () => {
     const handle = mount(makeTarget(), h(SamplePanel, {}), { theme: 'light' });
 
-    expect(getComputedStyle(handle.host).getPropertyValue('--sk-color-bg').trim()).toBe('#ffffff');
+    expect(getComputedStyle(handle.host).getPropertyValue('--sk-color-bg').trim()).toBe('#fbfcff');
     expect(
       getComputedStyle(document.documentElement).getPropertyValue('--sk-color-bg').trim(),
     ).toBe('');

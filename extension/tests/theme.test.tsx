@@ -18,9 +18,9 @@ function mountPanel(theme: 'light' | 'dark' | 'system') {
 describe('theme tokens', () => {
   it('defines light and dark token sets plus a system override in the shadow stylesheet', () => {
     // Tokens are real and mode-specific.
-    expect(THEME_CSS).toContain('--sk-color-bg: #ffffff'); // light default
+    expect(THEME_CSS).toContain('--sk-color-bg: #fbfcff'); // light default (indigo-tinted neutral)
     expect(THEME_CSS).toContain(':host([data-theme="dark"])');
-    expect(THEME_CSS).toContain('--sk-color-bg: #1a1a1a'); // dark
+    expect(THEME_CSS).toContain('--sk-color-bg: #191a21'); // dark (indigo-tinted neutral)
     expect(THEME_CSS).toContain('@media (prefers-color-scheme: dark)');
     expect(THEME_CSS).toContain(':host([data-theme="system"])');
   });
