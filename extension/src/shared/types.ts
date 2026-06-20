@@ -101,6 +101,16 @@ export interface PromptVar {
   options?: string[];
 }
 
+/**
+ * One token from {@link tokenizeTemplate}: either a literal `text` run or a
+ * recognized `{{…}}` `var`. `raw` preserves the original token text so card /
+ * editor rendering can round-trip the body faithfully. Derived from the same scan
+ * as {@link parseVariables}, so the two never disagree about which spans are vars.
+ */
+export type TemplateToken =
+  | { kind: 'text'; text: string }
+  | { kind: 'var'; name: string; raw: string };
+
 export interface Prompt extends SyncMeta {
   id: string;
   title: string;
@@ -108,7 +118,10 @@ export interface Prompt extends SyncMeta {
   body: string;
   variables: PromptVar[];
   tags: string[];
-  targetModel?: PlatformId;
+  /** Platforms this prompt targets (zero or more) — the cross-platform cards. */
+  targetModels: PlatformId[];
+  /** Slash alias (`/exp`) shown on cards. Inert until insertion ships (C13). */
+  slug?: string;
   promptFolderId: string | null;
   usageCount: number;
   lastUsedAt?: number;

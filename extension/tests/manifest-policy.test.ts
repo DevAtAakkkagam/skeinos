@@ -25,10 +25,11 @@ describe('manifest permission policy', () => {
     }
   });
 
-  it('requests only the non-credential-bearing alarms + sidePanel + scripting permissions', () => {
+  it('requests only the non-credential-bearing alarms + sidePanel + scripting + storage permissions', () => {
     // `scripting` injects the content script into already-open supported tabs on
     // install/update; it is bounded by host_permissions and is not credential-bearing.
-    expect(skeinosManifest.permissions).toEqual(['alarms', 'sidePanel', 'scripting']);
+    // `storage` backs chrome.storage.local for the settings store (theme/telemetry).
+    expect(skeinosManifest.permissions).toEqual(['alarms', 'sidePanel', 'scripting', 'storage']);
     for (const perm of skeinosManifest.permissions) {
       expect(CREDENTIAL_BEARING).not.toContain(perm);
     }

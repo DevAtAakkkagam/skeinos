@@ -69,11 +69,17 @@ export function SidePanelApp() {
   if (platform == null) {
     // Neutral prompt for both "still resolving" and "no supported tab" — either
     // way there is no platform to scope folder data to yet.
+    // Wrap in `.sk-shell` so the empty state sits on the same themed full-height
+    // surface as the populated view — otherwise it paints no background and the
+    // panel falls through to the document's default white (invisible title text
+    // in dark mode).
     return (
-      <div class="sk-empty" data-testid="sk-panel-empty">
-        <div class="sk-empty__icon" aria-hidden="true"><ChatIcon size={40} /></div>
-        <p class="sk-empty__title">{STR.emptyTitle}</p>
-        <p class="sk-empty__body">{STR.emptyBody}</p>
+      <div class="sk-shell">
+        <div class="sk-empty" data-testid="sk-panel-empty">
+          <div class="sk-empty__icon" aria-hidden="true"><ChatIcon size={40} /></div>
+          <p class="sk-empty__title">{STR.emptyTitle}</p>
+          <p class="sk-empty__body">{STR.emptyBody}</p>
+        </div>
       </div>
     );
   }

@@ -40,5 +40,11 @@ export const skeinosManifest = {
   // on the three P0 hosts — and carries no credentials. Without it, a user's open
   // Claude/Gemini/Perplexity chats stay un-indexed until they manually reload each
   // tab, breaking the "your open chats just appear" promise.
-  permissions: ['alarms', 'sidePanel', 'scripting'] as string[],
+  //
+  // `storage` backs `chrome.storage.local`, the settings store (D4): theme,
+  // telemetry, and later per-platform toggles. Without it `chrome.storage` is
+  // undefined, so settings writes silently no-op and never persist, and the
+  // `storage.onChanged` live-update bus never fires (e.g. the side panel would
+  // not re-theme when the options page changes the theme).
+  permissions: ['alarms', 'sidePanel', 'scripting', 'storage'] as string[],
 };

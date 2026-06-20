@@ -47,19 +47,26 @@ Deleting a syncable record SHALL mark it `deleted: true` and retain it as a tomb
 
 ### Requirement: Versioned schema with explicit migrations
 
-The store SHALL define one versioned IndexedDB database whose object stores and indexes match the data model, and SHALL apply schema changes through an explicit, ordered, add-only migration list.
+The store SHALL define one versioned IndexedDB database whose object stores and indexes match the data model, and SHALL apply schema changes through an explicit, ordered, add-only migration list. The `searchPostings` store SHALL be keyed by `prefix` (prefix-shard layout per LLD §8.1 / D26), each record holding many terms.
 
 #### Scenario: All declared stores and indexes exist at the current version
 
 - **WHEN** the database is opened at the current version
 - **THEN** every declared object store exists with its declared key path and indexes
-- **AND** the `searchPostings` store (keyed by `term`) and the `syncMeta` store are present
+- **AND** the `searchPostings` store (keyed by `prefix`) and the `syncMeta` store are present
 
 #### Scenario: Migration upgrades an older database
 
 - **WHEN** a database created at version 1 is opened at version 2
 - **THEN** the version-2 migration runs and the resulting schema includes the version-2 additions
 - **AND** existing version-1 records remain readable
+
+#### Scenario: searchPostings reshape is a no-data migration
+
+- **WHEN** the new migration step — appended to the add-only list after the existing `activeConversations` and conversation-organization steps — changes `searchPostings` from the per-term layout (keyed by `term`) to the prefix-shard layout (keyed by `prefix`)
+- **THEN** the `searchPostings` store is dropped and recreated with key path `prefix` at the bumped database version
+- **AND** no posting rows require transformation because indexing has not yet run
+- **AND** all other stores (including `conversations` and `activeConversations`) and their records are unaffected
 
 ### Requirement: Multi-store atomic transactions
 
