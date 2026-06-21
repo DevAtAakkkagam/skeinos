@@ -23,12 +23,12 @@ export const THEME_CSS = `
 
   /* Lattice Design System typefaces (bundled in fonts.ts). */
   --sk-font-ui: "Urbanist", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  --sk-font-label: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sk-font-label: ui-monospace, SFMono-Regular, Menlo, monospace;
   --sk-font-system: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 
   font-family: var(--sk-font-ui);
   /* Body · 500 · 13 / 20 (Lattice type scale). */
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 20px;
 
@@ -56,8 +56,8 @@ export const THEME_CSS = `
      rule. Heading (18px) is reserved for the largest dialog/section headings. */
   --sk-text-xs: 11px;
   --sk-text-sm: 12px;
-  --sk-text-base: 13px;
-  --sk-text-title: 15px;
+  --sk-text-base: 14px;
+  --sk-text-title: 16px;
   --sk-text-heading: 18px;
 
   color: var(--sk-color-fg);

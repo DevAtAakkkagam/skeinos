@@ -14,18 +14,19 @@ describe('bundled fonts (real browser)', () => {
     const s = document.createElement('style'); s.textContent = SIDEBAR_CSS;
     handle.shadowRoot.appendChild(s);
 
-    // FontFace API registration
+    // FontFace API registration: only the UI face (Urbanist) is bundled; labels
+    // use the platform monospace stack, so no label face is registered.
     const families = new Set<string>();
     document.fonts.forEach((f) => families.add(f.family));
     expect(families.has('Urbanist')).toBe(true);
-    expect(families.has('IBM Plex Mono')).toBe(true);
+    expect(families.has('IBM Plex Mono')).toBe(false);
 
     await document.fonts.ready;
 
-    // the overline heading should resolve to the label font (IBM Plex Mono)
+    // the overline heading should resolve to the monospace label stack
     const heading = handle.shadowRoot.querySelector('.sk-sidebar__heading') as HTMLElement;
     expect(heading).toBeTruthy();
     const fam = getComputedStyle(heading).fontFamily;
-    expect(fam).toContain('IBM Plex Mono');
+    expect(fam).toContain('monospace');
   });
 });

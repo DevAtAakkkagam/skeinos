@@ -441,6 +441,46 @@ describe('adapter.insertText into a contenteditable (real browser)', () => {
     expect(composer.textContent).toBe('DRAFT INSERTED');
   });
 
+  it('clears the draft on replace (the erase button: select-all + delete)', () => {
+    root = document.createElement('div');
+    root.innerHTML = `
+      <div class="sidebar"><div class="list"></div></div>
+      <div class="input-bar">
+        <div class="ce-composer" contenteditable="true">DRAFT TO ERASE</div>
+        <button class="send">Send</button>
+      </div>`;
+    document.body.appendChild(root);
+    const adapter = createAdapter(ceConfig(), { root });
+    const composer = root.querySelector<HTMLElement>('.ce-composer')!;
+
+    // The erase button calls insertText('', { replace: true }). Over a real
+    // contenteditable this must select the whole draft and `delete` it — a raw
+    // textContent='' + insertText('') leaves the draft in a model-backed editor.
+    const ok = adapter.insertText('', { replace: true });
+
+    expect(ok).toBe(true);
+    expect(composer.textContent).toBe('');
+    expect(adapter.isComposerEmpty()).toBe(true);
+  });
+
+  it('replaces the draft with new text (select-all + insertText)', () => {
+    root = document.createElement('div');
+    root.innerHTML = `
+      <div class="sidebar"><div class="list"></div></div>
+      <div class="input-bar">
+        <div class="ce-composer" contenteditable="true">OLD DRAFT</div>
+        <button class="send">Send</button>
+      </div>`;
+    document.body.appendChild(root);
+    const adapter = createAdapter(ceConfig(), { root });
+    const composer = root.querySelector<HTMLElement>('.ce-composer')!;
+
+    const ok = adapter.insertText('NEW TEXT', { replace: true });
+
+    expect(ok).toBe(true);
+    expect(composer.textContent).toBe('NEW TEXT');
+  });
+
   it('reports composer emptiness (drives the profile-prepend gate)', () => {
     root = document.createElement('div');
     root.innerHTML = `

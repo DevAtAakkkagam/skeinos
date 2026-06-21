@@ -393,7 +393,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
 
   const menuButton = (id: string) => (
     <button
-      class="sk-icon-btn sk-row-menu"
+      class={`sk-icon-btn sk-row-menu${menu.open && menuTargetId === id ? ' sk-row-menu--open' : ''}`}
       type="button"
       data-testid="sk-folder-menu"
       aria-label={STR.menuTrigger}

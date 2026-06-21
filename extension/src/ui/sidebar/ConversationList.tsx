@@ -214,7 +214,7 @@ export function ConversationList({
           </span>
         )}
         <button
-          class="sk-icon-btn sk-row-menu"
+          class={`sk-icon-btn sk-row-menu${menu.open && menuTargetId === c.id ? ' sk-row-menu--open' : ''}`}
           data-testid="sk-conv-menu"
           aria-label={STR.menuTrigger}
           title={STR.menuTrigger}

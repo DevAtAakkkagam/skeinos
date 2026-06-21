@@ -125,7 +125,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-row-menu { flex: none; margin-left: auto; opacity: 0; transition: opacity 0.12s ease; }
 .sk-row:hover .sk-row-menu, .sk-row:focus-within .sk-row-menu,
 .sk-conv-row:hover .sk-row-menu, .sk-conv-row:focus-within .sk-row-menu,
-.sk-row-menu:focus-visible, .sk-row-menu[data-state="open"] { opacity: 1; }
+.sk-row-menu:focus-visible, .sk-row-menu--open { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .sk-row-menu { transition: none; } }
 .sk-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--sk-space-2); padding: var(--sk-space-3) var(--sk-space-2); }
 .sk-empty__icon { display: inline-flex; color: var(--sk-color-muted); }

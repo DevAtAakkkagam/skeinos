@@ -11,6 +11,7 @@ import {
   type PlatformAdapter,
   REQUIRED_ANCHORS,
 } from '../types';
+import { readComposerText, writeComposer } from './composer-io';
 
 /** Anything we can query + observe — a live `Document` or a fixture container. */
 type Root = Document | HTMLElement;
@@ -20,55 +21,6 @@ export interface AdapterContext {
   root?: Root;
   /** Current URL, used to resolve the active conversation (defaults to `location`). */
   getUrl?: () => string;
-}
-
-function nativeValueSetter(el: HTMLElement): ((v: string) => void) | null {
-  const proto =
-    el instanceof HTMLTextAreaElement
-      ? HTMLTextAreaElement.prototype
-      : el instanceof HTMLInputElement
-        ? HTMLInputElement.prototype
-        : null;
-  if (!proto) return null;
-  const desc = Object.getOwnPropertyDescriptor(proto, 'value');
-  return desc?.set ? (v: string) => desc.set!.call(el, v) : null;
-}
-
-/** A form field has a settable native `value`; everything else (ProseMirror, Quill,
- *  Lexical contenteditables) is a rich editor we must drive through the selection. */
-function isFormField(el: HTMLElement): el is HTMLTextAreaElement | HTMLInputElement {
-  return el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
-}
-
-/** Collapse the selection to the end of a contenteditable so an appended insert
- *  lands after any existing draft (and an `execCommand` insert targets the editor).
- *  Best-effort: a host without a Selection API simply skips this. */
-function caretToEnd(el: HTMLElement, doc: Document): void {
-  try {
-    const sel = doc.getSelection?.();
-    if (!sel) return;
-    const range = doc.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  } catch {
-    /* no Selection API (e.g. some test envs) — the insert still runs */
-  }
-}
-
-/** Commit text into a composer, handling both form fields and contenteditable. */
-function writeComposer(el: HTMLElement, text: string, replace: boolean): boolean {
-  const setNative = nativeValueSetter(el);
-  if (setNative) {
-    const current = (el as HTMLTextAreaElement | HTMLInputElement).value;
-    setNative(replace ? text : current + text);
-  } else {
-    const current = el.textContent ?? '';
-    el.textContent = replace ? text : current + text;
-  }
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  return true;
 }
 
 export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): PlatformAdapter {
@@ -196,40 +148,16 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
   function isComposerEmpty(): boolean {
     const el = getInputElement();
     if (!el) return true;
-    const text = isFormField(el) ? el.value : (el.textContent ?? '');
-    return text.trim().length === 0;
+    return readComposerText(el).trim().length === 0;
   }
 
   function insertText(text: string, opts?: { replace?: boolean }): boolean {
     const el = getInputElement();
     if (!el) return false;
-    const replace = opts?.replace ?? false;
-    const doc = el.ownerDocument;
-
-    // The insert is triggered from our overlay, so the host editor is NOT focused —
-    // focus it first or the write/execCommand has no target. (No-op if already focused.)
-    el.focus?.();
-
-    // A rich contenteditable (Claude=ProseMirror, Gemini=Quill, …) manages its own
-    // document model and silently reverts a raw `textContent` write, so it must be
-    // driven through `execCommand('insertText')`, which dispatches the real
-    // `beforeinput`/`input` the editor listens for. We take this path for ANY
-    // contenteditable (not just configs tagged `execCommand`) so a host whose
-    // textarea became a contenteditable still gets text. Form fields keep the native
-    // value-setter path (`react-set`).
-    const useExecCommand = behaviors.insertMode === 'execCommand' || !isFormField(el);
-    if (useExecCommand) {
-      if (replace) writeComposer(el, '', true);
-      else caretToEnd(el, doc); // append after the existing draft
-      const exec = (doc as Document & { execCommand?: (c: string, ui: boolean, v: string) => boolean })
-        .execCommand;
-      if (typeof exec === 'function' && exec.call(doc, 'insertText', false, text)) return true;
-      return writeComposer(el, text, replace); // graceful fallback (e.g. test envs)
-    }
-
-    // 'react-set' and 'paste' both resolve to a native-value write + input event;
-    // 'paste' is best-effort and degrades to the same path under test/jsdom.
-    return writeComposer(el, text, replace);
+    return writeComposer(el, text, {
+      replace: opts?.replace ?? false,
+      preferExecCommand: behaviors.insertMode === 'execCommand',
+    });
   }
 
   function submit(): boolean {

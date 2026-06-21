@@ -18,12 +18,18 @@
 
 import { P0_MATCHES } from '../manifest.config';
 
-// WXT emits the content entry (`entrypoints/skeinos.content.ts`) to this path in the
-// build output; it is stable as long as that entrypoint keeps its name.
+// WXT emits each content entry to `content-scripts/<entry>.js` in the build output;
+// these are stable as long as the entrypoints keep their names. The page bridge runs
+// in the MAIN world (see skeinos-page.content.ts) and must be injected there too.
 const CONTENT_SCRIPT_FILE = 'content-scripts/skeinos.js';
+const PAGE_BRIDGE_FILE = 'content-scripts/skeinos-page.js';
 
 interface ScriptingApi {
-  executeScript?(opts: { target: { tabId: number }; files: string[] }): Promise<unknown> | void;
+  executeScript?(opts: {
+    target: { tabId: number };
+    files: string[];
+    world?: 'ISOLATED' | 'MAIN';
+  }): Promise<unknown> | void;
 }
 interface TabLike {
   id?: number;
@@ -68,6 +74,13 @@ export async function injectOpenTabs(): Promise<void> {
     if (tab.id == null) continue;
     try {
       await scripting.executeScript({ target: { tabId: tab.id }, files: [CONTENT_SCRIPT_FILE] });
+      // Best-effort: the MAIN-world bridge powers Lexical clears. A failure here (e.g.
+      // a host CSP blocking MAIN injection) must not stop the isolated script above.
+      await scripting.executeScript({
+        target: { tabId: tab.id },
+        files: [PAGE_BRIDGE_FILE],
+        world: 'MAIN',
+      });
       console.log('[Skeinos] injected content script into open tab', tab.url);
     } catch (err) {
       console.warn('[Skeinos] injectOpenTabs: executeScript failed', tab.url, err);

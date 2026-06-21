@@ -19,8 +19,9 @@
     },
     {
       "name": "sidepanel",
+      "$reason": "Dropped the bundled IBM Plex Mono face (labels now use the platform monospace stack), reclaiming ~14.6KB gzip across every entry. Bumped 110->118 for the remaining gap: the side panel carries the full app surface that landed after the original budget (onboarding stepper, instruction profiles, the docked input bar + prompt library), and the single bundled face (Urbanist) is shared design infra. Trimmed first, then bumped.",
       "html": "sidepanel.html",
-      "budgetKb": 110
+      "budgetKb": 118
     },
     {
       "name": "options",
