@@ -2,8 +2,10 @@
 // bar's old disabled Profile stub with a functional control: a button showing the
 // active profile's name that opens a menu of saved instruction profiles. Selecting a
 // profile that applies to the current platform sets it as the global active profile
-// (`Settings.activeProfileId`) and inserts its composed text through the bar's
-// append-only `onInsert` seam (PREPEND, never auto-submit — D-5).
+// (`Settings.activeProfileId`). Selection only ACTIVATES — the chip no longer injects
+// on its own; it reports the active profile's composed text up via
+// `onActiveProfileChange`, and the bar prepends it on the next prompt insert into an
+// empty composer (profile-prepend, PREPEND-only, never auto-submit — D-5).
 //
 // Like the rest of the bar it is a pure view over injectable seams: profile reads go
 // through `queryProfiles` (the worker client by default), and the active selection is
@@ -34,8 +36,10 @@ type LoadStatus = 'loading' | 'ready' | 'error';
 export interface ProfileChipProps {
   /** The current platform — resolves each profile's `appliesTo` gating. */
   platform: PlatformId;
-  /** Commit composed instruction text into the host composer (append-only). */
-  onInsert: (text: string) => void;
+  /** Report the active profile's composed text (or null when none applies here) to
+   *  the bar, which prepends it on the next prompt insert. Selecting a profile only
+   *  ACTIVATES it — the chip no longer injects on its own (profile-prepend). */
+  onActiveProfileChange?: (text: string | null) => void;
   /** Library reads. Injectable for tests; production uses the live worker client. */
   queryProfiles?: QueryProfilesFn;
   /** Settings read. Injectable for tests; production reads `chrome.storage.local`. */
@@ -48,7 +52,7 @@ export interface ProfileChipProps {
 
 export function ProfileChip({
   platform,
-  onInsert,
+  onActiveProfileChange,
   queryProfiles = queryProfilesRemote,
   getSettings = getSettingsLive,
   setSettings = setSettingsLive,
@@ -99,6 +103,16 @@ export function ProfileChip({
   const active = activeId ? profiles.find((p) => p.id === activeId) : undefined;
   const activeApplies = active ? active.appliesTo.includes(platform) : false;
 
+  // Report the active profile's composed text up to the bar so it can prepend it on
+  // the next prompt insert. Null unless a profile is active AND applies here — an
+  // active profile that doesn't apply to this platform never rides an insert. The
+  // string identity is stable across renders when unchanged, so this fires only on a
+  // real activation/deactivation, not every render.
+  const activeText = active && activeApplies ? composeProfileText(active) : null;
+  useEffect(() => {
+    onActiveProfileChange?.(activeText);
+  }, [activeText, onActiveProfileChange]);
+
   const floating = useFloating({ placement: 'top-start', open });
   // Combined ref for the floating panel: keeps `panelRef` (for outside-click hit
   // testing) AND wires the element into `useFloating`. MUST depend only on the STABLE
@@ -117,12 +131,13 @@ export function ProfileChip({
   useShadowDismiss(panelRef, () => setOpen(false));
 
   const handleSelect = (p: InstructionProfile): void => {
-    // Non-applicable profiles are rendered disabled and cannot activate/inject here
-    // (D-3); guard anyway so a stray call never injects on the wrong platform.
+    // Non-applicable profiles are rendered disabled and cannot activate here (D-3);
+    // guard anyway so a stray call never activates on the wrong platform. Selection
+    // only ACTIVATES — the composed text rides the next prompt insert (profile-prepend),
+    // reported up via the `activeText` effect above once the settings change lands.
     if (!p.appliesTo.includes(platform)) return;
-    setOpen(false);
     void setSettings({ activeProfileId: p.id });
-    onInsert(composeProfileText(p));
+    setOpen(false);
   };
 
   // The chip's accessible name reflects the active profile when one is set.

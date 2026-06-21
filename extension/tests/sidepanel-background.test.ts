@@ -6,6 +6,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { registerSidePanel } from '../src/background/sidePanel';
+import { OPEN_SIDE_PANEL } from '../src/shared/sidepanel';
 
 type ActivatedCb = (info: { tabId: number }) => void;
 type UpdatedCb = (
@@ -13,21 +14,31 @@ type UpdatedCb = (
   changeInfo: { status?: string; url?: string },
   tab: { url?: string },
 ) => void;
+type MessageCb = (
+  message: unknown,
+  sender: { tab?: { id?: number; windowId?: number } },
+  sendResponse: (r: unknown) => void,
+) => boolean | void;
 
 function makeChrome(activeTab: { id?: number; url?: string } | undefined) {
   const setPanelBehavior = vi.fn(async () => {});
   const setOptions = vi.fn(async () => {});
+  const open = vi.fn(async () => {});
   const get = vi.fn(async (tabId: number) => ({ id: tabId, url: undefined as string | undefined }));
   let activatedCb: ActivatedCb | undefined;
   let updatedCb: UpdatedCb | undefined;
+  let messageCb: MessageCb | undefined;
   return {
     setPanelBehavior,
     setOptions,
+    open,
     get,
     fireActivated: (tabId: number) => activatedCb?.({ tabId }),
     fireUpdated: (...args: Parameters<UpdatedCb>) => updatedCb?.(...args),
+    fireMessage: (...args: Parameters<MessageCb>) => messageCb?.(...args),
     chrome: {
-      sidePanel: { setPanelBehavior, setOptions },
+      sidePanel: { setPanelBehavior, setOptions, open },
+      runtime: { onMessage: { addListener: (cb: MessageCb) => void (messageCb = cb) } },
       tabs: {
         query: async () => (activeTab ? [activeTab] : []),
         get,
@@ -89,6 +100,43 @@ describe('registerSidePanel', () => {
     fake.fireActivated(12);
     await flush();
     expect(fake.setOptions).toHaveBeenCalledWith({ tabId: 12, enabled: false });
+  });
+
+  it('opens the panel for the sender tab on an OPEN_SIDE_PANEL message (brand click)', async () => {
+    const fake = makeChrome({ id: 7, url: 'https://claude.ai/new' });
+    (globalThis as { chrome?: unknown }).chrome = fake.chrome;
+
+    registerSidePanel();
+    await flush();
+
+    fake.fireMessage({ type: OPEN_SIDE_PANEL }, { tab: { id: 42, windowId: 5 } }, () => {});
+    await flush();
+    // Opened for the exact sender tab (preferred over its window).
+    expect(fake.open).toHaveBeenCalledWith({ tabId: 42 });
+  });
+
+  it('falls back to the sender window when the message carries no tab id', async () => {
+    const fake = makeChrome({ id: 7, url: 'https://claude.ai/new' });
+    (globalThis as { chrome?: unknown }).chrome = fake.chrome;
+
+    registerSidePanel();
+    await flush();
+
+    fake.fireMessage({ type: OPEN_SIDE_PANEL }, { tab: { windowId: 9 } }, () => {});
+    await flush();
+    expect(fake.open).toHaveBeenCalledWith({ windowId: 9 });
+  });
+
+  it('ignores unrelated runtime messages (does not open the panel)', async () => {
+    const fake = makeChrome({ id: 7, url: 'https://claude.ai/new' });
+    (globalThis as { chrome?: unknown }).chrome = fake.chrome;
+
+    registerSidePanel();
+    await flush();
+
+    fake.fireMessage({ type: 'something.else' }, { tab: { id: 42 } }, () => {});
+    await flush();
+    expect(fake.open).not.toHaveBeenCalled();
   });
 
   it('is a no-op without the chrome.sidePanel API (non-Chromium)', () => {

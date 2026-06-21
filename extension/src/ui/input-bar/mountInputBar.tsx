@@ -16,6 +16,14 @@ export interface MountInputBarOptions extends MountOptions {
   platform: PlatformId;
   /** Commit the chosen prompt text into the host composer (append-only). */
   onInsert: (text: string) => void;
+  /** Wipe the host composer entirely (replace-with-empty, never submits) — the
+   *  bar's icon-only clear button. Optional; the button hides when unset. */
+  onClear?: () => void;
+  /** Open the Skeinos workspace side panel — fired by the brand mark. Optional;
+   *  when unset the brand renders as a plain (non-interactive) label. */
+  onOpenSidebar?: () => void;
+  /** Whether the host composer is empty — gates prepending the active profile. */
+  isComposerEmpty?: () => boolean;
   /** Contain popover focus — for hosts whose composer steals focus
    *  (`behaviors.composerStealsFocus`). Default off. */
   containFocus?: boolean;
@@ -32,28 +40,35 @@ function laysOutInColumn(el: Element): boolean {
   return d === 'block' || d === 'flow-root' || d === 'list-item';
 }
 
-/** Dock `host` as a block sibling on its OWN line below the composer. Starting at the
+/** Dock `host` as a block sibling on its OWN line above the composer. Starting at the
  *  composer anchor, climb out of any row-like ancestor (whose parent would place the
  *  bar beside the composer) until we reach a node sitting in a normal vertical block
- *  flow, then insert after it. Bounded so a page that is flex-rows all the way up
- *  can't walk to `<body>`. Falls back to right-after the anchor. */
-function dockAfterComposer(anchor: HTMLElement, host: HTMLElement): void {
+ *  flow, then insert before it. Bounded so a page that is flex-rows all the way up
+ *  can't walk to `<body>`. Falls back to right-before the anchor. */
+function dockBeforeComposer(anchor: HTMLElement, host: HTMLElement): void {
   let node: HTMLElement = anchor;
   for (let hops = 0; hops < 5; hops++) {
     const parent = node.parentElement;
     if (!parent || laysOutInColumn(parent)) break;
     node = parent;
   }
-  node.insertAdjacentElement('afterend', host);
+  node.insertAdjacentElement('beforebegin', host);
 }
 
 export function mountInputBar(
   target: HTMLElement,
-  { platform, onInsert, containFocus, ...opts }: MountInputBarOptions,
+  { platform, onInsert, onClear, onOpenSidebar, isComposerEmpty, containFocus, ...opts }: MountInputBarOptions,
 ): MountHandle {
   const handle = mount(
     target,
-    <InputBar platform={platform} onInsert={onInsert} containFocus={containFocus} />,
+    <InputBar
+      platform={platform}
+      onInsert={onInsert}
+      onClear={onClear}
+      onOpenSidebar={onOpenSidebar}
+      isComposerEmpty={isComposerEmpty}
+      containFocus={containFocus}
+    />,
     opts,
   );
   // The host node carries no feature CSS (that lives in the shadow root), but it must
@@ -63,11 +78,11 @@ export function mountInputBar(
   handle.host.style.width = '100%';
   handle.host.style.position = 'relative';
   handle.host.style.zIndex = '2147483646';
-  // Dock the bar as a block sibling on its own line below the composer rather than
-  // inside the anchor. `mount()` appended the host into the anchor; `dockAfterComposer`
+  // Dock the bar as a block sibling on its own line above the composer rather than
+  // inside the anchor. `mount()` appended the host into the anchor; `dockBeforeComposer`
   // moves it out and climbs past any row-like ancestors so the bar isn't laid out
   // BESIDE the composer (Gemini's `input-area-v2`, Perplexity's `#ask-input` row).
-  dockAfterComposer(target, handle.host);
+  dockBeforeComposer(target, handle.host);
   const style = document.createElement('style');
   style.textContent = INPUT_BAR_CSS;
   handle.shadowRoot.appendChild(style);

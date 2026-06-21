@@ -21,8 +21,9 @@ import { mutateWorkspaceRemote } from '../core/folders';
 import { indexConversationFromMessagesRemote } from '../core/conversation-index/client';
 // Leaf import (not the messaging barrel) so the content bundle never pulls the
 // worker-only hub/registry — same reason as the conversation-index client above.
-import { isContextValid } from '../core/messaging/chrome';
+import { isContextValid, runtime } from '../core/messaging/chrome';
 import { conversationId } from '../shared/workspace';
+import { OPEN_SIDE_PANEL } from '../shared/sidepanel';
 import { mountInputBar } from '../ui/input-bar/mountInputBar';
 import type { MountHandle } from '../ui/mount';
 
@@ -119,6 +120,16 @@ export async function runContent(): Promise<void> {
     handles.inputBar = mountInputBar(points.inputBar, {
       platform: platformId,
       onInsert: (text) => adapter.insertText(text),
+      // Wipe the host composer entirely (replace-with-empty, never submits) — the
+      // bar's icon-only clear button to the left of the trigger.
+      onClear: () => adapter.insertText('', { replace: true }),
+      // The Skeinos brand mark opens the workspace side panel. Sent straight from the
+      // click handler so Chrome forwards the user gesture to the worker, which calls
+      // `chrome.sidePanel.open()` (only the worker can — see background/sidePanel.ts).
+      onOpenSidebar: () => void runtime()?.sendMessage({ type: OPEN_SIDE_PANEL }),
+      // Lets the bar prepend an active profile only into an empty composer (so the
+      // standing instruction rides the next prompt insert without clobbering a draft).
+      isComposerEmpty: () => adapter.isComposerEmpty(),
       // Opt into focus containment only for hosts that force-focus their own composer
       // (Perplexity) — the guard is invasive, so it's config-gated, not universal.
       containFocus: config.behaviors?.composerStealsFocus === true,

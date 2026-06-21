@@ -73,6 +73,16 @@ export function CloseIcon({ size = 16, class: cls }: IconProps) {
   );
 }
 
+/** An eraser sweeping a baseline — the "clear the composer" action glyph. */
+export function EraserIcon({ size = 16, class: cls }: IconProps) {
+  return (
+    <Svg size={size} class={cls}>
+      <path d="M4 17 14 7a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8l-7 7H8z" />
+      <path d="M9 20H20" />
+    </Svg>
+  );
+}
+
 export function CheckIcon({ size = 16, class: cls }: IconProps) {
   return (
     <Svg size={size} class={cls}>

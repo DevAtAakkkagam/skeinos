@@ -6,7 +6,13 @@ export const STR = {
   // Bar chrome
   brand: 'Skeinos',
   barLabel: 'Skeinos input bar',
+  // Accessible name for the brand mark when it acts as the handle to the workspace
+  // side panel (the wordmark itself is decorative, carried by this label).
+  openSidebar: 'Open Skeinos panel',
   slashTrigger: 'Insert prompt',
+  // Icon-only button to the left of the trigger: wipes the host composer entirely
+  // (replace-with-empty, never submits). Label-only — its glyph is decorative.
+  clearComposer: 'Clear composer',
   // Visible keyboard hint on the trigger — the `Cmd/Ctrl + /` accelerator, rendered
   // per-OS (⌘ on macOS, Ctrl elsewhere). Decorative (aria-hidden); the trigger's
   // accessible name stays `slashTrigger`.
@@ -29,11 +35,6 @@ export const STR = {
   profileMenuLoading: 'Loading your profiles…',
   profileMenuError: 'Couldn’t load your profiles.',
   profileMenuRetry: 'Try again',
-
-  // Deferred model control (C24) — a disabled stub that reserves layout so the bar
-  // does not reflow when that feature lands (design D-7).
-  modelStub: 'Model',
-  modelStubHint: 'Model selection — coming soon',
 
   // Slash popover
   popoverLabel: 'Prompt picker',

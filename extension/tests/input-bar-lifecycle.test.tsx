@@ -87,10 +87,10 @@ describe('input bar mount lifecycle (6.2)', () => {
     // The shared harness host lives in light DOM with an OPEN shadow root…
     expect(handle.host.getAttribute('data-skeinos-root')).toBe('');
     expect(handle.shadowRoot).toBe(handle.host.shadowRoot);
-    // …docked as a block sibling immediately AFTER the anchor (not inside it, so the
+    // …docked as a block sibling immediately BEFORE the anchor (not inside it, so the
     // anchor's own flex/grid layout can't lay the bar out beside the composer).
     expect(anchor.contains(handle.host)).toBe(false);
-    expect(anchor.nextElementSibling).toBe(handle.host);
+    expect(anchor.previousElementSibling).toBe(handle.host);
     // …and the bar renders inside it (the toolbar + trigger + stubs).
     const bar = handle.shadowRoot.querySelector('[data-testid="sk-input-bar"]');
     expect(bar).toBeTruthy();
@@ -164,8 +164,8 @@ describe('input bar mount lifecycle (6.2)', () => {
     old.replaceWith(fresh);
 
     await vi.waitFor(() => expect(bars()).toHaveLength(1));
-    // And it is docked right after the live input-bar anchor, not orphaned.
-    expect(root.querySelector('.input-bar')!.nextElementSibling).toBe(handles.bar!.host);
+    // And it is docked right before the live input-bar anchor, not orphaned.
+    expect(root.querySelector('.input-bar')!.previousElementSibling).toBe(handles.bar!.host);
 
     dispose();
     handles.bar?.dispose();

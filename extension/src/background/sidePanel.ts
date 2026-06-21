@@ -7,6 +7,7 @@
 // exist on every cold start, before any async init.
 
 import { matchPlatform } from '../adapters/runtime/host-match';
+import { isOpenSidePanelMessage } from '../shared/sidepanel';
 
 // The side-panel page path (WXT emits this from `entrypoints/sidepanel/`; it is
 // also the manifest `side_panel.default_path`). Passed explicitly when enabling a
@@ -16,6 +17,7 @@ const PANEL_PATH = 'sidepanel.html';
 interface SidePanelApi {
   setPanelBehavior?(opts: { openPanelOnActionClick: boolean }): Promise<void> | void;
   setOptions?(opts: { tabId: number; path?: string; enabled: boolean }): Promise<void> | void;
+  open?(opts: { tabId?: number; windowId?: number }): Promise<void> | void;
 }
 interface TabLike {
   id?: number;
@@ -35,12 +37,26 @@ interface TabsApi {
     ): void;
   };
 }
+/** The sender carried by a `runtime.onMessage` frame — we only need its tab. */
+interface MessageSender {
+  tab?: { id?: number; windowId?: number };
+}
+interface RuntimeApi {
+  onMessage?: {
+    addListener(
+      cb: (message: unknown, sender: MessageSender, sendResponse: (r: unknown) => void) => boolean | void,
+    ): void;
+  };
+}
 
 function sidePanelApi(): SidePanelApi | undefined {
   return (globalThis as { chrome?: { sidePanel?: SidePanelApi } }).chrome?.sidePanel;
 }
 function tabsApi(): TabsApi | undefined {
   return (globalThis as { chrome?: { tabs?: TabsApi } }).chrome?.tabs;
+}
+function runtimeApi(): RuntimeApi | undefined {
+  return (globalThis as { chrome?: { runtime?: RuntimeApi } }).chrome?.runtime;
 }
 
 /** Enable the panel on supported P0 hosts, disable it on every other tab. A tab
@@ -79,6 +95,27 @@ export function registerSidePanel(): void {
   void Promise.resolve(panel.setPanelBehavior?.({ openPanelOnActionClick: true })).catch((err) =>
     console.warn('[Skeinos] sidePanel.setPanelBehavior failed', err),
   );
+
+  // The in-page Skeinos brand mark is a second way to open the panel: the input bar
+  // fires `OPEN_SIDE_PANEL` from its click handler, and we open the panel for the
+  // sender's tab. `sidePanel.open()` only runs inside a user gesture — Chrome forwards
+  // the brand-click activation with the message, so we MUST call `open` synchronously
+  // here (no intervening await) or the activation is spent. We read the tab straight
+  // off the sender rather than querying for the active tab for the same reason.
+  runtimeApi()?.onMessage?.addListener((message, sender) => {
+    if (!isOpenSidePanelMessage(message)) return undefined; // not ours — let the hub see it
+    const tabId = sender.tab?.id;
+    const windowId = sender.tab?.windowId;
+    const target = tabId != null ? { tabId } : windowId != null ? { windowId } : undefined;
+    // A panel disabled for this tab, or an expired gesture, rejects — log and ignore
+    // (the brand click simply does nothing) rather than surfacing an error.
+    if (target) {
+      void Promise.resolve(panel.open?.(target)).catch((err) =>
+        console.warn('[Skeinos] sidePanel.open failed', err),
+      );
+    }
+    return undefined; // one-way control message; no response
+  });
 
   // Enable the panel for the tab that is already active at worker start; the
   // listeners below only cover *subsequent* tab switches/navigations.

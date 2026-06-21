@@ -1,9 +1,9 @@
 // The input action bar (design D-1/D-2): a content-script shadow-DOM overlay docked
 // above the host composer. It owns a Skeinos `/` trigger that opens the slash popover
 // (a prompt picker with its OWN search field — no host-keystroke interception), and
-// orchestrates the pick → variable-fill → insert flow. The Profile (C14) and model
-// (C24) controls are disabled stubs that reserve layout so the bar does not reflow
-// when those features land (design D-7).
+// orchestrates the pick → variable-fill → insert flow. The Profile chip (C14) sits
+// alongside it; the prompt-picker trigger is pushed to the right end as the bar's
+// primary action.
 //
 // The bar is a pure view: it never touches storage or the DOM directly. Insertion is
 // delegated to `onInsert` (wired to `adapter.insertText`, append-only, never
@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { BrandGlyph } from '../components/BrandGlyph';
+import { EraserIcon } from '../components/Icon';
 import { useFloating } from '../primitives/useFloating';
 import { parseVariables } from '../../core/prompts/template';
 import { mutatePromptLibraryRemote, queryPromptLibraryRemote } from '../../core/prompts/client';
@@ -48,6 +49,17 @@ export interface InputBarProps {
   platform: PlatformId;
   /** Commit the final text into the host composer (append-only, no auto-submit). */
   onInsert: (text: string) => void;
+  /** Wipe the host composer entirely (replace its contents with empty, no submit).
+   *  Wired to `adapter.insertText('', { replace: true })`. Optional — omitted in
+   *  tests that don't exercise the clear action. */
+  onClear?: () => void;
+  /** Open the Skeinos workspace side panel — wired to the brand mark. Optional;
+   *  when omitted the brand renders as a plain, non-interactive label. */
+  onOpenSidebar?: () => void;
+  /** Whether the host composer is empty right now. Gates prepending the active
+   *  profile: it rides a prompt insert only into an empty composer, so a standing
+   *  instruction never clobbers or duplicates over a draft. Defaults to "empty". */
+  isComposerEmpty?: () => boolean;
   /** Library reads (search + body resolution). Injectable for tests. */
   query?: QueryFn;
   /** Library writes (records prompt usage on insert). Injectable for tests. */
@@ -70,6 +82,9 @@ interface Pending {
 export function InputBar({
   platform,
   onInsert,
+  onClear,
+  onOpenSidebar,
+  isComposerEmpty = () => true,
   query = queryPromptLibraryRemote,
   mutate = mutatePromptLibraryRemote,
   queryProfiles,
@@ -82,6 +97,22 @@ export function InputBar({
   // Text queued by the modal's confirm, committed only AFTER the modal unmounts (see
   // the effect below) so the host composer can take focus.
   const queuedInsert = useRef<string | null>(null);
+  // The active profile's composed text (null when none applies here), reported up from
+  // the chip. Held in a ref so the insert paths read the current value without
+  // re-subscribing or tearing down the open variable modal on a profile change.
+  const activeProfileText = useRef<string | null>(null);
+
+  // Prepend the active profile above a prompt body — but ONLY into an empty composer,
+  // so the profile reads as the standing instruction for this message and never
+  // duplicates over an existing draft (profile-prepend). The chip merely activates a
+  // profile now; this is where its text actually lands, riding the next prompt insert.
+  const withActiveProfile = useCallback(
+    (body: string): string => {
+      const profile = activeProfileText.current;
+      return profile && isComposerEmpty() ? `${profile}\n\n${body}` : body;
+    },
+    [isComposerEmpty],
+  );
 
   // Record a prompt use, fire-and-forget (prompt-recents D-2): fired at the real
   // insertion moments, never awaited before inserting, so a lost ack never blocks the
@@ -105,9 +136,9 @@ export function InputBar({
     if (pending === null && queuedInsert.current !== null) {
       const text = queuedInsert.current;
       queuedInsert.current = null;
-      onInsert(text);
+      onInsert(withActiveProfile(text));
     }
-  }, [pending, onInsert]);
+  }, [pending, onInsert, withActiveProfile]);
 
   // Render the variable modal as its OWN viewport-level overlay (mountVariableModal),
   // not inside this bar's composer-anchored tree: a transformed/contained ancestor of
@@ -176,7 +207,7 @@ export function InputBar({
     const variables = parseVariables(prompt.body);
     if (variables.length === 0) {
       // No variables: insert the body straight away (design D-5) and record the use.
-      onInsert(prompt.body);
+      onInsert(withActiveProfile(prompt.body));
       recordUse(prompt.id);
       return;
     }
@@ -192,12 +223,57 @@ export function InputBar({
       data-testid="sk-input-bar"
     >
       {/* Brand mark + wordmark so the bar reads as Skeinos, distinct from the host's
-          own composer chrome. */}
-      <span class="sk-ib-brand" data-testid="sk-ib-brand">
-        <BrandGlyph size={16} />
-        <span class="sk-ib-brand__name">{STR.brand}</span>
-      </span>
+          own composer chrome. When `onOpenSidebar` is wired it becomes the bar's
+          handle to the workspace side panel — rendered as a real button (keyboard-
+          operable, labelled); otherwise it stays a plain, non-interactive label. */}
+      {onOpenSidebar ? (
+        <button
+          type="button"
+          class="sk-ib-brand sk-ib-brand--action"
+          aria-label={STR.openSidebar}
+          title={STR.openSidebar}
+          data-testid="sk-ib-brand"
+          onClick={() => onOpenSidebar()}
+        >
+          <BrandGlyph size={16} />
+          <span class="sk-ib-brand__name">{STR.brand}</span>
+        </button>
+      ) : (
+        <span class="sk-ib-brand" data-testid="sk-ib-brand">
+          <BrandGlyph size={16} />
+          <span class="sk-ib-brand__name">{STR.brand}</span>
+        </span>
+      )}
 
+      {/* The functional Profile chip (profile-activation): lists profiles and marks
+          the active one. Selecting only ACTIVATES it; its composed text is reported
+          up via `onActiveProfileChange` and prepended on the next prompt insert. */}
+      <ProfileChip
+        platform={platform}
+        onActiveProfileChange={(text) => {
+          activeProfileText.current = text;
+        }}
+        queryProfiles={queryProfiles}
+      />
+
+      {/* Icon-only clear button, immediately left of the trigger. Wipes the host
+          composer entirely (replace-with-empty, never submits). `margin-left: auto`
+          floats this whole right-hand group; the trigger then follows on the gap. */}
+      {onClear ? (
+        <button
+          type="button"
+          class="sk-ib-clear"
+          aria-label={STR.clearComposer}
+          title={STR.clearComposer}
+          data-testid="sk-ib-clear"
+          onClick={() => onClear()}
+        >
+          <EraserIcon size={16} />
+        </button>
+      ) : null}
+
+      {/* The Skeinos prompt-picker trigger — pushed to the right end of the bar,
+          the bar's primary action. */}
       <button
         type="button"
         class="sk-ib-trigger"
@@ -215,23 +291,6 @@ export function InputBar({
         <kbd class="sk-ib-kbd" aria-hidden="true" data-testid="sk-ib-kbd">
           {STR.shortcutHint(detectIsMac())}
         </kbd>
-      </button>
-
-      {/* The functional Profile chip (profile-activation): lists profiles, marks the
-          active one, and activates-and-injects on selection. */}
-      <ProfileChip platform={platform} onInsert={onInsert} queryProfiles={queryProfiles} />
-
-      {/* Deferred model control (C24): a visibly disabled stub reserving layout so the
-          bar does not reflow when model selection lands (design D-7). */}
-      <button
-        type="button"
-        class="sk-ib-stub"
-        disabled
-        aria-disabled="true"
-        title={STR.modelStubHint}
-        data-testid="sk-ib-model-stub"
-      >
-        {STR.modelStub}
       </button>
 
       {open ? (

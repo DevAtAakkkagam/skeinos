@@ -45,8 +45,9 @@ export const PROFILES_CSS = `
   padding: var(--sk-space-1) var(--sk-space-3); cursor: pointer; font-size: var(--sk-text-sm);
 }
 .sk-segmented__btn:first-child { border-left: 0; }
-.sk-segmented__btn:hover, .sk-segmented__btn:focus-visible { outline: none; background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); }
+.sk-segmented__btn:not(.sk-segmented__btn--active):hover, .sk-segmented__btn:not(.sk-segmented__btn--active):focus-visible { outline: none; background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); }
 .sk-segmented__btn--active { background: var(--sk-color-accent); color: var(--sk-color-bg); }
+.sk-segmented__btn--active:hover, .sk-segmented__btn--active:focus-visible { outline: none; background: color-mix(in srgb, var(--sk-color-accent) 85%, black); }
 
 /* The editor's action row: Delete sits left, Cancel/Save right. */
 .sk-profile-editor__actions { display: flex; align-items: center; gap: var(--sk-space-2); }

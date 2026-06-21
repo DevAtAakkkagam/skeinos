@@ -58,24 +58,25 @@ function makeQueryProfiles(profiles: InstructionProfile[]) {
   );
 }
 
-// Settings seams: getSettings resolves a fixed snapshot; subscribeSettings captures
-// the handler so a test can fire a cross-tab change.
+// Settings seams: getSettings resolves the current snapshot; subscribeSettings captures
+// the handler. setSettings PERSISTS and notifies subscribers — mirroring production,
+// where a write to chrome.storage.local fires the storage subscription that re-marks
+// the chip (so activating a profile updates `activeId` without a manual `fire`).
 function makeSettings(activeProfileId?: string) {
   const handlers = new Set<SettingsHandler>();
-  const setSettings = vi.fn(async (_partial: Partial<Settings>) => {});
-  const getSettings = vi.fn(async (): Promise<Settings> => ({
-    theme: 'system',
-    telemetry: false,
-    onboardingCompleted: false,
-    activeProfileId,
-  }));
+  let current: Settings = { theme: 'system', telemetry: false, onboardingCompleted: false, activeProfileId };
+  const setSettings = vi.fn(async (partial: Partial<Settings>) => {
+    current = { ...current, ...partial };
+    for (const h of handlers) h(current);
+  });
+  const getSettings = vi.fn(async (): Promise<Settings> => current);
   const subscribeSettings = (h: SettingsHandler): (() => void) => {
     handlers.add(h);
     return () => handlers.delete(h);
   };
   const fire = (next: Partial<Settings>): void => {
-    const full: Settings = { theme: 'system', telemetry: false, onboardingCompleted: false, ...next };
-    for (const h of handlers) h(full);
+    current = { ...current, ...next };
+    for (const h of handlers) h(current);
   };
   return { getSettings, setSettings, subscribeSettings, fire };
 }
@@ -84,17 +85,16 @@ interface RenderOpts {
   profiles: InstructionProfile[];
   platform?: PlatformId;
   activeProfileId?: string;
-  onInsert?: (t: string) => void;
 }
 
 async function renderChip(opts: RenderOpts) {
-  const onInsert = vi.fn(opts.onInsert);
+  const onActiveProfileChange = vi.fn<(t: string | null) => void>();
   const queryProfiles = makeQueryProfiles(opts.profiles);
   const settings = makeSettings(opts.activeProfileId);
   mount(
     <ProfileChip
       platform={opts.platform ?? 'claude'}
-      onInsert={onInsert}
+      onActiveProfileChange={onActiveProfileChange}
       queryProfiles={queryProfiles as never}
       getSettings={settings.getSettings}
       setSettings={settings.setSettings}
@@ -103,12 +103,23 @@ async function renderChip(opts: RenderOpts) {
   );
   // Flush the load effect + the settings-read effect (both async).
   for (let i = 0; i < 6; i++) await Promise.resolve();
-  return { onInsert, queryProfiles, settings };
+  return { onActiveProfileChange, queryProfiles, settings };
 }
 
 async function openMenu(): Promise<void> {
   $('[data-testid="sk-ib-profile"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   // Preact batches the open state update; flush the re-render before asserting.
+  for (let i = 0; i < 4; i++) await Promise.resolve();
+}
+
+// Click a menu item and flush the activation round-trip: setSettings persists and
+// notifies the subscription, which re-marks the chip and re-runs the effect that
+// reports the active profile's composed text up. Flush microtasks and a macrotask so
+// Preact's effect callback has fired.
+async function selectItem(el: HTMLElement): Promise<void> {
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  for (let i = 0; i < 4; i++) await Promise.resolve();
+  await new Promise((r) => setTimeout(r, 0));
   for (let i = 0; i < 4; i++) await Promise.resolve();
 }
 
@@ -173,7 +184,7 @@ describe('ProfileChip menu (4.3)', () => {
 // --- 4.4 activation ------------------------------------------------------------
 
 describe('ProfileChip activation (4.4)', () => {
-  it('clicking an applicable profile sets activeProfileId AND inserts composeProfileText', async () => {
+  it('clicking an applicable profile sets activeProfileId AND reports its composed text', async () => {
     const p = profile({
       id: 'a',
       name: 'Staff',
@@ -181,33 +192,50 @@ describe('ProfileChip activation (4.4)', () => {
       appliesTo: ['claude'],
       responseStyle: { verbosity: 'brief', format: 'markdown' },
     });
-    const { onInsert, settings } = await renderChip({ profiles: [p], platform: 'claude' });
+    const { onActiveProfileChange, settings } = await renderChip({ profiles: [p], platform: 'claude' });
     await openMenu();
-    itemById('a')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await selectItem(itemById('a')!);
 
+    // Selection only activates; it does NOT inject on its own.
     expect(settings.setSettings).toHaveBeenCalledWith({ activeProfileId: 'a' });
-    expect(onInsert).toHaveBeenCalledTimes(1);
-    expect(onInsert).toHaveBeenCalledWith(composeProfileText(p));
+    // The active profile's composed text is reported up so the bar can prepend it on
+    // the next prompt insert.
+    expect(onActiveProfileChange).toHaveBeenLastCalledWith(composeProfileText(p));
     // Sanity: the composed text carries both the instruction and the directive.
-    expect(onInsert).toHaveBeenCalledWith('Be a senior staff engineer.\n\nRespond briefly, in Markdown.');
+    expect(onActiveProfileChange).toHaveBeenLastCalledWith(
+      'Be a senior staff engineer.\n\nRespond briefly, in Markdown.',
+    );
   });
 
-  it('a profile with no responseStyle inserts only the instruction text', async () => {
+  it('a profile with no responseStyle reports only the instruction text', async () => {
     const p = profile({ id: 'a', name: 'Plain', instructionText: 'Just be terse.', appliesTo: ['claude'] });
-    const { onInsert } = await renderChip({ profiles: [p] });
+    const { onActiveProfileChange } = await renderChip({ profiles: [p] });
     await openMenu();
-    itemById('a')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(onInsert).toHaveBeenCalledWith('Just be terse.');
+    await selectItem(itemById('a')!);
+    expect(onActiveProfileChange).toHaveBeenLastCalledWith('Just be terse.');
   });
 
-  it('a non-applicable (disabled) profile does NOT activate or insert when clicked', async () => {
+  it('a non-applicable (disabled) profile does NOT activate when clicked', async () => {
     const p = profile({ id: 'b', name: 'Elsewhere', instructionText: 'No.', appliesTo: ['gemini'] });
-    const { onInsert, settings } = await renderChip({ profiles: [p], platform: 'claude' });
+    const { onActiveProfileChange, settings } = await renderChip({ profiles: [p], platform: 'claude' });
     await openMenu();
     // The disabled button still receives a programmatic click; the handler must guard.
-    itemById('b')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await selectItem(itemById('b')!);
     expect(settings.setSettings).not.toHaveBeenCalled();
-    expect(onInsert).not.toHaveBeenCalled();
+    // Never reports the non-applicable profile's text — it stays "no active profile".
+    expect(onActiveProfileChange).not.toHaveBeenCalledWith(composeProfileText(p));
+  });
+
+  it('activating an applicable profile, then deactivating, reports null', async () => {
+    const p = profile({ id: 'a', name: 'Staff', instructionText: 'Be terse.', appliesTo: ['claude'] });
+    const { onActiveProfileChange, settings } = await renderChip({ profiles: [p], platform: 'claude' });
+    await openMenu();
+    await selectItem(itemById('a')!);
+    expect(onActiveProfileChange).toHaveBeenLastCalledWith('Be terse.');
+
+    // The profile is cleared elsewhere — the bar must stop prepending it.
+    settings.fire({ activeProfileId: undefined });
+    await vi.waitFor(() => expect(onActiveProfileChange).toHaveBeenLastCalledWith(null));
   });
 });
 
@@ -234,7 +262,7 @@ describe('ProfileChip cross-tab + dangling id (4.5)', () => {
 
   it('a dangling active id renders as "no active profile" and never throws', async () => {
     // activeProfileId points at a profile that is not in the library.
-    const { onInsert } = await renderChip({
+    const { onActiveProfileChange } = await renderChip({
       profiles: [profile({ id: 'a', name: 'Alpha' })],
       activeProfileId: 'ghost',
     });
@@ -242,6 +270,7 @@ describe('ProfileChip cross-tab + dangling id (4.5)', () => {
     expect($('[data-testid="sk-ib-profile-name"]')!.textContent).toBe(STR.profileChip);
     await openMenu();
     expect(items().some((el) => el.getAttribute('aria-checked') === 'true')).toBe(false);
-    expect(onInsert).not.toHaveBeenCalled();
+    // A dangling id reports as "no active profile" — never a composed string.
+    expect(onActiveProfileChange).not.toHaveBeenCalledWith(expect.any(String));
   });
 });

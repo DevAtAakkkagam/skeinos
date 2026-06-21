@@ -25,10 +25,30 @@ const INPUT_BAR_FEATURE_CSS = `
 .sk-ib-brand { display: inline-flex; align-items: center; gap: var(--sk-space-1); color: var(--sk-color-accent); padding-right: var(--sk-space-1); margin-right: var(--sk-space-1); border-right: 1px solid var(--sk-color-border); }
 .sk-ib-brand__name { font-size: var(--sk-text-sm); font-weight: 600; letter-spacing: 0.01em; color: var(--sk-color-fg); }
 
-/* The Skeinos prompt-picker trigger — the one active control on the bar today.
-   Labelled "Insert prompt" (input-bar-shortcut D-1); sized to its text like the
-   sibling stub controls, not the old fixed slash-glyph square. */
-.sk-ib-trigger { display: inline-flex; align-items: center; gap: var(--sk-space-1); height: 28px; padding: 0 var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-fg); font: inherit; font-size: var(--sk-text-sm); cursor: pointer; }
+/* When the brand mark opens the side panel it is a real <button>: strip the native
+   chrome, keep the divider, and add the same quiet affordances as the bar's other
+   controls (pointer, hover wash, focus ring) so it reads as clickable while holding
+   the bar's rhythm. Negative inset cancels its padding so the glyph still aligns to
+   the bar's left edge; the wash then reaches comfortably around the wordmark. */
+.sk-ib-brand--action { appearance: none; height: 28px; margin-left: calc(-1 * var(--sk-space-1)); padding-left: var(--sk-space-1); border-top: none; border-left: none; border-bottom: none; border-radius: var(--sk-radius); background: transparent; font: inherit; cursor: pointer; }
+.sk-ib-brand--action:hover { background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); }
+.sk-ib-brand--action:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
+
+/* Icon-only "clear the composer" button. A square, quiet control that leads the
+   right-hand group: it carries margin-left:auto, so it floats itself and the
+   trigger to the right end together (the trigger then drops its own auto — see
+   below). Muted by default, taking the accent wash on hover like its siblings. */
+.sk-ib-clear { margin-left: auto; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-muted); cursor: pointer; }
+.sk-ib-clear:hover { background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); color: var(--sk-color-fg); }
+.sk-ib-clear:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
+
+/* The Skeinos prompt-picker trigger — the bar's primary action, pushed to the right
+   end (margin-left: auto). Labelled "Insert prompt" (input-bar-shortcut D-1); sized
+   to its text, not the old fixed slash-glyph square. When the clear button precedes
+   it, that button owns the auto margin, so the trigger drops its own and sits snug
+   beside it on the bar's gap. */
+.sk-ib-trigger { margin-left: auto; display: inline-flex; align-items: center; gap: var(--sk-space-1); height: 28px; padding: 0 var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-fg); font: inherit; font-size: var(--sk-text-sm); cursor: pointer; }
+.sk-ib-clear + .sk-ib-trigger { margin-left: 0; }
 .sk-ib-trigger:hover { background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); }
 .sk-ib-trigger:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
 .sk-ib-trigger[aria-expanded="true"] { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); }
@@ -36,9 +56,6 @@ const INPUT_BAR_FEATURE_CSS = `
 /* OS-aware keyboard hint (⌘/ · Ctrl+/) on the trigger: a quiet inset badge so the
    shortcut is discoverable without competing with the label. */
 .sk-ib-kbd { display: inline-flex; align-items: center; padding: 1px var(--sk-space-1); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: color-mix(in srgb, var(--sk-color-fg) 6%, transparent); color: var(--sk-color-muted); font-family: var(--sk-font-mono, monospace); font-size: var(--sk-text-xs); line-height: 1.4; }
-
-/* Deferred-control stub (C24 model): visibly inert, reserving layout. */
-.sk-ib-stub { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: transparent; color: var(--sk-color-muted); font: inherit; font-size: var(--sk-text-sm); opacity: 0.55; cursor: not-allowed; }
 
 /* The functional Profile chip (profile-activation): same footprint as the trigger so
    the bar keeps its rhythm. Shows the active profile's name and opens the menu. The

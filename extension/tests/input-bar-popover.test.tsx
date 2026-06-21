@@ -282,16 +282,14 @@ describe('InputBar slash trigger + search call (6.3)', () => {
     expect($('[data-testid="sk-ib-popover"]')).toBeNull();
   });
 
-  it('renders an interactive Profile chip and a disabled Model stub', () => {
+  it('renders an interactive Profile chip and no Model stub', () => {
     mount(<InputBar platform="claude" onInsert={vi.fn()} query={makeQuery([]) as never} queryProfiles={emptyProfiles() as never} />);
-    // The Profile control is now the functional chip (not a disabled stub).
+    // The Profile control is the functional chip (not a disabled stub).
     const chip = $('[data-testid="sk-ib-profile"]') as HTMLButtonElement;
     expect(chip).toBeTruthy();
     expect(chip.disabled).toBe(false);
-    // Only the Model control remains a disabled deferred stub.
-    const model = $('[data-testid="sk-ib-model-stub"]') as HTMLButtonElement;
-    expect(model.disabled).toBe(true);
-    expect(model.getAttribute('aria-disabled')).toBe('true');
+    // The deferred Model stub has been removed.
+    expect($('[data-testid="sk-ib-model-stub"]')).toBeNull();
   });
 
   it('typing in the popover issues prompt.search with the entered terms', async () => {
@@ -338,5 +336,39 @@ describe('InputBar slash trigger + search call (6.3)', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect($('[data-testid="sk-ib-popover"]')).toBeNull();
     expect(onInsert).not.toHaveBeenCalled();
+  });
+
+  it('makes the brand a button that fires onOpenSidebar, or a plain label without it', () => {
+    // Without onOpenSidebar the brand is a non-interactive label (a <span>).
+    mount(<InputBar platform="claude" onInsert={vi.fn()} query={makeQuery([]) as never} queryProfiles={emptyProfiles() as never} />);
+    const label = $('[data-testid="sk-ib-brand"]')!;
+    expect(label.tagName).toBe('SPAN');
+
+    // With it, the brand becomes a labelled button; clicking opens the side panel.
+    const onOpenSidebar = vi.fn();
+    mount(<InputBar platform="claude" onInsert={vi.fn()} onOpenSidebar={onOpenSidebar} query={makeQuery([]) as never} queryProfiles={emptyProfiles() as never} />);
+    const btn = $('[data-testid="sk-ib-brand"]') as HTMLButtonElement;
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('aria-label')).toBe('Open Skeinos panel');
+
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(onOpenSidebar).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the clear button only when onClear is wired, and clicking it fires onClear', () => {
+    // No onClear → no button (the host content script always wires it; tests that
+    // don't exercise clearing simply omit it).
+    mount(<InputBar platform="claude" onInsert={vi.fn()} query={makeQuery([]) as never} queryProfiles={emptyProfiles() as never} />);
+    expect($('[data-testid="sk-ib-clear"]')).toBeNull();
+
+    const onClear = vi.fn();
+    mount(<InputBar platform="claude" onInsert={vi.fn()} onClear={onClear} query={makeQuery([]) as never} queryProfiles={emptyProfiles() as never} />);
+    const clear = $('[data-testid="sk-ib-clear"]') as HTMLButtonElement;
+    expect(clear).toBeTruthy();
+    // It sits immediately to the LEFT of the Insert-prompt trigger.
+    expect(clear.nextElementSibling).toBe($('[data-testid="sk-ib-trigger"]'));
+
+    clear.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(onClear).toHaveBeenCalledTimes(1);
   });
 });

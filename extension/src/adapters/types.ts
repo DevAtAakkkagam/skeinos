@@ -49,6 +49,8 @@ export interface PlatformAdapter {
   listConversations(): ConversationRef[];
   readMessages(nativeId: string): Promise<Message[]>;
   getInputElement(): HTMLElement | null;
+  /** Whether the host composer currently holds no draft (trimmed). */
+  isComposerEmpty(): boolean;
   insertText(text: string, opts?: { replace?: boolean }): boolean;
   submit(): boolean;
   mountPoints(): { sidebar: HTMLElement; inputBar: HTMLElement } | null;

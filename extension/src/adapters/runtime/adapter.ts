@@ -188,6 +188,18 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return q<HTMLElement>(selectors.composer);
   }
 
+  // Whether the host composer currently holds no draft — read from the same node
+  // `insertText` writes (form field `value` or contenteditable `textContent`). Drives
+  // the input bar's "prepend the active profile only into an empty composer" rule, so
+  // a standing instruction never clobbers or duplicates over text the user is typing.
+  // A missing composer reads as empty (nothing to preserve).
+  function isComposerEmpty(): boolean {
+    const el = getInputElement();
+    if (!el) return true;
+    const text = isFormField(el) ? el.value : (el.textContent ?? '');
+    return text.trim().length === 0;
+  }
+
   function insertText(text: string, opts?: { replace?: boolean }): boolean {
     const el = getInputElement();
     if (!el) return false;
@@ -301,6 +313,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     listConversations,
     readMessages,
     getInputElement,
+    isComposerEmpty,
     insertText,
     submit,
     mountPoints,

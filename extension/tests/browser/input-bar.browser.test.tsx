@@ -60,11 +60,33 @@ function profilesQuery() {
   return vi.fn(async () => ({ ok: true as const, data: { kind: 'profile.library' as const, profiles } }));
 }
 
+// Stub `chrome.storage.local` so the Profile chip's live settings seams resolve a
+// pre-activated profile (`activeProfileId`) — the only way to exercise the bar's
+// profile-prepend end to end (the chip reads/writes settings directly, not via props).
+// Returns a disposer that restores the prior global.
+function stubChromeSettings(activeProfileId: string): () => void {
+  const store: Record<string, unknown> = { 'skeinos.settings': { activeProfileId } };
+  const prior = (globalThis as { chrome?: unknown }).chrome;
+  (globalThis as { chrome?: unknown }).chrome = {
+    storage: {
+      local: {
+        get: async (key: string) => ({ [key]: store[key] }),
+        set: async (items: Record<string, unknown>) => Object.assign(store, items),
+      },
+      onChanged: { addListener: () => {}, removeListener: () => {} },
+    },
+  };
+  return () => {
+    (globalThis as { chrome?: unknown }).chrome = prior;
+  };
+}
+
 function mountBar(
   prompts: Prompt[],
   onInsert: (t: string) => void,
   containFocus = false,
   queryProfiles: () => unknown = emptyProfiles(),
+  isComposerEmpty?: () => boolean,
 ) {
   const target = document.createElement('div');
   document.body.appendChild(target);
@@ -75,6 +97,7 @@ function mountBar(
       onInsert={onInsert}
       query={makeQuery(prompts) as never}
       queryProfiles={queryProfiles as never}
+      isComposerEmpty={isComposerEmpty}
       containFocus={containFocus}
     />,
     { theme: 'light' },
@@ -109,17 +132,17 @@ afterEach(() => {
 });
 
 describe('input action bar (real browser)', () => {
-  it('mounts in a shadow root with tokens resolved, the Profile chip interactive and the Model stub disabled', () => {
+  it('mounts in a shadow root with tokens resolved, the Profile chip interactive and no Model stub', () => {
     mountBar([], vi.fn());
     const bar = $('[data-testid="sk-input-bar"]')!;
     expect(bar).toBeTruthy();
     // The token cascade resolves inside the shadow root: the bar paints a real color,
     // not the initial transparent default.
     expect(getComputedStyle(bar).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    // The Profile control is now the functional chip (not a disabled stub).
+    // The Profile control is the functional chip (not a disabled stub).
     expect(($('[data-testid="sk-ib-profile"]') as HTMLButtonElement).disabled).toBe(false);
-    // Only the Model control remains a disabled deferred stub.
-    expect(($('[data-testid="sk-ib-model-stub"]') as HTMLButtonElement).disabled).toBe(true);
+    // The deferred Model stub has been removed.
+    expect($('[data-testid="sk-ib-model-stub"]')).toBeNull();
   });
 
   it('opens the slash popover and positions it with real layout (no render loop)', async () => {
@@ -170,9 +193,61 @@ describe('input action bar (real browser)', () => {
     });
     expect(item.disabled).toBe(false);
 
-    // Selecting it inserts the composed instruction (append, no submit).
+    // Selecting it only ACTIVATES — it does not inject on its own (the composed text
+    // rides the next prompt insert). The menu closes and nothing is pushed to onInsert.
     click(item);
-    await vi.waitFor(() => expect(onInsert).toHaveBeenCalledWith('Be terse.'));
+    await vi.waitFor(() => expect($('[data-testid="sk-ib-profile-menu"]')).toBeNull());
+    expect(onInsert).not.toHaveBeenCalled();
+  });
+
+  it('prepends an active profile ahead of an inserted prompt, into a real contenteditable', async () => {
+    // End-to-end profile-prepend in a real editor: with a profile pre-activated (via a
+    // stubbed chrome.storage), inserting a prompt into an EMPTY composer lands the
+    // profile's composed text above the prompt body — the one-action flow that replaces
+    // the old "click the chip to inject" step. Wires `onInsert`/`isComposerEmpty` to a
+    // real adapter over a real contenteditable (the execCommand path).
+    const restore = stubChromeSettings('pr1');
+    const ceRoot = document.createElement('div');
+    ceRoot.innerHTML = `<div class="sidebar"><div class="list"></div></div>
+      <div class="input-bar"><div class="ce-composer" contenteditable="true"></div><button class="send">Send</button></div>`;
+    document.body.appendChild(ceRoot);
+    const adapter = createAdapter(ceConfig(), { root: ceRoot });
+    const composer = ceRoot.querySelector<HTMLElement>('.ce-composer')!;
+    try {
+      mountBar(
+        [makePrompt({ id: 'p5', title: 'Linked', body: 'Write a LinkedIn post.' })],
+        (t) => adapter.insertText(t),
+        false,
+        profilesQuery(),
+        () => adapter.isComposerEmpty(),
+      );
+      // Let the chip resolve the active profile from the stubbed settings first.
+      await vi.waitFor(() =>
+        expect($('[data-testid="sk-ib-profile-name"]')!.textContent).toBe('Senior staff engineer'),
+      );
+
+      click($('[data-testid="sk-ib-trigger"]')!);
+      await vi.waitFor(() => expect($('[data-testid="sk-ib-search"]')).toBeTruthy());
+      typeInto($('[data-testid="sk-ib-search"]') as HTMLInputElement, 'linked');
+      const row = await vi.waitFor(() => {
+        const el = $('[data-testid="sk-ib-result"]');
+        expect(el).toBeTruthy();
+        return el!;
+      });
+      click(row);
+
+      // The profile rode the prompt insert: its composed text leads, then the body.
+      // (A contenteditable may normalize the blank line into block/<br> nodes, so assert
+      // order + presence rather than the exact whitespace.)
+      await vi.waitFor(() => {
+        const text = composer.textContent ?? '';
+        expect(text.startsWith('Be terse.')).toBe(true);
+        expect(text).toContain('Write a LinkedIn post.');
+      });
+    } finally {
+      ceRoot.remove();
+      restore();
+    }
   });
 
   it('clicking the search field keeps the popover open (shadow retargeting)', async () => {
@@ -365,11 +440,31 @@ describe('adapter.insertText into a contenteditable (real browser)', () => {
     expect(root.ownerDocument.activeElement).toBe(composer);
     expect(composer.textContent).toBe('DRAFT INSERTED');
   });
+
+  it('reports composer emptiness (drives the profile-prepend gate)', () => {
+    root = document.createElement('div');
+    root.innerHTML = `
+      <div class="sidebar"><div class="list"></div></div>
+      <div class="input-bar">
+        <div class="ce-composer" contenteditable="true"></div>
+        <button class="send">Send</button>
+      </div>`;
+    document.body.appendChild(root);
+    const adapter = createAdapter(ceConfig(), { root });
+    const composer = root.querySelector<HTMLElement>('.ce-composer')!;
+
+    // Empty (and whitespace-only) reads as empty; a real draft reads as non-empty.
+    expect(adapter.isComposerEmpty()).toBe(true);
+    composer.textContent = '   \n  ';
+    expect(adapter.isComposerEmpty()).toBe(true);
+    composer.textContent = 'a draft';
+    expect(adapter.isComposerEmpty()).toBe(false);
+  });
 });
 
 // Placement: a flex-ROW composer container (Perplexity's `#ask-input` row, Gemini's
 // input-area-v2) must NOT lay the bar out beside the composer. `mountInputBar` climbs
-// out of row-like ancestors so the bar docks on its own line below. Needs real layout
+// out of row-like ancestors so the bar docks on its own line above. Needs real layout
 // (getComputedStyle/flex), hence a browser test.
 describe('input bar placement (real browser)', () => {
   let root: HTMLElement | null = null;
@@ -381,9 +476,9 @@ describe('input bar placement (real browser)', () => {
     root = null;
   });
 
-  it('docks below a flex-row composer, on its own line (not beside it)', () => {
+  it('docks above a flex-row composer, on its own line (not beside it)', () => {
     // Mimics Perplexity: a vertical outer container holding a flex-ROW whose child is
-    // the composer anchor. A naive sibling-after would make the bar a flex item beside
+    // the composer anchor. A naive sibling-before would make the bar a flex item beside
     // the composer; the climb must hoist it into the outer column instead.
     root = document.createElement('div');
     root.style.display = 'block';
@@ -400,9 +495,9 @@ describe('input bar placement (real browser)', () => {
     // Climbed out of the flex row: the bar is a sibling of the row in the outer column…
     expect(handleP.host.parentElement).toBe(root);
     expect(row.contains(handleP.host)).toBe(false);
-    // …and it sits BELOW the composer row, not beside it.
-    expect(handleP.host.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      row.getBoundingClientRect().bottom - 1,
+    // …and it sits ABOVE the composer row, not beside it.
+    expect(handleP.host.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      row.getBoundingClientRect().top + 1,
     );
   });
 });
