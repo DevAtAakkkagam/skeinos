@@ -3,8 +3,10 @@
 // existing host permissions — never page content) and maps it to a platform with
 // `matchPlatform`, re-resolving whenever the active tab changes or navigates
 // (`tabs.onActivated` / `tabs.onUpdated`). With a supported host active it mounts
-// the `SidebarShell`; otherwise it shows a neutral "open a supported chat" prompt
-// rather than stale or wrong-platform data (design D3).
+// the `SidebarShell`; once an onboarded user's active tab resolves to an
+// unsupported host it closes the panel (it cannot show a workspace there). The
+// neutral "open a supported chat" prompt remains as the brief still-resolving
+// placeholder and the pre-onboarding fallback (design D3).
 //
 // Imports `matchPlatform` from its leaf module (not the adapters barrel) so the
 // panel pulls in the host-match table without dragging in the adapter runtime.
@@ -72,6 +74,20 @@ export function SidePanelApp() {
       tabs?.onUpdated?.removeListener(update);
     };
   }, []);
+
+  // Close the panel once the active tab resolves to an unsupported host: the side
+  // panel is global to the window, so without this it would linger over a tab whose
+  // workspace it cannot show. Keyed on the same `platform` state that drives the
+  // empty state below — that signal updates on the very first tab switch, so this
+  // closes immediately rather than a switch late. `window.close()` is the only way
+  // to dismiss a side panel (there is no `chrome.sidePanel.close()`).
+  //
+  // Strict `=== null` (not `== null`) so the initial `undefined` "still resolving"
+  // value never closes the panel mid-open. Gated on `onboarded` so the platform-
+  // independent first-run flow can still show on any tab.
+  useEffect(() => {
+    if (onboarded === true && platform === null) window.close();
+  }, [onboarded, platform]);
 
   useEffect(() => {
     let live = true;

@@ -17,14 +17,15 @@ type ChangeListener = (
   areaName: string,
 ) => void;
 
-function makeChrome(initialUrl: string | undefined) {
+function makeChrome(initialUrl: string | undefined, onboarded = true) {
   let activeUrl = initialUrl;
   const activated = new Set<TabListener>();
   const updated = new Set<TabListener>();
-  // Seed onboarding as complete so these (pre-onboarding) scenarios exercise the
-  // platform branch (shell / empty), not the first-run onboarding surface. The
-  // onboarding gate itself is covered in onboarding-*.test.tsx.
-  const store: Record<string, unknown> = { [SETTINGS_KEY]: { onboardingCompleted: true } };
+  // Seed onboarding as complete (by default) so these scenarios exercise the
+  // platform branch (shell / empty / auto-close), not the first-run onboarding
+  // surface. Pass `onboarded = false` to exercise the pre-onboarding fallback.
+  // The onboarding gate itself is covered in onboarding-*.test.tsx.
+  const store: Record<string, unknown> = { [SETTINGS_KEY]: { onboardingCompleted: onboarded } };
   const changeListeners = new Set<ChangeListener>();
   const sendMessage = vi.fn(async () => ({ ok: false, error: { code: 'no_response' } }));
 
@@ -176,5 +177,47 @@ describe('Neutral state + re-scoping (7.3)', () => {
     await flush();
     expect($('[data-testid=sk-shell]')).toBeTruthy();
     expect($('[data-testid=sk-panel-empty]')).toBeNull();
+  });
+});
+
+describe('Auto-close on an unsupported host (7.3)', () => {
+  let close: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    // happy-dom's `window.close()` is a no-op; spy so we can assert the call
+    // without it tearing down the test document.
+    close = vi.spyOn(window, 'close').mockImplementation(() => {});
+  });
+  afterEach(() => close.mockRestore());
+
+  it('closes the panel when the active tab switches to an unsupported host', async () => {
+    fake = makeChrome('https://claude.ai/');
+    setChrome(fake.chrome);
+    await mountPanel();
+    // Supported host resolved: the panel stays open.
+    expect(close).not.toHaveBeenCalled();
+
+    // First switch to an unsupported host closes it (not a switch late).
+    fake.setActiveUrl('https://example.com/');
+    await flush();
+    await flush();
+    expect(close).toHaveBeenCalled();
+  });
+
+  it('stays open on a supported host (never closes while resolving or scoped)', async () => {
+    fake = makeChrome('https://claude.ai/chat/abc');
+    setChrome(fake.chrome);
+    await mountPanel();
+    // Through the initial `undefined` (still resolving) and the resolved supported
+    // platform, the strict `=== null` guard keeps `window.close` untouched.
+    expect(close).not.toHaveBeenCalled();
+    expect($('[data-testid=sk-shell]')).toBeTruthy();
+  });
+
+  it('does not close on an unsupported host before onboarding (first-run shows on any tab)', async () => {
+    fake = makeChrome('https://example.com/', false); // onboarding NOT complete
+    setChrome(fake.chrome);
+    await mountPanel();
+    // The platform-independent first-run flow must remain reachable everywhere.
+    expect(close).not.toHaveBeenCalled();
   });
 });
