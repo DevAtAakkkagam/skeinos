@@ -758,10 +758,11 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                       ))}
                     </div>
                   )}
-        </div>
 
-        {unfiledConvs.length > 0 && (
-          <div class="sk-sidebar__section" data-testid="sk-unfiled">
+          {/* Unfiled lives inside the folders section so the sticky FOLDERS header
+              pins across the whole list (folders + unfiled), not just the folders. */}
+          {unfiledConvs.length > 0 && (
+            <div class="sk-sidebar__section" data-testid="sk-unfiled">
             <div class="sk-row" onClick={() => toggleExpanded(UNFILED)}>
               <button
                 class="sk-caret"
@@ -792,8 +793,9 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                 />
               </div>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       {hasArchive && (

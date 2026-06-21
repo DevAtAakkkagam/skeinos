@@ -87,7 +87,7 @@ export const COMPONENT_CSS = `
   border: 1px solid var(--sk-color-border);
   border-radius: var(--sk-radius);
   padding: var(--sk-space-2) var(--sk-space-3);
-  box-shadow: 0 6px 24px color-mix(in srgb, var(--sk-color-fg) 16%, transparent);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--sk-color-shadow) 28%, transparent);
 }
 .sk-snackbar__content { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sk-snackbar__content .sk-text { font-weight: 600; }

@@ -77,7 +77,7 @@ const SIDEBAR_FEATURE_CSS = `
 @media (prefers-reduced-motion: reduce) { .sk-row[data-jump-flash] { animation: none; } }
 /* Folder / Unfiled names are the tree's anchors: bold them so conversation titles
    (regular weight) read as the level below. The weight contrast carries hierarchy. */
-.sk-row__label { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.sk-row__label { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .sk-row__count { color: var(--sk-color-muted); font-variant-numeric: tabular-nums; }
 .sk-row__icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 1.2em; }
 .sk-row__icon svg { display: block; }
@@ -93,11 +93,21 @@ const SIDEBAR_FEATURE_CSS = `
 .sk-node__children { display: flex; flex-direction: column; gap: var(--sk-space-1); margin-left: 12px; }
 /* The FOLDERS overline gets a full-width hairline under it, anchoring the section
    instead of letting the label float over the rows. */
-.sk-sidebar__section-head { justify-content: space-between; border-radius: 0; padding-bottom: var(--sk-space-2); margin-bottom: 2px; }
+/* The section overline (FOLDERS / PROMPTS / PROFILES / ARCHIVE) sticks to the top of
+   its scroll region so the title — and its +/expand actions — stay reachable while a
+   long list scrolls under it. An opaque panel-bg fill plus a bg box-shadow over the
+   scroll container's top padding band keep scrolled rows from peeking above it. */
+.sk-sidebar__section-head { position: sticky; top: 0; z-index: 2; background: var(--sk-color-bg); box-shadow: 0 calc(-1 * var(--sk-space-2)) 0 var(--sk-color-bg); justify-content: space-between; border-radius: 0; padding-bottom: var(--sk-space-2); margin-bottom: 2px; animation: sk-section-head-shadow linear both; animation-timeline: scroll(nearest block); animation-range: 0 16px; }
+/* The drop shadow under a pinned overline fades in only once its list scrolls beneath
+   it (scroll-driven timeline), so a list resting at the top stays flat. The leading
+   shadow layer is the bg cover over the scroll container's top padding band. */
+@keyframes sk-section-head-shadow {
+  to { box-shadow: 0 calc(-1 * var(--sk-space-2)) 0 var(--sk-color-bg), 0 4px 6px -5px color-mix(in srgb, var(--sk-color-shadow) 26%, transparent); }
+}
 /* The heading underline divides it from its list — only meaningful when expanded.
    When collapsed it would stack against the footer's top border (double rule). */
 details[open] > .sk-sidebar__section-head { border-bottom: 1px solid var(--sk-color-border); }
-.sk-sidebar__section-head:hover { background: none; }
+.sk-sidebar__section-head:hover { background: var(--sk-color-bg); }
 /* Inside a head row the overline drops its own top margin so the caret, label, and
    trailing meta (+ / count) center on one line; section spacing comes from the
    sidebar/section gaps. The label grows to push the trailing meta to the far edge. */
@@ -107,7 +117,7 @@ details[open] > .sk-sidebar__section-head { border-bottom: 1px solid var(--sk-co
    title reads identically. */
 .sk-sidebar__section-summary { cursor: pointer; list-style: none; }
 .sk-sidebar__section-summary::-webkit-details-marker { display: none; }
-.sk-sidebar__section-summary:hover { background: none; }
+.sk-sidebar__section-summary:hover { background: var(--sk-color-bg); }
 .sk-sidebar__section-summary:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: -2px; }
 .sk-section-caret { pointer-events: none; order: 3; margin-left: var(--sk-space-2); }
 details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: rotate(90deg); }
@@ -211,7 +221,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-conv-row__main { flex: 1; display: flex; flex-direction: row; align-items: flex-start; gap: var(--sk-space-2); min-width: 0; text-align: left; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; }
 /* Two-line text column: title on top, a muted meta line (relative time) below. */
 .sk-conv-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.sk-conv-row__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-conv-row__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 .sk-conv-row__meta { display: flex; align-items: center; gap: var(--sk-space-1); min-width: 0; }
 .sk-conv-row__time { color: var(--sk-color-muted); font-size: var(--sk-text-sm); line-height: 1; white-space: nowrap; }
 /* Platform brand logo: the row's leading mark (always present), keyed by the
@@ -223,6 +233,9 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-conv-row__pin { flex: none; display: inline-flex; align-items: center; justify-content: center; color: var(--sk-color-accent); }
 .sk-conv-row__pin svg { display: block; }
 .sk-conv-list__cap { color: var(--sk-color-muted); font-size: var(--sk-text-sm); margin: var(--sk-space-1) 0 0; }
+/* Empty-folder hint sits where the conversation rows would: same leading inset as
+   .sk-conv-row so it lines up with the parent folder's nested content, not flush-left. */
+.sk-conv-list__empty { padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-1) calc(var(--sk-space-2) + var(--sk-space-3)); text-align: left; }
 
 /* --- shell frame (header · search · tabs · filters · body · footer) --------- */
 .sk-shell { position: relative; display: flex; flex-direction: column; height: 100%; min-width: 260px; background: var(--sk-color-bg); color: var(--sk-color-fg); }
@@ -239,10 +252,15 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-search__icon svg { display: block; }
 .sk-search__placeholder { flex: 1; text-align: left; }
 .sk-search__kbd { font-family: var(--sk-font-system); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); font-size: var(--sk-text-xs); }
-.sk-tabs { display: flex; gap: var(--sk-space-1); padding: var(--sk-space-2) var(--sk-space-3) 0; }
-.sk-tab { flex: 1; text-align: center; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--sk-color-muted); font: inherit; padding: var(--sk-space-1) var(--sk-space-2); cursor: pointer; }
-.sk-tab:not([disabled]):hover { color: var(--sk-color-fg); }
+/* Underline tabs (DESIGN §5): equal-width text tabs sharing one hairline baseline; the
+   active tab fills that baseline with an accent rule and takes Ink text at 700. Flat —
+   no inset track, no raised thumb, no shadow (DESIGN §4 Flat-By-Default). */
+.sk-tabs { display: flex; gap: var(--sk-space-3); margin: var(--sk-space-2) var(--sk-space-3) 0; border-bottom: 1px solid var(--sk-color-border); }
+.sk-tab { flex: 1; text-align: center; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--sk-color-muted); font: inherit; font-size: var(--sk-text-title); font-weight: 500; padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-2); cursor: pointer; transition: color 120ms ease, border-color 120ms ease; }
+.sk-tab:not([disabled]):not(.sk-tab--active):hover { color: var(--sk-color-fg); }
 .sk-tab--active { color: var(--sk-color-fg); font-weight: 700; border-bottom-color: var(--sk-color-accent); }
+.sk-tab:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: -2px; border-radius: var(--sk-radius); }
+@media (prefers-reduced-motion: reduce) { .sk-tab { transition: none; } }
 /* One unified filter row: platform chips and the inert "+ Tag" seam share a single
    wrapping chip flow. No leading captions — a lone "All" reset chip needs none. */
 .sk-filters { padding: var(--sk-space-3) var(--sk-space-3) 0; }

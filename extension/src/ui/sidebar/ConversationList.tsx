@@ -233,7 +233,7 @@ export function ConversationList({
       {rows.length > 0 ? (
         <ul class="sk-conv-list__items">{rows.map(renderRow)}</ul>
       ) : (
-        <p class="sk-empty__body" data-testid="sk-conv-empty">
+        <p class="sk-empty__body sk-conv-list__empty" data-testid="sk-conv-empty">
           {context.kind === 'unfiled'
             ? STR.emptyUnfiled
             : context.kind === 'archived'

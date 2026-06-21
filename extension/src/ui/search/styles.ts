@@ -22,7 +22,7 @@ export const SEARCH_CSS = `
   background: var(--sk-color-bg);
   border: 1px solid var(--sk-color-border);
   border-radius: var(--sk-radius);
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--sk-color-fg) 18%, transparent);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--sk-color-shadow) 30%, transparent);
   overflow: hidden;
 }
 .sk-search-panel__head {

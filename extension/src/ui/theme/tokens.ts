@@ -44,6 +44,11 @@ export const THEME_CSS = `
   --sk-color-success: #84c9b0;
   --sk-color-danger: #c74b47;
   --sk-color-border: #e0e1e7;
+  /* Elevation shadow colour. A cast shadow is occlusion — always darker than its
+     surface — so it must NOT derive from --sk-color-fg, which inverts to near-white
+     in dark mode and turns every "shadow" into a glow halo. This stays a deep
+     indigo-tinted near-black in both themes (oklch(22% .018 277) light). */
+  --sk-color-shadow: #181a23;
   --sk-space-1: 4px;
   --sk-space-2: 8px;
   --sk-space-3: 12px;
@@ -74,6 +79,9 @@ export const THEME_CSS = `
   --sk-color-success: #84c9b0;
   --sk-color-danger: #e66e68;
   --sk-color-border: #3f424d;
+  /* Stays near-black (deeper than the dark bg) so the menu/overlay/snackbar read as
+     real cast shadows, not a light halo. oklch(11% .015 277). */
+  --sk-color-shadow: #07080d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -85,6 +93,7 @@ export const THEME_CSS = `
     --sk-color-success: #84c9b0;
     --sk-color-danger: #e66e68;
     --sk-color-border: #3f424d;
+    --sk-color-shadow: #07080d;
   }
 }
 `;

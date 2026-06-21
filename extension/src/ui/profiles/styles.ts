@@ -13,12 +13,12 @@ export const PROFILES_CSS = `
 /* A profile row: a full-width clickable card (opens the editor modal). */
 .sk-profiles__row {
   display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; cursor: pointer;
-  border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius);
-  background: var(--sk-color-bg); padding: var(--sk-space-2) var(--sk-space-3);
+  border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); font: inherit; color: var(--sk-color-fg);
+  background: var(--sk-color-bg); padding: var(--sk-space-2) var(--sk-space-3) var(--sk-space-3);
 }
 .sk-profiles__row:hover, .sk-profiles__row:focus-visible { border-color: var(--sk-color-accent); outline: none; }
 .sk-profiles__head { display: flex; align-items: center; gap: var(--sk-space-2); }
-.sk-profiles__name { flex: 1 1 auto; min-width: 0; font-size: var(--sk-text-title); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-profiles__name { flex: 1 1 auto; min-width: 0; font-size: var(--sk-text-base); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-profiles__desc { font-size: var(--sk-text-sm); color: var(--sk-color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-profiles__logos { flex: none; display: inline-flex; align-items: center; gap: var(--sk-space-1); margin-left: auto; }
 .sk-profiles__logo { display: inline-flex; align-items: center; }

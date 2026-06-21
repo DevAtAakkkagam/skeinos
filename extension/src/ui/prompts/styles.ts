@@ -21,18 +21,23 @@ export const PROMPTS_CSS = `
    as tags (the conventional notation) without forcing a separate row or label. */
 .sk-chip--tag::before { content: '#'; margin-right: 1px; opacity: 0.55; }
 
-/* A category chip pairs its select button with a compact overflow menu (rename /
-   delete). The menu trigger reuses the icon-button look, not the filled accent btn. */
-.sk-prompt-cat { display: inline-flex; align-items: center; gap: 2px; }
-.sk-prompt-cat__menu .sk-menu-root { display: inline-flex; }
-.sk-prompt-cat__menu .sk-btn {
-  background: none; color: var(--sk-color-muted); border: 0; padding: 2px;
-  border-radius: var(--sk-radius); cursor: pointer; display: inline-flex; align-items: center;
-}
-.sk-prompt-cat__menu .sk-btn:hover, .sk-prompt-cat__menu .sk-btn:focus-visible {
-  color: var(--sk-color-fg); background: color-mix(in srgb, var(--sk-color-accent) 16%, transparent); outline: none;
-}
-.sk-prompt-cat__menu .sk-btn svg { display: block; }
+/* A category chip is ONE pill that pairs its select button with a compact rename /
+   delete overflow menu. The pill surface lives on the wrapper so the label and the ⋯
+   trigger read as a single unit: the inner select button is transparent, the wrapper
+   carries the resting/active tint (via :has), and — mirroring the conversation-row
+   menu (.sk-row-menu) — the ⋯ stays hidden until the pill is hovered, focused, or its
+   category is active. Opacity-only reveal so the slot is reserved and nothing reflows. */
+.sk-prompt-cat { display: inline-flex; align-items: center; border-radius: 999px; background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); }
+.sk-prompt-cat:hover { background: color-mix(in srgb, var(--sk-color-fg) 12%, transparent); }
+.sk-prompt-cat:has(.sk-chip--active) { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); }
+.sk-prompt-cat .sk-chip { background: none; border-radius: 999px 0 0 999px; padding-right: var(--sk-space-1); }
+.sk-prompt-cat .sk-chip:focus-visible { outline-offset: -1px; }
+.sk-prompt-cat__menu, .sk-prompt-cat__menu .sk-menu-root { display: inline-flex; }
+.sk-prompt-cat__menu .sk-icon-btn { padding: 2px; margin-right: 4px; border-radius: 999px; opacity: 0; transition: opacity 0.12s ease; }
+.sk-prompt-cat:hover .sk-prompt-cat__menu .sk-icon-btn,
+.sk-prompt-cat:focus-within .sk-prompt-cat__menu .sk-icon-btn,
+.sk-prompt-cat:has(.sk-chip--active) .sk-prompt-cat__menu .sk-icon-btn { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .sk-prompt-cat__menu .sk-icon-btn { transition: none; } }
 
 /* --- prompt card ----------------------------------------------------------- */
 .sk-prompt-card {
@@ -41,7 +46,7 @@ export const PROMPTS_CSS = `
   background: var(--sk-color-bg); padding: var(--sk-space-2) var(--sk-space-3);
 }
 .sk-prompt-card__head { display: flex; align-items: center; gap: var(--sk-space-2); }
-.sk-prompt-card__title { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--sk-text-title); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-prompt-card__title { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--sk-text-base); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The inert slash alias (no insertion until C13): a quiet monospace badge. */
 .sk-prompt-card__slug {
   flex: none; font-family: var(--sk-font-label, monospace); font-size: var(--sk-text-xs); color: var(--sk-color-accent);

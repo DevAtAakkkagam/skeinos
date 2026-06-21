@@ -4,7 +4,7 @@
 // Lexical vs plain), so a new platform is still just a config + fixture. The generic
 // adapter delegates here so its methods stay free of editor quirks.
 
-import { requestComposerClear } from './composer-bridge';
+import { requestComposerClear, requestComposerInsert } from './composer-bridge';
 
 /** A form field has a settable native `value`; everything else (ProseMirror, Quill,
  *  Lexical contenteditables) is a rich editor we must drive through the selection. */
@@ -102,6 +102,12 @@ export function writeComposer(
   // value-setter path (`react-set`).
   const useExecCommand = opts.preferExecCommand || !isFormField(el);
   if (useExecCommand) {
+    // Quill (Gemini) reverts an out-of-band `execCommand` edit on its next update
+    // cycle, so a programmatic insert visibly lands but is restored as a draft the
+    // instant the user sends. Drive it through its own instance via the MAIN-world
+    // bridge instead (handles both insert and clear); falls through to the DOM path
+    // below when no page bridge is present (tests) or the editor isn't Quill.
+    if (el.classList?.contains('ql-editor') && requestComposerInsert(el, text, replace)) return true;
     // Clearing a model-backed editor (Perplexity = Lexical) can't go through the DOM —
     // it ignores execCommand delete and reverts a raw write — and its instance lives
     // in the page world the isolated content script can't reach, so we ask the

@@ -23,7 +23,7 @@ const INPUT_BAR_FEATURE_CSS = `
    own composer controls. The glyph carries the fixed brand accent; the wordmark uses
    the muted ramp so it reads as a label, not a button. */
 .sk-ib-brand { display: inline-flex; align-items: center; gap: var(--sk-space-1); color: var(--sk-color-accent); padding-right: var(--sk-space-1); margin-right: var(--sk-space-1); border-right: 1px solid var(--sk-color-border); }
-.sk-ib-brand__name { font-size: var(--sk-text-sm); font-weight: 600; letter-spacing: 0.01em; color: var(--sk-color-fg); }
+.sk-ib-brand__name { font-size: var(--sk-text-title); font-weight: 600; letter-spacing: 0.01em; color: var(--sk-color-fg); }
 
 /* When the brand mark opens the side panel it is a real <button>: strip the native
    chrome, keep the divider, and add the same quiet affordances as the bar's other
@@ -47,7 +47,7 @@ const INPUT_BAR_FEATURE_CSS = `
    to its text, not the old fixed slash-glyph square. When the clear button precedes
    it, that button owns the auto margin, so the trigger drops its own and sits snug
    beside it on the bar's gap. */
-.sk-ib-trigger { margin-left: auto; display: inline-flex; align-items: center; gap: var(--sk-space-1); height: 28px; padding: 0 var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-fg); font: inherit; font-size: var(--sk-text-sm); cursor: pointer; }
+.sk-ib-trigger { margin-left: auto; display: inline-flex; align-items: center; gap: var(--sk-space-1); height: 28px; padding: 0 var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-fg); font: inherit; font-size: var(--sk-text-base); cursor: pointer; }
 .sk-ib-clear + .sk-ib-trigger { margin-left: 0; }
 .sk-ib-trigger:hover { background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); }
 .sk-ib-trigger:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
@@ -60,7 +60,7 @@ const INPUT_BAR_FEATURE_CSS = `
 /* The functional Profile chip (profile-activation): same footprint as the trigger so
    the bar keeps its rhythm. Shows the active profile's name and opens the menu. The
    --inactive variant marks an active profile that does not apply to this site. */
-.sk-ib-chip { display: inline-flex; align-items: center; gap: var(--sk-space-1); max-width: 160px; height: 28px; padding: 0 var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-fg); font: inherit; font-size: var(--sk-text-sm); cursor: pointer; }
+.sk-ib-chip { display: inline-flex; align-items: center; gap: var(--sk-space-1); max-width: 160px; height: 28px; padding: 0 var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-fg); font: inherit; font-size: var(--sk-text-base); cursor: pointer; }
 .sk-ib-chip:hover { background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); }
 .sk-ib-chip:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
 .sk-ib-chip[aria-expanded="true"] { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); }
@@ -69,7 +69,7 @@ const INPUT_BAR_FEATURE_CSS = `
 
 /* The Profile menu: a floating panel positioned by useFloating (opens upward), styled
    like the slash popover so the two read as one family. */
-.sk-ib-menu { position: absolute; z-index: 2147483646; width: 260px; max-width: 90vw; display: flex; flex-direction: column; background: var(--sk-color-bg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); box-shadow: 0 8px 28px color-mix(in srgb, var(--sk-color-fg) 22%, transparent); overflow: hidden; padding: var(--sk-space-1); }
+.sk-ib-menu { position: absolute; z-index: 2147483646; width: 260px; max-width: 90vw; display: flex; flex-direction: column; background: var(--sk-color-bg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); box-shadow: 0 8px 28px color-mix(in srgb, var(--sk-color-shadow) 34%, transparent); overflow: hidden; padding: var(--sk-space-1); }
 .sk-ib-menu__status { margin: 0; padding: var(--sk-space-3) var(--sk-space-2); color: var(--sk-color-muted); font-size: var(--sk-text-sm); text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--sk-space-2); }
 .sk-ib-menu__retry { padding: var(--sk-space-1) var(--sk-space-2); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg); color: var(--sk-color-fg); font: inherit; font-size: var(--sk-text-sm); cursor: pointer; }
 .sk-ib-menu__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -83,7 +83,7 @@ const INPUT_BAR_FEATURE_CSS = `
 .sk-ib-menu__note { flex: none; font-size: var(--sk-text-xs); color: var(--sk-color-muted); }
 
 /* The slash popover: a floating panel positioned by useFloating (opens upward). */
-.sk-ib-popover { position: absolute; z-index: 2147483646; width: 340px; max-width: 90vw; display: flex; flex-direction: column; background: var(--sk-color-bg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); box-shadow: 0 8px 28px color-mix(in srgb, var(--sk-color-fg) 22%, transparent); overflow: hidden; }
+.sk-ib-popover { position: absolute; z-index: 2147483646; width: 340px; max-width: 90vw; display: flex; flex-direction: column; background: var(--sk-color-bg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); box-shadow: 0 8px 28px color-mix(in srgb, var(--sk-color-shadow) 34%, transparent); overflow: hidden; }
 .sk-ib-popover__head { padding: var(--sk-space-2); border-bottom: 1px solid var(--sk-color-border); }
 .sk-ib-popover__input { width: 100%; box-sizing: border-box; background: var(--sk-color-bg); color: var(--sk-color-fg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: var(--sk-space-1) var(--sk-space-2); font: inherit; }
 .sk-ib-popover__input:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 1px; }
