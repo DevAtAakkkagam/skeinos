@@ -118,5 +118,32 @@ export function runAdapterContract(fixture: ContractFixture): void {
       await new Promise((r) => setTimeout(r, 20));
       expect(seen).not.toHaveBeenCalled();
     });
+
+    it('observe re-emits composer-ready when the composer element is replaced', async () => {
+      const seen = vi.fn();
+      const dispose = adapter.observe(seen);
+
+      // Drain the INITIAL composer-ready (queued in a microtask on observe) so the
+      // assertion below proves the RE-EMIT specifically, not the first signal.
+      await vi.waitFor(() =>
+        expect(seen).toHaveBeenCalledWith(expect.objectContaining({ type: 'composer-ready' })),
+      );
+      seen.mockClear();
+
+      // Swap the composer for a fresh node of the same kind so `getInputElement()`
+      // returns a NEW identity — the SPA-navigation case the re-anchor handles.
+      const composer = root.querySelector<HTMLElement>(config.selectors.composer)!;
+      const replacement = document.createElement(composer.tagName.toLowerCase());
+      for (const attr of Array.from(composer.attributes)) {
+        replacement.setAttribute(attr.name, attr.value);
+      }
+      composer.replaceWith(replacement);
+
+      await vi.waitFor(() =>
+        expect(seen).toHaveBeenCalledWith(expect.objectContaining({ type: 'composer-ready' })),
+      );
+
+      dispose();
+    });
   });
 }

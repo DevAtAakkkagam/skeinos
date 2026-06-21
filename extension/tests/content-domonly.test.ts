@@ -17,6 +17,7 @@ const m = vi.hoisted(() => ({
     url: '/c/n1',
   })),
   observe: vi.fn((_cb: (e: unknown) => void) => () => {}),
+  insertText: vi.fn((_t: string) => true),
   selfCheck: vi.fn((): { ok: boolean; missing: string[] } => ({ ok: true, missing: [] })),
   mountBanner: vi.fn(),
   reportHealth: vi.fn(async () => {}),
@@ -34,6 +35,10 @@ vi.mock('../src/adapters', () => ({
     listConversations: m.listConversations,
     detectConversation: m.detectConversation,
     observe: m.observe,
+    // The input bar mounts at `mountPoints().inputBar`; returning null keeps these
+    // ingest/nudge tests focused (the bar no-ops until an anchor exists).
+    mountPoints: () => null,
+    insertText: m.insertText,
     configVersion: '1.0.0',
   }),
   reportHealth: m.reportHealth,

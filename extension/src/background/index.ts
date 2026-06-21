@@ -8,6 +8,7 @@ import { installMessageHub } from '../core/messaging';
 import { registerAdapterHandlers, registerCanary, registerResilienceHandlers } from '../adapters';
 import { registerFolderHandlers } from '../core/folders';
 import { registerPromptHandlers } from '../core/prompts';
+import { registerProfileHandlers } from '../core/profiles';
 import { registerSearchHandlers } from '../core/conversation-index';
 import { registerSidePanel } from './sidePanel';
 import { registerInjectOpenTabs } from './injectOpenTabs';
@@ -42,6 +43,8 @@ registerResilienceHandlers();
 registerFolderHandlers();
 // Prompt library query/mutate (prompts.query, prompts.mutate).
 registerPromptHandlers();
+// Instruction-profile library query/mutate (profiles.query, profiles.mutate).
+registerProfileHandlers();
 // Search query + indexing (search.run, conversation.index/indexBulk).
 registerSearchHandlers();
 

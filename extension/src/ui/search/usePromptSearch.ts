@@ -20,6 +20,33 @@ export interface PromptSearchView {
   status: SearchStatus;
 }
 
+type RecentsQueryFn = (
+  selector: { kind: 'prompt.recents'; limit: number },
+) => Promise<Response<PromptSnapshot>>;
+
+/** The recently-used prompts for the popover's empty state (prompt-recents D-4): one
+ *  read on mount via `prompt.recents`, returning up to `limit` rows. Holds no
+ *  authoritative state — a transient popover re-reads on each open, so it does not
+ *  subscribe to `state.changed` (a use recorded in another tab reconciles on reopen).
+ *  Empty until the read resolves and whenever no prompt has been used yet. */
+export function useRecentPrompts(
+  send: RecentsQueryFn = queryPromptLibraryRemote,
+  limit = 5,
+): PromptSearchResult[] {
+  const [results, setResults] = useState<PromptSearchResult[]>([]);
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const res = await send({ kind: 'prompt.recents', limit });
+      if (live && res.ok && res.data.kind === 'prompt.recents') setResults(res.data.results);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [send, limit]);
+  return results;
+}
+
 /** Debounce window for keystrokes before a query is issued (same as `useSearch`). */
 const DEBOUNCE_MS = 160;
 

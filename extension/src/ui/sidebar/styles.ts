@@ -9,6 +9,7 @@
 import { PRIMITIVES_CSS } from '../primitives/styles';
 import { SEARCH_CSS } from '../search/styles';
 import { PROMPTS_CSS } from '../prompts/styles';
+import { PROFILES_CSS } from '../profiles/styles';
 
 const SIDEBAR_FEATURE_CSS = `
 /* The sidebar fills the shell body and splits into a scrolling region (pinned ·
@@ -276,4 +277,4 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-search[disabled], .sk-tab[disabled], .sk-chip[disabled] { opacity: 0.55; cursor: not-allowed; }
 `;
 
-export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}\n${PROMPTS_CSS}`;
+export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}\n${PROMPTS_CSS}\n${PROFILES_CSS}`;

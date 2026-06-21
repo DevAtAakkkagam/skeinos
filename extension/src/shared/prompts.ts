@@ -27,7 +27,8 @@ export interface PromptInstallRequest {
  *  kind — a direct in-worker scan of the small library, never a postings entry. */
 export type PromptSelector =
   | { kind: 'prompt.library' }
-  | { kind: 'prompt.search'; terms: string[] };
+  | { kind: 'prompt.search'; terms: string[] }
+  | { kind: 'prompt.recents'; limit: number };
 
 /** One ranked prompt-search hit (design D-B): the fields a result row renders,
  *  reusing the search overlay's {@link SnippetSegment} so prompt rows highlight
@@ -53,6 +54,10 @@ export type PromptSnapshot =
     }
   | {
       kind: 'prompt.search';
+      results: PromptSearchResult[];
+    }
+  | {
+      kind: 'prompt.recents';
       results: PromptSearchResult[];
     };
 
@@ -83,6 +88,7 @@ export type PromptMutationOp =
       promptFolderId?: string | null;
     }
   | { op: 'prompt.delete'; id: string }
+  | { op: 'prompt.recordUse'; id: string }
   | { op: 'promptFolder.create'; id: string; name: string; order: number; parentId: null }
   | { op: 'promptFolder.rename'; id: string; name: string }
   | { op: 'promptFolder.delete'; id: string };

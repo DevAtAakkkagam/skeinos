@@ -147,6 +147,12 @@ export function validateAdapterConfig(raw: unknown): AdapterConfig | ValidationE
     ) {
       errors.push({ path: 'behaviors.listHiddenWhenCollapsed', message: 'must be a boolean' });
     }
+    if (
+      raw.behaviors.composerStealsFocus !== undefined &&
+      typeof raw.behaviors.composerStealsFocus !== 'boolean'
+    ) {
+      errors.push({ path: 'behaviors.composerStealsFocus', message: 'must be a boolean' });
+    }
   }
 
   return errors.length > 0 ? errors : (raw as unknown as AdapterConfig);

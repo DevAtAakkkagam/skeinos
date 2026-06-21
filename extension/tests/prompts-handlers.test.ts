@@ -217,6 +217,100 @@ describe('prompt.library read (4.5)', () => {
   });
 });
 
+async function recents(
+  store: WorkspaceStore,
+  limit: number,
+): Promise<Extract<PromptSnapshot, { kind: 'prompt.recents' }>> {
+  const snap = await queryPromptLibrary(store, { kind: 'prompt.recents', limit });
+  if (snap.kind !== 'prompt.recents') throw new Error('expected prompt.recents snapshot');
+  return snap;
+}
+
+describe('prompt.recordUse stamps usage (prompt-recents 6.1)', () => {
+  let store: WorkspaceStore;
+  beforeEach(async () => {
+    store = await freshStore();
+    await mutatePromptLibrary(store, createOp({ id: 'p1', body: 'no vars' }));
+  });
+
+  it('sets lastUsedAt, increments usageCount, leaves other fields unchanged', async () => {
+    const before = await store.prompts.get('p1');
+    expect(before!.usageCount).toBe(0);
+    expect(before!.lastUsedAt).toBeUndefined();
+
+    const r = await mutatePromptLibrary(store, { op: 'prompt.recordUse', id: 'p1' });
+    expect(r.stores).toEqual(['prompts']);
+
+    const after = await store.prompts.get('p1');
+    expect(after!.usageCount).toBe(1);
+    expect(typeof after!.lastUsedAt).toBe('number');
+    // Untouched fields.
+    expect(after!.title).toBe('A prompt');
+    expect(after!.body).toBe('no vars');
+
+    // A second use increments again.
+    await mutatePromptLibrary(store, { op: 'prompt.recordUse', id: 'p1' });
+    expect((await store.prompts.get('p1'))!.usageCount).toBe(2);
+  });
+
+  it('no-ops (touches no store) for a missing id', async () => {
+    const r = await mutatePromptLibrary(store, { op: 'prompt.recordUse', id: 'nope' });
+    expect(r.stores).toEqual([]);
+  });
+
+  it('no-ops for a tombstoned id', async () => {
+    await mutatePromptLibrary(store, { op: 'prompt.delete', id: 'p1' });
+    const r = await mutatePromptLibrary(store, { op: 'prompt.recordUse', id: 'p1' });
+    expect(r.stores).toEqual([]);
+  });
+});
+
+describe('prompt.recents read (prompt-recents 6.1)', () => {
+  let store: WorkspaceStore;
+  beforeEach(async () => {
+    store = await freshStore();
+  });
+
+  it('is empty before any use', async () => {
+    await mutatePromptLibrary(store, createOp({ id: 'p1' }));
+    expect((await recents(store, 5)).results).toEqual([]);
+  });
+
+  it('returns only used prompts, most-recent first, capped at limit', async () => {
+    for (const id of ['p1', 'p2', 'p3']) {
+      await mutatePromptLibrary(store, createOp({ id, body: `body ${id}` }));
+    }
+    // Stamp distinct lastUsedAt directly so ordering is deterministic (no clock race).
+    await store.prompts.put({ ...(await store.prompts.get('p1'))!, lastUsedAt: 100 });
+    await store.prompts.put({ ...(await store.prompts.get('p3'))!, lastUsedAt: 300 });
+    // p2 is never used → excluded.
+
+    const all = await recents(store, 5);
+    expect(all.results.map((r) => r.id)).toEqual(['p3', 'p1']);
+
+    const capped = await recents(store, 1);
+    expect(capped.results.map((r) => r.id)).toEqual(['p3']);
+  });
+
+  it('excludes tombstoned prompts even if they were used', async () => {
+    await mutatePromptLibrary(store, createOp({ id: 'p1' }));
+    await store.prompts.put({ ...(await store.prompts.get('p1'))!, lastUsedAt: 100 });
+    await mutatePromptLibrary(store, { op: 'prompt.delete', id: 'p1' });
+    expect((await recents(store, 5)).results).toEqual([]);
+  });
+
+  it('shapes each row as a result with a snippet and slug when present', async () => {
+    await mutatePromptLibrary(store, createOp({ id: 'p1', body: 'Draft a quarterly report', slug: '/qr' }));
+    await store.prompts.put({ ...(await store.prompts.get('p1'))!, lastUsedAt: 100 });
+    const [row] = (await recents(store, 5)).results;
+    expect(row.id).toBe('p1');
+    expect(row.slug).toBe('/qr');
+    // A leading body excerpt, no highlight.
+    expect(row.snippet.length).toBeGreaterThan(0);
+    expect(row.snippet.every((s) => s.match === false)).toBe(true);
+  });
+});
+
 describe('broadcast semantics (4.6)', () => {
   const originalChrome = (globalThis as { chrome?: unknown }).chrome;
   afterEach(() => {

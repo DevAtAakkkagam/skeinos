@@ -16,14 +16,17 @@ import { PromptsPanel } from '../prompts/PromptsPanel';
 import { PromptCategoryChips } from '../prompts/PromptCategoryChips';
 import { usePromptsController } from '../prompts/usePromptsController';
 import type { PromptLibraryView } from '../prompts/usePromptLibrary';
+import { ProfilesPanel } from '../profiles/ProfilesPanel';
+import { useProfilesController } from '../profiles/useProfilesController';
+import type { ProfileLibraryView } from '../profiles/useProfileLibrary';
 import { Sidebar } from './Sidebar';
 import { IndexingIndicator } from './IndexingIndicator';
 import { useWorkspace, type WorkspaceView } from './useWorkspace';
 import type { FolderTreeSnapshot } from '../../shared/workspace';
 
-/** The interactive shell tabs (Profiles stays a disabled stub until its feature
- *  ships, so it is not part of the switchable union). */
-type ActiveTab = 'folders' | 'prompts';
+/** The interactive shell tabs. All three (Folders / Prompts / Profiles) switch the
+ *  body region; the Profiles tab became interactive in the profiles-library slice. */
+type ActiveTab = 'folders' | 'prompts' | 'profiles';
 
 /** Display labels for the platform view-filter chips (i18n-ready; no inline
  *  literals in markup). Keyed by `PlatformId`. */
@@ -77,6 +80,8 @@ export interface SidebarShellProps {
   view?: WorkspaceView;
   /** Injectable prompt-library view for tests; forwarded to the prompts controller. */
   promptView?: PromptLibraryView;
+  /** Injectable profile-library view for tests; forwarded to the profiles controller. */
+  profileView?: ProfileLibraryView;
   /** Receives the imperative `openPrompt(id)` seam (D-F): selects the Prompts tab
    *  and opens that prompt's editor. Slice 4's search → prompt navigation binds it. */
   bindOpenPrompt?: (openPrompt: (id: string) => void) => void;
@@ -105,7 +110,7 @@ function flattenFolders(tree: FolderTreeSnapshot): Folder[] {
   return out;
 }
 
-export function SidebarShell({ platform, view, promptView, bindOpenPrompt }: SidebarShellProps) {
+export function SidebarShell({ platform, view, promptView, profileView, bindOpenPrompt }: SidebarShellProps) {
   // One workspace view feeds the Folders tab's tree (folders + inline
   // conversations + the Unfiled node), so nothing opens competing subscriptions or
   // diverges. Tests inject `view`; production uses the live worker-backed view.
@@ -117,8 +122,12 @@ export function SidebarShell({ platform, view, promptView, bindOpenPrompt }: Sid
   // mutate this single controller, so they can never diverge. Tests inject `promptView`.
   const prompts = usePromptsController(promptView);
 
-  // The active section tab (D-A). The shell swaps the body region between the
-  // folder tree and the prompt library; Profiles stays a disabled stub.
+  // The profile library is likewise held ONCE here (the profiles analog): the Profiles
+  // tab body reads and mutates this single controller. Tests inject `profileView`.
+  const profiles = useProfilesController(profileView);
+
+  // The active section tab (D-A). The shell swaps the body region between the folder
+  // tree, the prompt library, and the Profiles view (all three interactive).
   const [activeTab, setActiveTab] = useState<ActiveTab>('folders');
 
   // Expose the `openPrompt(id)` seam to a parent (slice 4's search navigation): jump
@@ -207,7 +216,14 @@ export function SidebarShell({ platform, view, promptView, bindOpenPrompt }: Sid
         >
           {STR.tabPrompts}
         </button>
-        <button class="sk-tab" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled data-testid="sk-tab-profiles" title={STR.comingSoon}>
+        <button
+          class={`sk-tab${activeTab === 'profiles' ? ' sk-tab--active' : ''}`}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'profiles'}
+          data-testid="sk-tab-profiles"
+          onClick={() => setActiveTab('profiles')}
+        >
           {STR.tabProfiles}
         </button>
       </nav>
@@ -276,8 +292,10 @@ export function SidebarShell({ platform, view, promptView, bindOpenPrompt }: Sid
       <div class="sk-shell__body" role="tabpanel">
         {activeTab === 'folders' ? (
           <Sidebar platform={platform} view={ws} />
-        ) : (
+        ) : activeTab === 'prompts' ? (
           <PromptsPanel controller={prompts} />
+        ) : (
+          <ProfilesPanel controller={profiles} />
         )}
       </div>
 

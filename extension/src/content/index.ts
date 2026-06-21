@@ -23,6 +23,8 @@ import { indexConversationFromMessagesRemote } from '../core/conversation-index/
 // worker-only hub/registry — same reason as the conversation-index client above.
 import { isContextValid } from '../core/messaging/chrome';
 import { conversationId } from '../shared/workspace';
+import { mountInputBar } from '../ui/input-bar/mountInputBar';
+import type { MountHandle } from '../ui/mount';
 
 // SPA hosts mutate the chat list in bursts (lazy render, infinite scroll, nav).
 // Collapse those into a single ingest so we don't spam the worker per-mutation.
@@ -95,7 +97,33 @@ export async function runContent(): Promise<void> {
   // Disposers, populated once the observers below are wired. Held on a `const`
   // holder so `teardown` (defined before them, but referenced from inside the
   // observer callback) can read them without a forward `let` reference.
-  const handles: { disposeObserver?: () => void; onVisibility?: () => void } = {};
+  const handles: {
+    disposeObserver?: () => void;
+    onVisibility?: () => void;
+    inputBar?: MountHandle;
+  } = {};
+
+  // The input action bar (input-bar, design D-2): a shadow-DOM overlay docked at the
+  // adapter's `inputBar` anchor. Insertion is append-only and never auto-submits
+  // (design D-5) — `insertText` defaults to append, and we never call `submit()`.
+  // `(re)mountInputBar` is idempotent: it disposes any prior mount first, so it can
+  // run on the initial ready branch AND on every `composer-ready` re-anchor signal,
+  // and tolerates a transiently-null `mountPoints()` (no anchor yet) by no-opping
+  // until the next signal — mirroring the ingest loop's tolerance of an unhydrated DOM.
+  const remountInputBar = (): void => {
+    if (!isContextValid()) return void teardown();
+    handles.inputBar?.dispose();
+    handles.inputBar = undefined;
+    const points = adapter.mountPoints();
+    if (!points) return;
+    handles.inputBar = mountInputBar(points.inputBar, {
+      platform: platformId,
+      onInsert: (text) => adapter.insertText(text),
+      // Opt into focus containment only for hosts that force-focus their own composer
+      // (Perplexity) — the guard is invasive, so it's config-gated, not universal.
+      containFocus: config.behaviors?.composerStealsFocus === true,
+    });
+  };
 
   // Chrome leaves an already-injected content script (and its observers) running
   // after the extension is uninstalled/reloaded, but invalidates the context, so
@@ -109,6 +137,9 @@ export async function runContent(): Promise<void> {
     ingestTimer = undefined;
     handles.disposeObserver?.();
     if (handles.onVisibility) doc?.removeEventListener('visibilitychange', handles.onVisibility);
+    // Dispose the bar (and any open popover/modal it owns) on context invalidation.
+    handles.inputBar?.dispose();
+    handles.inputBar = undefined;
   };
 
   const ingestList = (): void => {
@@ -206,6 +237,10 @@ export async function runContent(): Promise<void> {
     void indexActive(ref);
   };
   onActive(adapter.detectConversation());
+  // Dock the input bar now that the adapter is ready (design D-2). If the composer
+  // anchor is not hydrated yet, this no-ops; the `composer-ready` signal below mounts
+  // it once the composer arrives.
+  remountInputBar();
   handles.disposeObserver = adapter.observe((e) => {
     if (!isContextValid()) return void teardown();
     if (e.type === 'conversation-changed') onActive(e.ref);
@@ -213,6 +248,10 @@ export async function runContent(): Promise<void> {
     // scroll): re-ingest so the unfiled section and folder counts catch up
     // without a page reload. Debounced to collapse mutation bursts.
     else if (e.type === 'list-changed') scheduleIngest();
+    // The composer first appeared, or an SPA navigation replaced it (adapter
+    // re-emits on element-identity change, design D-3): (re-)anchor the bar into
+    // the fresh `inputBar` mount point so it never orphans. Idempotent.
+    else if (e.type === 'composer-ready') remountInputBar();
   });
 
   // Two tabs of one platform share a single per-platform "active" record, so when

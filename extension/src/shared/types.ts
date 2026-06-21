@@ -161,6 +161,19 @@ export interface InstructionProfile extends SyncMeta {
     verbosity: 'brief' | 'balanced' | 'thorough';
     format: 'markdown' | 'plain';
   };
+  /**
+   * The professional domain this profile was seeded for ({@link DomainId}). Set once
+   * when a catalog seed is installed; absent on hand-created profiles. Mirrors
+   * `Prompt.domain`.
+   */
+  domain?: DomainId;
+  /**
+   * Catalog provenance: the originating seed's stable id (e.g.
+   * `software-engineering/senior-staff-engineer`). Lets the installer dedupe by
+   * presence so re-installing a domain never duplicates. Absent on hand-created
+   * profiles. Mirrors `Prompt.seedId`.
+   */
+  seedId?: string;
 }
 
 export interface Tag extends SyncMeta {

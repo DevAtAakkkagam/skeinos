@@ -4,10 +4,11 @@
   "entries": [
     {
       "name": "content-script",
+      "$reason": "Bumped 65->90 for the input-action-bar change: the bar is a content-script shadow-DOM overlay (design D-2), so the content bundle now legitimately carries Preact + the floating/dialog primitives (useFloating, Zag dialog) it mounts. WXT inlines content-script deps, so lazy-loading would not reliably trim this entry.",
       "files": [
         "content-scripts/skeinos.js"
       ],
-      "budgetKb": 65
+      "budgetKb": 90
     },
     {
       "name": "background",

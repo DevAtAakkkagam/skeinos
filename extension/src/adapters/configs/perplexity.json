@@ -19,6 +19,7 @@
   "behaviors": {
     "insertMode": "execCommand",
     "submitMode": "click",
-    "supportsSystemPrompt": false
+    "supportsSystemPrompt": false,
+    "composerStealsFocus": true
   }
 }

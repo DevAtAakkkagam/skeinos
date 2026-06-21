@@ -66,6 +66,20 @@ describe('AdapterConfig validation (T1.1)', () => {
     expect(isValidationErrors(result)).toBe(true);
   });
 
+  it('accepts an optional composerStealsFocus boolean, rejects a non-boolean', () => {
+    const ok = makeConfig();
+    (ok.behaviors as unknown as Record<string, unknown>).composerStealsFocus = true;
+    expect(isValidationErrors(validateAdapterConfig(ok))).toBe(false);
+
+    const bad = makeConfig();
+    (bad.behaviors as unknown as Record<string, unknown>).composerStealsFocus = 'yes';
+    const result = validateAdapterConfig(bad);
+    expect(isValidationErrors(result)).toBe(true);
+    if (isValidationErrors(result)) {
+      expect(result.some((e) => e.path === 'behaviors.composerStealsFocus')).toBe(true);
+    }
+  });
+
   it('accepts an optional conversationUrlPattern', () => {
     const cfg = makeConfig();
     cfg.selectors.conversationUrlPattern = '/app/[^/?#]+';

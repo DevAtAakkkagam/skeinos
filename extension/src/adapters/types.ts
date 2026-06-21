@@ -97,6 +97,13 @@ export interface AdapterBehaviors {
   // can nudge the user to open the drawer once to sync. Platforms that keep their
   // list in the DOM when collapsed (Claude, Perplexity) omit it. Optional/additive.
   listHiddenWhenCollapsed?: boolean;
+  // The host runs a global handler that force-focuses its own composer whenever focus
+  // lands elsewhere (Perplexity), so an overlay text field can't hold focus and
+  // keystrokes leak into the native box. When true, the input bar's popover contains
+  // focus while open (window-capture focusin guard). Hosts that don't steal focus
+  // omit it — the guard is invasive (it suppresses host focus events while open), so
+  // only the platforms that need it opt in. Optional/additive.
+  composerStealsFocus?: boolean;
 }
 
 /**

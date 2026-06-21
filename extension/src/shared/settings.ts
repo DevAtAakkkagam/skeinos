@@ -27,6 +27,16 @@ export interface Settings {
    * filter axis for the prompt library (shared/domains).
    */
   domain?: DomainId;
+  /**
+   * The globally active instruction profile (profile-activation, D-1). Additive
+   * optional key — absent (undefined) means no active profile. Device-local by
+   * intent: it is a UI preference (which profile the input bar's chip shows and
+   * injects), NOT workspace data, so it lives in settings and is never part of the
+   * synced set. The chip reads it via `getSettings`, writes via `setSettings`, and
+   * re-renders across tabs via `subscribeSettings`. A dangling id (the profile was
+   * deleted) is treated by readers as "no active profile" — never an error.
+   */
+  activeProfileId?: string;
   // Later features extend this: per-platform toggles (adapters), shortcuts
   // (T3.7), sync controls (T5.5). Missing keys fall back to DEFAULT_SETTINGS on
   // read, so adding a key never invalidates an existing install.

@@ -81,7 +81,40 @@ export async function queryPromptLibrary(
       const results = searchPrompts(prompts, selector.terms);
       return { kind: 'prompt.search', results };
     }
+    case 'prompt.recents': {
+      // The popover's empty-state list (D-3): only prompts with a recorded
+      // `lastUsedAt`, most-recent first, capped at `limit`. `query()` excludes
+      // tombstones; mapped to result rows so the popover renders them unchanged.
+      const prompts = await store.prompts.query();
+      const results = recentPrompts(prompts, selector.limit);
+      return { kind: 'prompt.recents', results };
+    }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Recents (design D-3) — used prompts, most-recent first, as result rows with a
+// leading body/description excerpt as the snippet (no query, so no highlight).
+// ---------------------------------------------------------------------------
+
+/** The prompts that have actually been used, sorted by `lastUsedAt` descending and
+ *  capped at `limit`, each shaped as a {@link PromptSearchResult} with a leading
+ *  excerpt snippet. Prompts that have never been used are excluded; tombstones are
+ *  already gone (the caller passes `query()` output). */
+export function recentPrompts(prompts: Prompt[], limit: number): PromptSearchResult[] {
+  return prompts
+    .filter((p) => p.lastUsedAt !== undefined)
+    .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
+    .slice(0, Math.max(0, limit))
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      // No query → no highlight: a leading excerpt of the body (then description)
+      // as a single unmatched segment, reusing the search-row snippet shape.
+      snippet: buildSnippet(p.body || (p.description ?? ''), []),
+      targetModels: p.targetModels ?? [],
+      ...(p.slug !== undefined ? { slug: p.slug } : {}),
+    }));
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +275,21 @@ export async function mutatePromptLibrary(
       // Tombstone via the repo (prompts are syncable, so `delete` writes a tombstone).
       await requirePrompt(store, op.id);
       await store.prompts.delete(op.id);
+      return { stores: ['prompts'] };
+    }
+    case 'prompt.recordUse': {
+      // The minimal usage write (D-1): stamp `lastUsedAt` and bump `usageCount`,
+      // touching nothing else. A missing/tombstoned id is a silent no-op (fired
+      // fire-and-forget on insert — never throws back at the bar), reporting no
+      // touched store so the broadcast is skipped. `Date.now()` is ordinary worker
+      // app code.
+      const prev = await store.prompts.get(op.id);
+      if (!prev) return { stores: [] };
+      await store.prompts.put({
+        ...prev,
+        lastUsedAt: Date.now(),
+        usageCount: (prev.usageCount ?? 0) + 1,
+      });
       return { stores: ['prompts'] };
     }
     case 'promptFolder.create': {

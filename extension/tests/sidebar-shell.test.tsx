@@ -7,7 +7,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
 import { SidebarShell } from '../src/ui/sidebar/SidebarShell';
 import type { WorkspaceView } from '../src/ui/sidebar/useWorkspace';
+import type { ProfileLibraryView } from '../src/ui/profiles/useProfileLibrary';
 import type { ConversationIndex } from '../src/shared/types';
+
+// A ready, empty profile-library stub so the Profiles tab deterministically renders its
+// panel + first-run state (no worker round-trip under the test chrome shim).
+const profileView: ProfileLibraryView = {
+  profiles: [],
+  status: 'ready',
+  refresh: vi.fn(),
+  retry: vi.fn(),
+  mutate: vi.fn(async () => ({ ok: true, applied: true })),
+};
 
 const view: WorkspaceView = {
   tree: { active: [], pinned: [], archived: [] },
@@ -80,7 +91,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 const $ = (sel: string) => container.querySelector(sel) as HTMLElement | null;
 
 async function mountShell(): Promise<void> {
-  render(<SidebarShell platform="claude" view={view} />, container);
+  render(<SidebarShell platform="claude" view={view} profileView={profileView} />, container);
   await flush(); // let any effects + async folder view settle
 }
 
@@ -122,7 +133,7 @@ describe('Framed shell (6.1)', () => {
 });
 
 describe('Disabled feature stubs (6.2)', () => {
-  it('Profiles tab stays inert; Prompts is now interactive; PRO badge + sync present', async () => {
+  it('Prompts and Profiles are now interactive; search live; PRO badge + sync present', async () => {
     await mountShell();
     const prompts = $('[data-testid=sk-tab-prompts]') as HTMLButtonElement;
     const profiles = $('[data-testid=sk-tab-profiles]') as HTMLButtonElement;
@@ -130,11 +141,9 @@ describe('Disabled feature stubs (6.2)', () => {
     const search = $('[data-testid=sk-search]') as HTMLButtonElement;
     expect(search.disabled).toBe(false);
     expect(container.textContent).toContain('⌘K');
-    // Prompts became interactive in this slice (sidebar-shell MODIFIED requirement).
+    // Prompts became interactive earlier; Profiles became interactive in this slice.
     expect(prompts.disabled).toBe(false);
-    // Profiles remains a disabled "coming soon" stub.
-    expect(profiles.disabled).toBe(true);
-    expect(profiles.getAttribute('aria-disabled')).toBe('true');
+    expect(profiles.disabled).toBe(false);
     expect($('[data-testid=sk-pro-badge]')).toBeTruthy();
     expect($('[data-testid=sk-sync]')).toBeTruthy();
     // the active Folders tab is not disabled
@@ -174,12 +183,32 @@ describe('Tab switching folders ⇄ prompts (sidebar-shell, 6.6)', () => {
     expect($('[data-testid=sk-prompts-panel]')).toBeNull();
   });
 
-  it('the Profiles tab is inert and does not switch the body away from Folders', async () => {
+  it('activating Profiles renders ProfilesPanel (not PromptsPanel) and hides folder chrome', async () => {
     await mountShell();
     $('[data-testid=sk-tab-profiles]')!.click();
     await flush();
-    expect($('[data-testid=sk-sidebar]')).toBeTruthy();
+    const profiles = $('[data-testid=sk-tab-profiles]') as HTMLButtonElement;
+    expect(profiles.getAttribute('aria-selected')).toBe('true');
+    expect($('[data-testid=sk-profiles-panel]')).toBeTruthy();
+    // Guards the ternary fall-through: Profiles must render its own panel, not Prompts.
     expect($('[data-testid=sk-prompts-panel]')).toBeNull();
+    // Folder-specific chrome + body are gone.
+    expect($('[data-testid=sk-filters]')).toBeNull();
+    expect($('[data-testid=sk-sidebar]')).toBeNull();
+  });
+
+  it('switching Folders → Profiles → Folders restores the folder body', async () => {
+    await mountShell();
+    $('[data-testid=sk-tab-profiles]')!.click();
+    await flush();
+    expect($('[data-testid=sk-profiles-panel]')).toBeTruthy();
+
+    $('[data-testid=sk-tab-folders]')!.click();
+    await flush();
+    expect(($('[data-testid=sk-tab-folders]') as HTMLButtonElement).getAttribute('aria-selected')).toBe('true');
+    expect($('[data-testid=sk-sidebar]')).toBeTruthy();
+    expect($('[data-testid=sk-filters]')).toBeTruthy();
+    expect($('[data-testid=sk-profiles-panel]')).toBeNull();
   });
 });
 

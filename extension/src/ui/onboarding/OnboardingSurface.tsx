@@ -15,6 +15,7 @@ import { CheckIcon, ChevronIcon, FolderIcon, LockIcon, ShieldIcon } from '../com
 import { DOMAIN_REGISTRY, type DomainId } from '../../shared/domains';
 import { seedsForDomain } from '../../core/prompts/catalog';
 import { installPromptSeedsRemote } from '../../core/prompts/client';
+import { installProfileSeedsRemote } from '../../core/profiles/client';
 import { mutateWorkspaceRemote } from '../../core/folders/client';
 import { DEFAULT_FOLDER_COLOR, makeFolderId } from '../sidebar/folderDefaults';
 import type { PlatformId } from '../../shared/types';
@@ -116,10 +117,16 @@ export interface OnboardingSurfaceProps {
   createFolder?: (name: string, platform: PlatformId) => void | Promise<void>;
 }
 
-/** Default seed installer: through the worker, returning the inserted count. */
+/** Default seed installer: through the worker, seeding BOTH the prompt library and the
+ *  instruction-profile library for the picked domain. Returns the prompt count (which
+ *  drives the confirmation's title-chip preview); profile seeding rides alongside and
+ *  is idempotent. A failed profile install never blocks the prompt-driven flow. */
 async function defaultInstallSeeds(domain: DomainId): Promise<number> {
-  const res = await installPromptSeedsRemote(domain);
-  return res.ok ? res.data.installed : 0;
+  const [promptRes] = await Promise.all([
+    installPromptSeedsRemote(domain),
+    installProfileSeedsRemote(domain).catch(() => undefined),
+  ]);
+  return promptRes.ok ? promptRes.data.installed : 0;
 }
 
 /** Default folder-create: the `folder.create` workspace op, scoped to the platform,
