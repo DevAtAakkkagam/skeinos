@@ -1,8 +1,9 @@
 // The Profiles tab body — structurally uniform with the Prompts body (`PromptsPanel`):
 // a `PROFILES` section header (reusing `.sk-sidebar__section-head`) whose right-aligned
 // `+` is the create action, a 1-up list of profile rows, and the loading / error /
-// first-run states. Clicking a row opens the editor MODAL (the same `Dialog` style as
-// Prompts/Folders) — consistent with the rest of the overlay.
+// first-run states. Each row (see `ProfileRow`) is click-to-edit and carries the same
+// overflow (`⋯`) actions menu used everywhere else in the overlay; clicking a row or
+// Edit opens the editor MODAL (the same `Dialog` style as Prompts/Folders).
 //
 // It is a pure view over a {@link ProfilesController}: the controller (held once at the
 // shell) owns the library, the editor state, and every mutation. CRUD + view only this
@@ -11,9 +12,8 @@
 
 import type { JSX } from 'preact';
 import { PlusIcon, PromptIcon } from '../components/Icon';
-import { PlatformLogo } from '../components/PlatformLogo';
-import { TARGETABLE_PLATFORMS } from '../prompts/strings';
 import { ProfileEditor } from './ProfileEditor';
+import { ProfileRow } from './ProfileRow';
 import { STR } from './strings';
 import type { ProfilesController } from './useProfilesController';
 
@@ -71,30 +71,7 @@ export function ProfilesPanel({ controller: c }: ProfilesPanelProps): JSX.Elemen
           ) : (
             <ul class="sk-profiles__list" data-testid="sk-profiles-list">
               {c.profiles.map((p) => (
-                <li key={p.id} class="sk-profiles__item">
-                  <button
-                    type="button"
-                    class="sk-profiles__row"
-                    data-testid={`sk-profile-row-${p.id}`}
-                    onClick={() => c.openEdit(p)}
-                  >
-                    <span class="sk-profiles__head">
-                      <span class="sk-profiles__name" data-testid="sk-profile-row-name">
-                        {p.name || STR.defaultName}
-                      </span>
-                      {p.appliesTo.length > 0 ? (
-                        <span class="sk-profiles__logos" aria-hidden="true">
-                          {TARGETABLE_PLATFORMS.filter((pl) => p.appliesTo.includes(pl)).map((pl) => (
-                            <span key={pl} class="sk-profiles__logo">
-                              <PlatformLogo platform={pl} size={14} />
-                            </span>
-                          ))}
-                        </span>
-                      ) : null}
-                    </span>
-                    {p.description ? <span class="sk-profiles__desc">{p.description}</span> : null}
-                  </button>
-                </li>
+                <ProfileRow key={p.id} profile={p} onEdit={c.openEdit} onDelete={c.deleteProfile} />
               ))}
             </ul>
           )}
@@ -110,6 +87,7 @@ export function ProfilesPanel({ controller: c }: ProfilesPanelProps): JSX.Elemen
           onClose={c.closeEditor}
           onSubmit={c.submitProfile}
           onDelete={c.deleteProfile}
+          quota={c.createQuota}
         />
       ) : null}
     </div>

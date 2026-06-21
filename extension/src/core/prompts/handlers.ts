@@ -12,6 +12,8 @@
 
 import { broadcast, registerHandler } from '../../core/messaging';
 import { workspaceStore, type WorkspaceStore } from '../../core/store';
+import { getSettings } from '../../core/settings';
+import { assertWithinQuota } from '../../core/tier';
 import { normalize } from '../../core/search/normalize';
 import type { Prompt, PromptFolder, SnippetSegment } from '../../shared/types';
 import type { DomainId } from '../../shared/domains';
@@ -234,6 +236,11 @@ export async function mutatePromptLibrary(
 ): Promise<MutationResult> {
   switch (op.op) {
     case 'prompt.create': {
+      // Tier quota (tier-gate D2/D3): reject before any `put` when the live prompt
+      // count is at the tier limit, so a refused create writes nothing and emits no
+      // broadcast. PRO bypasses via the unlimited table entry.
+      const existing = await store.prompts.query();
+      assertWithinQuota('prompts', existing.length, (await getSettings()).tier ?? 'FREE');
       // The worker derives `variables` from `body` (D-C) and initializes the dormant
       // usage fields; the envelope is stamped by the repo on `put`. `usageCount` is 0
       // and `lastUsedAt` is left unset until C25 owns usage.

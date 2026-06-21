@@ -10,6 +10,8 @@
 
 import { broadcast, registerHandler } from '../../core/messaging';
 import { workspaceStore, type WorkspaceStore } from '../../core/store';
+import { getSettings } from '../../core/settings';
+import { assertWithinQuota } from '../../core/tier';
 import type { InstructionProfile } from '../../shared/types';
 import type { DomainId } from '../../shared/domains';
 import type {
@@ -78,6 +80,11 @@ export async function mutateProfileLibrary(
 ): Promise<MutationResult> {
   switch (op.op) {
     case 'profile.create': {
+      // Tier quota (tier-gate D2/D3): reject before any `put` when the live profile
+      // count is at the tier limit, so a refused create writes nothing and emits no
+      // broadcast. PRO bypasses via the unlimited table entry.
+      const existing = await store.profiles.query();
+      assertWithinQuota('profiles', existing.length, (await getSettings()).tier ?? 'FREE');
       // The envelope is stamped by the repo on `put`. `appliesTo` defaults to empty;
       // `description`/`responseStyle` are only set when provided (optional fields).
       const profile: InstructionProfile = {

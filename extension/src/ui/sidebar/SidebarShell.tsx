@@ -8,6 +8,8 @@
 // Everything draws from `--sk-*` tokens and is keyboard-operable and ARIA-labelled.
 
 import { useEffect, useState } from 'preact/hooks';
+import { getSettings, subscribeSettings } from '../../core/settings';
+import type { Tier } from '../../shared/settings';
 import type { Folder, PlatformId } from '../../shared/types';
 import { SearchIcon, SettingsIcon } from '../components/Icon';
 import { PlatformLogo } from '../components/PlatformLogo';
@@ -54,7 +56,13 @@ const STR = {
   platformAll: 'All',
   filterLabel: 'Filter conversations',
   sections: 'Sidebar sections',
-  tier: 'PRO',
+  // The tier badge label is now driven by settings (tier-gate D6): one label per
+  // tier, i18n-ready, with a descriptive title (no "coming soon" — the badge
+  // reflects real state, not a stub).
+  tierFree: 'FREE',
+  tierPro: 'PRO',
+  tierFreeTitle: 'Free plan',
+  tierProTitle: 'Pro plan',
   synced: 'Synced',
   settings: 'Settings',
   comingSoon: 'Coming soon',
@@ -66,6 +74,27 @@ const STR = {
  *  hides the list when collapsed (Gemini). */
 const collapsedListNudge = (label: string): string =>
   `${label}'s chat list is hidden while its sidebar is collapsed. Open it once to sync all your conversations here.`;
+
+/** The effective tier from settings (tier-gate D6), defaulting to `FREE` and
+ *  re-reading on every settings change so the badge updates without a reload. A
+ *  pure read of settings state — the single source the worker also enforces from. */
+function useTier(): Tier {
+  const [tier, setTier] = useState<Tier>('FREE');
+  useEffect(() => {
+    let live = true;
+    void getSettings().then((s) => {
+      if (live) setTier(s.tier ?? 'FREE');
+    });
+    const dispose = subscribeSettings((s) => {
+      if (live) setTier(s.tier ?? 'FREE');
+    });
+    return () => {
+      live = false;
+      dispose();
+    };
+  }, []);
+  return tier;
+}
 
 /** Open the extension options page. Guarded so a non-extension context (tests
  *  without a chrome shim) is a no-op rather than a throw. */
@@ -142,6 +171,10 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
   // The search overlay (C8) is opened from the search launcher; it is a pure view
   // over worker state and holds no workspace data of its own.
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // The effective tier drives the footer badge (tier-gate D6) — real state from
+  // settings, not the old hardcoded `PRO` stub.
+  const tier = useTier();
 
   // The platform view-filter chips (D28): "All" (unified) plus one chip per
   // platform actually present in the workspace, so the control never offers a
@@ -300,7 +333,14 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
       </div>
 
       <footer class="sk-shell__footer">
-        <span class="sk-badge" data-testid="sk-pro-badge" title={STR.comingSoon}>{STR.tier}</span>
+        <span
+          class={`sk-badge${tier === 'PRO' ? ' sk-badge--pro' : ' sk-badge--free'}`}
+          data-testid="sk-pro-badge"
+          data-tier={tier}
+          title={tier === 'PRO' ? STR.tierProTitle : STR.tierFreeTitle}
+        >
+          {tier === 'PRO' ? STR.tierPro : STR.tierFree}
+        </span>
         <span class="sk-sync" data-testid="sk-sync" aria-disabled="true" title={STR.comingSoon}>{STR.synced}</span>
         <button
           class="sk-icon-btn"

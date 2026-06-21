@@ -25,6 +25,7 @@ import type {
   PlatformId,
 } from '../../shared/types';
 import type { FolderTreeSnapshot, MutationOp } from '../../shared/workspace';
+import type { AppError } from '../../shared/messages';
 
 const EMPTY_TREE: FolderTreeSnapshot = { active: [], pinned: [], archived: [] };
 
@@ -49,6 +50,10 @@ export interface MutateResult {
    *  state. `true` even when `ok` is false if the worker committed despite a lost
    *  ack; `false` when the change is confirmed absent (a genuine failure). */
   applied: boolean;
+  /** The typed error envelope when the worker rejected the mutation (e.g. a tier
+   *  `quota_exceeded`), so the create dialog can branch on `error.code` and keep the
+   *  typed values. Absent on success or a merely-lost ack. */
+  error?: AppError;
 }
 
 /** The platform view-filter: a single platform, or `'all'` for the unified view.
@@ -304,7 +309,9 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
       if (res.ok) return { ok: true, applied: true };
       // Ack lost: trust the reconciled tree to decide whether it actually applied.
       const applied = reconciled ? mutationApplied(op, reconciled) : false;
-      return { ok: false, applied };
+      // Carry the typed error so the folder dialog can branch on `quota_exceeded`
+      // and keep the typed values (block-with-nudge) instead of a generic failure.
+      return { ok: false, applied, error: res.error };
     },
     [readTree, readAux],
   );

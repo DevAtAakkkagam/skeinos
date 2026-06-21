@@ -18,6 +18,7 @@ import { subscribe } from '../../core/messaging';
 import { mutatePromptLibraryRemote, queryPromptLibraryRemote } from '../../core/prompts';
 import type { Prompt, PromptFolder } from '../../shared/types';
 import type { PromptMutationOp } from '../../shared/prompts';
+import type { AppError } from '../../shared/messages';
 
 /** The slice of a `chrome.tabs` event we use: an argument-agnostic listener. The
  *  panel ignores the payload — it just re-reads worker state. */
@@ -39,6 +40,10 @@ export interface PromptMutateResult {
   /** Whether the reconciling re-read confirms the change is present in worker state
    *  (`true` even when `ok` is false if the worker committed despite a lost ack). */
   applied: boolean;
+  /** The typed error envelope when the worker rejected the mutation (e.g. a tier
+   *  `quota_exceeded`), so the caller can branch on `error.code` without re-deriving
+   *  it. Absent on success or a merely-lost ack. */
+  error?: AppError;
 }
 
 /** The injectable view the panel renders over (like `WorkspaceView`): the unified
@@ -197,7 +202,9 @@ export function usePromptLibrary(): PromptLibraryView {
       const applied = reconciled
         ? mutationApplied(op, reconciled.prompts, reconciled.folders)
         : false;
-      return { ok: false, applied };
+      // Carry the typed error so the editor can branch on `quota_exceeded` and keep
+      // the user's draft (block-with-nudge) rather than reporting a generic failure.
+      return { ok: false, applied, error: res.error };
     },
     [read],
   );

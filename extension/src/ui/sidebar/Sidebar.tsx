@@ -25,6 +25,8 @@ import {
   PlusIcon,
 } from '../components/Icon';
 import { Skeleton } from '../components/Skeleton';
+import { UpgradeNudge } from '../components/UpgradeNudge';
+import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import { ConversationList } from './ConversationList';
 import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
 import { FOLDER_COLORS } from './palette';
@@ -963,6 +965,10 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
   );
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The tier quota that refused this create, if any (block-with-nudge): when set
+  // the dialog stays open with the typed values intact and shows the upgrade nudge
+  // instead of the generic error. Only a create can be quota-refused.
+  const [quota, setQuota] = useState<QuotaErrorDetail | null>(null);
   // A new folder's id is fixed once, so a retry after a (possibly committed but
   // unacknowledged) attempt overwrites the same row instead of duplicating it.
   const [newId] = useState(makeFolderId);
@@ -980,8 +986,12 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
     const trimmed = name.trim();
     if (!trimmed) return;
     setFailed(false);
+    setQuota(null);
     setBusy(true);
     let ok: boolean;
+    // The typed error from a refused create, to distinguish a quota block from a
+    // generic failure once we leave the create branch.
+    let createError: MutateResult['error'];
     if (editing && state.folder) {
       const renamed = await onSubmit({ op: 'folder.rename', id: state.folder.id, name: trimmed });
       const recolored = await onSubmit({
@@ -1011,11 +1021,18 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
         platformScope: 'unified',
       });
       ok = took(created);
+      createError = created.error;
     }
     setBusy(false);
-    // On success close; on a confirmed failure keep the dialog (and the typed
-    // values) open and surface the error — never silently discard input ([PRIV]).
-    if (ok) onClose();
+    // On success close; otherwise keep the dialog (and the typed values) open and
+    // surface the reason — never silently discard input ([PRIV]). A tier quota gets
+    // the informational upgrade nudge; anything else, the generic error.
+    if (ok) {
+      onClose();
+      return;
+    }
+    const q = quotaDetailOf(createError);
+    if (q) setQuota(q);
     else setFailed(true);
   };
 
@@ -1141,6 +1158,7 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
         {failed && (
           <p class="sk-dialog__error" data-testid="sk-folder-error" role="alert">{STR.createError}</p>
         )}
+        {quota && <UpgradeNudge resource="folders" limit={quota.limit} testId="sk-folder-quota-nudge" />}
         <div class="sk-dialog__actions">
           <button class="sk-menu__item" type="button" onClick={onClose}>{STR.cancel}</button>
           <button class="sk-btn sk-btn--icon" type="submit" data-testid="sk-folder-submit" disabled={busy} aria-busy={busy}>

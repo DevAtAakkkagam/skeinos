@@ -10,8 +10,10 @@ import { useMemo, useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { parseVariables } from '../../core/prompts';
 import { PlatformLogo } from '../components/PlatformLogo';
+import { UpgradeNudge } from '../components/UpgradeNudge';
 import { Dialog } from '../primitives/Dialog';
 import type { PlatformId, Prompt, PromptFolder } from '../../shared/types';
+import type { QuotaErrorDetail } from '../../core/tier';
 import { STR, PLATFORM_LABELS, TARGETABLE_PLATFORMS } from './strings';
 
 /** The flat field set the editor emits on save; the panel turns it into a
@@ -38,6 +40,9 @@ export interface PromptEditorProps {
   onSubmit: (fields: PromptEditorSubmit) => void;
   /** Create a category inline; resolves to its new id so the picker can select it. */
   onCreateCategory: (name: string) => Promise<string | null>;
+  /** A tier quota that refused the create (block-with-nudge): when set the editor
+   *  stays open with the typed values and shows the upgrade nudge. */
+  quota?: QuotaErrorDetail | null;
 }
 
 /** Sentinel `<select>` value that reveals the inline "new category" input. */
@@ -50,6 +55,7 @@ export function PromptEditor({
   onClose,
   onSubmit,
   onCreateCategory,
+  quota,
 }: PromptEditorProps): JSX.Element {
   const isEdit = !!prompt;
   const [title, setTitle] = useState(prompt?.title ?? '');
@@ -283,6 +289,10 @@ export function PromptEditor({
           <p class="sk-dialog__error" data-testid="sk-prompt-editor-error">
             {error}
           </p>
+        ) : null}
+
+        {quota ? (
+          <UpgradeNudge resource="prompts" limit={quota.limit} testId="sk-prompt-quota-nudge" />
         ) : null}
 
         <div class="sk-dialog__actions">

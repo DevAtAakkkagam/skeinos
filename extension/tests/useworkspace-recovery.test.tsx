@@ -139,7 +139,8 @@ describe('useWorkspace observe-don’t-replay mutate (7.2, 7.3)', () => {
     const result = await latest!.mutate({ op: 'folder.create', id: 'new', name: 'New' } as MutationOp);
     await flush();
 
-    expect(result).toEqual({ ok: false, applied: true });
+    // The lost-ack error is carried through (tier-gate added `error` to the result).
+    expect(result).toEqual({ ok: false, applied: true, error: { code: 'no_response', message: 'no_response' } });
     expect(mockMutate).toHaveBeenCalledTimes(1); // never replayed
     expect(read('data-active')).toBe('1'); // reconciled into view
   });
@@ -155,7 +156,7 @@ describe('useWorkspace observe-don’t-replay mutate (7.2, 7.3)', () => {
     const result = await latest!.mutate({ op: 'folder.create', id: 'gone', name: 'Gone' } as MutationOp);
     await flush();
 
-    expect(result).toEqual({ ok: false, applied: false });
+    expect(result).toEqual({ ok: false, applied: false, error: { code: 'send_failed', message: 'send_failed' } });
     expect(mockMutate).toHaveBeenCalledTimes(1);
   });
 });

@@ -91,6 +91,27 @@ describe('Persistence (3.2)', () => {
   });
 });
 
+describe('Tier setting (tier-gate)', () => {
+  it('getSettings returns tier FREE for a record without a tier key', async () => {
+    setChrome(makeChrome({ [SETTINGS_KEY]: { theme: 'dark' } as Partial<Settings> }));
+    const settings = await getSettings();
+    expect(settings.tier).toBe('FREE');
+  });
+
+  it('a tier change notifies subscribers with the new value', async () => {
+    const fake = makeChrome();
+    setChrome(fake);
+    const seen: Settings[] = [];
+    const dispose = subscribeSettings((s) => seen.push(s));
+
+    await setSettings({ tier: 'PRO' });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0].tier).toBe('PRO');
+    dispose();
+  });
+});
+
 describe('onChanged subscription (3.3)', () => {
   beforeEach(() => setChrome(makeChrome()));
 

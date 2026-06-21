@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'preact/hooks';
 import type { InstructionProfile } from '../../shared/types';
 import type { DomainId } from '../../shared/domains';
 import { installProfileSeedsRemote } from '../../core/profiles';
+import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import type { ProfileEditorSubmit } from './ProfileEditor';
 import {
   makeProfileId,
@@ -31,6 +32,10 @@ export interface ProfilesController {
   closeEditor: () => void;
   submitProfile: (fields: ProfileEditorSubmit) => void;
   deleteProfile: (p: InstructionProfile) => void;
+  /** The tier quota that refused the in-progress create, or `null`. When set the
+   *  editor stays open with the typed values intact and shows the upgrade nudge
+   *  (block-with-nudge). Only a create can be quota-refused; cleared on open/close. */
+  createQuota: QuotaErrorDetail | null;
 
   // --- imperative open (e.g. after a create from another surface) -------------
   /** Open the editor for this profile id once the library has it. */
@@ -51,6 +56,7 @@ export function useProfilesController(view?: ProfileLibraryView): ProfilesContro
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<InstructionProfile | undefined>(undefined);
+  const [createQuota, setCreateQuota] = useState<QuotaErrorDetail | null>(null);
 
   // The pending open target: held until the library has that id, then the editor opens
   // and the pending id clears (the library may still be loading). Mirrors the prompts
@@ -68,28 +74,43 @@ export function useProfilesController(view?: ProfileLibraryView): ProfilesContro
 
   const openCreate = useCallback((): void => {
     setEditing(undefined);
+    setCreateQuota(null);
     setEditorOpen(true);
   }, []);
 
   const openEdit = useCallback((p: InstructionProfile): void => {
     setEditing(p);
+    setCreateQuota(null);
     setEditorOpen(true);
   }, []);
 
   const closeEditor = useCallback((): void => {
     setEditorOpen(false);
     setEditing(undefined);
+    setCreateQuota(null);
   }, []);
 
   const submitProfile = useCallback(
     (fields: ProfileEditorSubmit): void => {
+      // Update is never quota-governed; close on send (observe-don't-replay). Create
+      // awaits the result: on a `quota_exceeded` rejection keep the editor open with
+      // the typed values and surface the nudge ([PRIV] never lose input).
       if (editing) {
         void lib.mutate({ op: 'profile.update', id: editing.id, ...fields });
-      } else {
-        void lib.mutate({ op: 'profile.create', id: makeProfileId(), ...fields });
+        setEditorOpen(false);
+        setEditing(undefined);
+        return;
       }
-      setEditorOpen(false);
-      setEditing(undefined);
+      setCreateQuota(null);
+      void lib.mutate({ op: 'profile.create', id: makeProfileId(), ...fields }).then((res) => {
+        const quota = quotaDetailOf(res.error);
+        if (quota) {
+          setCreateQuota(quota);
+          return; // keep the editor open with the draft intact
+        }
+        setEditorOpen(false);
+        setEditing(undefined);
+      });
     },
     [editing, lib],
   );
@@ -127,6 +148,7 @@ export function useProfilesController(view?: ProfileLibraryView): ProfilesContro
     closeEditor,
     submitProfile,
     deleteProfile,
+    createQuota,
     openProfile,
     installSeeds,
   };

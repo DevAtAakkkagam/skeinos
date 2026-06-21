@@ -195,6 +195,57 @@ describe('ProfilesPanel mode indicator is PREPEND-only (5.3)', () => {
   });
 });
 
+describe('ProfilesPanel row overflow (⋯) menu', () => {
+  it('Edit in the row menu opens the editor seeded with that profile', async () => {
+    const p = profile('p1', { name: 'Staff engineer', instructionText: 'Be terse.' });
+    mount(<Tab view={makeView({ profiles: [p] })} />);
+
+    // The editor is not open until the menu's Edit is chosen.
+    expect($('[data-testid=sk-profile-editor]')).toBeNull();
+    $('[data-testid=sk-profile-row-menu]')!.click();
+    await flush();
+    $('[data-testid=sk-profile-menu-edit]')!.click();
+    await flush();
+
+    expect($('[data-testid=sk-profile-editor]')).toBeTruthy();
+    expect(($('[data-testid=sk-profile-name]') as HTMLInputElement).value).toBe('Staff engineer');
+  });
+
+  it('Delete in the row menu is confirm-gated and only deletes on confirm', async () => {
+    const view = makeView({ profiles: [profile('p1')] });
+    mount(<Tab view={view} />);
+
+    $('[data-testid=sk-profile-row-menu]')!.click();
+    await flush();
+    $('[data-testid=sk-profile-menu-delete]')!.click();
+    await flush();
+
+    // Confirm is up; nothing deleted yet, and the editor never opened.
+    expect($('[data-testid=sk-profile-row-delete-confirm]')).toBeTruthy();
+    expect($('[data-testid=sk-profile-editor]')).toBeNull();
+    expect(mockOf(view)).not.toHaveBeenCalled();
+
+    $('[data-testid=sk-profile-row-delete-confirm-btn]')!.click();
+    await flush();
+    expect(mockOf(view)).toHaveBeenCalledWith({ op: 'profile.delete', id: 'p1' });
+  });
+
+  it('cancelling the row-menu delete confirm sends nothing', async () => {
+    const view = makeView({ profiles: [profile('p1')] });
+    mount(<Tab view={view} />);
+
+    $('[data-testid=sk-profile-row-menu]')!.click();
+    await flush();
+    $('[data-testid=sk-profile-menu-delete]')!.click();
+    await flush();
+    expect($('[data-testid=sk-profile-row-delete-confirm]')).toBeTruthy();
+
+    $('[data-testid=sk-profile-row-delete-cancel]')!.click();
+    await flush();
+    expect(mockOf(view)).not.toHaveBeenCalled();
+  });
+});
+
 describe('ProfilesPanel delete is confirm-gated (5.3)', () => {
   it('shows a confirm before deleting and only deletes on confirm', async () => {
     const view = makeView({ profiles: [profile('p1')] });

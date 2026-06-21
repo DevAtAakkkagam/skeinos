@@ -289,6 +289,9 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-shell__body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sk-shell__footer { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-2) var(--sk-space-3); border-top: 1px solid var(--sk-color-border); }
 .sk-badge { font-size: var(--sk-text-xs); font-weight: 700; letter-spacing: 0.04em; color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 40%, transparent); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); }
+/* The tier badge reflects real state (tier-gate D6): PRO keeps the accent treatment;
+   FREE is muted/neutral so the free plan never reads as a premium chip. */
+.sk-badge--free { color: var(--sk-color-muted); background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); border-color: var(--sk-color-border); }
 .sk-sync { flex: 1; color: var(--sk-color-muted); font-size: var(--sk-text-sm); }
 
 /* --- disabled feature stubs: present but visibly inert --------------------- */

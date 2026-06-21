@@ -115,6 +115,9 @@ const INPUT_BAR_FEATURE_CSS = `
 .sk-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sk-space-2); }
 .sk-dialog__title { font-size: var(--sk-text-title); font-weight: 600; margin: 0; }
 .sk-dialog__actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--sk-space-2); margin-top: var(--sk-space-1); }
+.sk-btn { background: var(--sk-color-accent); color: var(--sk-color-bg); border: 0; border-radius: var(--sk-radius); padding: var(--sk-space-2) var(--sk-space-3); font: inherit; cursor: pointer; }
+.sk-btn--ghost { background: none; color: var(--sk-color-fg); border: 1px solid var(--sk-color-border); }
+.sk-btn--ghost:hover, .sk-btn--ghost:focus-visible { border-color: var(--sk-color-accent); outline: none; }
 `;
 
 export const INPUT_BAR_CSS = `${INPUT_BAR_FEATURE_CSS}\n${PRIMITIVES_CSS}`;

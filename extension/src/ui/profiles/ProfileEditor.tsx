@@ -9,9 +9,11 @@
 import { useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { PlatformLogo } from '../components/PlatformLogo';
+import { UpgradeNudge } from '../components/UpgradeNudge';
 import { Dialog } from '../primitives/Dialog';
 import { TARGETABLE_PLATFORMS } from '../prompts/strings';
 import type { InstructionProfile, PlatformId } from '../../shared/types';
+import type { QuotaErrorDetail } from '../../core/tier';
 import { PLATFORM_LABELS, STR } from './strings';
 
 type ResponseStyle = NonNullable<InstructionProfile['responseStyle']>;
@@ -37,6 +39,9 @@ export interface ProfileEditorProps {
   onSubmit: (fields: ProfileEditorSubmit) => void;
   /** Delete the profile being edited (only offered while editing). */
   onDelete: (profile: InstructionProfile) => void;
+  /** A tier quota that refused the create (block-with-nudge): when set the editor
+   *  stays open with the typed values and shows the upgrade nudge. */
+  quota?: QuotaErrorDetail | null;
 }
 
 const DEFAULT_VERBOSITY: Verbosity = 'balanced';
@@ -58,6 +63,7 @@ export function ProfileEditor({
   onClose,
   onSubmit,
   onDelete,
+  quota,
 }: ProfileEditorProps): JSX.Element {
   const isEdit = !!profile;
   const [name, setName] = useState(profile?.name ?? '');
@@ -215,11 +221,15 @@ export function ProfileEditor({
           </p>
         ) : null}
 
+        {quota ? (
+          <UpgradeNudge resource="profiles" limit={quota.limit} testId="sk-profile-quota-nudge" />
+        ) : null}
+
         <div class="sk-dialog__actions sk-profile-editor__actions">
           {isEdit ? (
             <button
               type="button"
-              class="sk-btn sk-btn--danger sk-profile-editor__delete"
+              class="sk-btn sk-btn--ghost sk-profile-editor__delete"
               data-testid="sk-profile-delete"
               onClick={() => setConfirmDelete(true)}
             >

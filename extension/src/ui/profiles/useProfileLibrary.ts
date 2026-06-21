@@ -15,6 +15,7 @@ import { subscribe } from '../../core/messaging';
 import { mutateProfilesRemote, queryProfilesRemote } from '../../core/profiles';
 import type { InstructionProfile } from '../../shared/types';
 import type { ProfileMutationOp } from '../../shared/profiles';
+import type { AppError } from '../../shared/messages';
 
 /** The slice of a `chrome.tabs` event we use: an argument-agnostic listener. The
  *  panel ignores the payload — it just re-reads worker state. */
@@ -33,6 +34,10 @@ export type ProfileLibraryStatus = 'loading' | 'ready' | 'error';
 export interface ProfileMutateResult {
   ok: boolean;
   applied: boolean;
+  /** The typed error envelope when the worker rejected the mutation (e.g. a tier
+   *  `quota_exceeded`), so the editor can branch on `error.code` and keep the draft.
+   *  Absent on success or a merely-lost ack. */
+  error?: AppError;
 }
 
 /** The injectable view the controller renders over: the library, an honest load
@@ -169,7 +174,9 @@ export function useProfileLibrary(): ProfileLibraryView {
       const reconciled = await read();
       if (res.ok) return { ok: true, applied: true };
       const applied = reconciled ? mutationApplied(op, reconciled) : false;
-      return { ok: false, applied };
+      // Carry the typed error so the editor can branch on `quota_exceeded` and keep
+      // the user's draft (block-with-nudge) rather than reporting a generic failure.
+      return { ok: false, applied, error: res.error };
     },
     [read],
   );

@@ -10,6 +10,14 @@ import type { DomainId } from './domains';
 /** Theme preference. Structurally identical to ui/mount's `Theme`. */
 export type Theme = 'light' | 'dark' | 'system';
 
+/**
+ * The monetization tier (tier-gate). `FREE` is the default and the fallback for
+ * any settings record that predates the field; `PRO` lifts every quota. Defined
+ * here (not in `core/tier`) so the type is dependency-free and importable by both
+ * the worker's limit table and the UI without crossing the deps-inward boundary.
+ */
+export type Tier = 'FREE' | 'PRO';
+
 export interface Settings {
   /** UI theme. Drives the `--sk-*` token set via the host `data-theme` attr. */
   theme: Theme;
@@ -37,6 +45,14 @@ export interface Settings {
    * deleted) is treated by readers as "no active profile" — never an error.
    */
   activeProfileId?: string;
+  /**
+   * The monetization tier (tier-gate). Additive optional key — a settings object
+   * written before it existed reads back `FREE` via the defaults merge, which is
+   * exactly the free-tier state. Device-local until billing/sync ships (M5): tier
+   * is read by the worker for quota enforcement and by the sidebar badge, both via
+   * the single source here. A `PRO` value lifts every per-resource limit.
+   */
+  tier?: Tier;
   // Later features extend this: per-platform toggles (adapters), shortcuts
   // (T3.7), sync controls (T5.5). Missing keys fall back to DEFAULT_SETTINGS on
   // read, so adding a key never invalidates an existing install.
@@ -50,6 +66,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   telemetry: false,
   onboardingCompleted: false,
+  // The free tier is the privacy-first, no-cost default; the merge fills it for
+  // every record that predates the field, so quotas are enforced from day one.
+  tier: 'FREE',
   // `domain` is intentionally absent — it defaults to undefined until the user
   // picks one, and stays optional so the merge never forces a value.
 };

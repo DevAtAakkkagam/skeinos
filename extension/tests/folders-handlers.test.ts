@@ -271,6 +271,11 @@ describe('a rejected move leaves the store unchanged', () => {
     const res = await dispatch(mutate({ op: 'folder.create', id: 'too-deep', name: 'x', parentId: 'd4' }));
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error.code).toBe('folder_depth_exceeded');
+
+    // These dispatch tests share the default `skeinos` DB. This chain leaves it at
+    // the FREE folder quota (5), so clean up the folders we created — otherwise the
+    // next dispatch test's create would be the 6th and hit the tier-gate quota.
+    for (let i = 4; i >= 0; i--) await dispatch(mutate({ op: 'folder.delete', id: `d${i}` }));
   });
 
   it('FolderError carries its code', () => {

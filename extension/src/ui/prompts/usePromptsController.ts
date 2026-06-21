@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import type { Prompt, PromptFolder } from '../../shared/types';
 import type { DomainId } from '../../shared/domains';
 import { installPromptSeedsRemote } from '../../core/prompts';
+import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import type { PromptEditorSubmit } from './PromptEditor';
 import {
   makePromptId,
@@ -57,6 +58,10 @@ export interface PromptsController {
   closeEditor: () => void;
   submitPrompt: (fields: PromptEditorSubmit) => void;
   deletePrompt: (p: Prompt) => void;
+  /** The tier quota that refused the in-progress create, or `null`. When set the
+   *  editor stays open with the typed values intact and shows the upgrade nudge
+   *  (block-with-nudge). Only a create can be quota-refused; cleared on open/close. */
+  createQuota: QuotaErrorDetail | null;
   /** Inline category create from within the editor; returns the new id (or null). */
   createCategory: (name: string) => Promise<string | null>;
 
@@ -100,6 +105,7 @@ export function usePromptsController(view?: PromptLibraryView): PromptsControlle
   // --- editor + category-dialog state -------------------------------------------
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Prompt | undefined>(undefined);
+  const [createQuota, setCreateQuota] = useState<QuotaErrorDetail | null>(null);
   const [categoryDialog, setCategoryDialog] = useState<CategoryDialog>(null);
   const [categoryName, setCategoryName] = useState('');
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<PromptFolder | null>(null);
@@ -165,28 +171,43 @@ export function usePromptsController(view?: PromptLibraryView): PromptsControlle
 
   const openCreate = useCallback((): void => {
     setEditing(undefined);
+    setCreateQuota(null);
     setEditorOpen(true);
   }, []);
 
   const openEdit = useCallback((p: Prompt): void => {
     setEditing(p);
+    setCreateQuota(null);
     setEditorOpen(true);
   }, []);
 
   const closeEditor = useCallback((): void => {
     setEditorOpen(false);
     setEditing(undefined);
+    setCreateQuota(null);
   }, []);
 
   const submitPrompt = useCallback(
     (fields: PromptEditorSubmit): void => {
+      // Update is never quota-governed; close on send (observe-don't-replay). Create
+      // awaits the result: on a `quota_exceeded` rejection keep the editor open with
+      // the typed values and surface the nudge ([PRIV] never lose input).
       if (editing) {
         void lib.mutate({ op: 'prompt.update', id: editing.id, ...fields });
-      } else {
-        void lib.mutate({ op: 'prompt.create', id: makePromptId(), ...fields });
+        setEditorOpen(false);
+        setEditing(undefined);
+        return;
       }
-      setEditorOpen(false);
-      setEditing(undefined);
+      setCreateQuota(null);
+      void lib.mutate({ op: 'prompt.create', id: makePromptId(), ...fields }).then((res) => {
+        const quota = quotaDetailOf(res.error);
+        if (quota) {
+          setCreateQuota(quota);
+          return; // keep the editor open with the draft intact
+        }
+        setEditorOpen(false);
+        setEditing(undefined);
+      });
     },
     [editing, lib],
   );
@@ -303,6 +324,7 @@ export function usePromptsController(view?: PromptLibraryView): PromptsControlle
     closeEditor,
     submitPrompt,
     deletePrompt,
+    createQuota,
     createCategory,
     categoryDialog,
     categoryName,

@@ -46,6 +46,8 @@ export const STR = {
   formatPlain: 'Plain',
 
   // Actions
+  rowMenu: 'Profile actions',
+  edit: 'Edit',
   delete: 'Delete',
   deleteProfile: 'Delete profile',
   confirmDeleteTitle: 'Delete this profile?',

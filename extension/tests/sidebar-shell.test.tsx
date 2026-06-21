@@ -9,6 +9,7 @@ import { SidebarShell } from '../src/ui/sidebar/SidebarShell';
 import type { WorkspaceView } from '../src/ui/sidebar/useWorkspace';
 import type { ProfileLibraryView } from '../src/ui/profiles/useProfileLibrary';
 import type { ConversationIndex } from '../src/shared/types';
+import { SETTINGS_KEY } from '../src/shared/settings';
 
 // A ready, empty profile-library stub so the Profiles tab deterministically renders its
 // panel + first-run state (no worker round-trip under the test chrome shim).
@@ -319,5 +320,36 @@ describe('Collapsed-list nudge (sidebar-shell)', () => {
       active: { platform: 'gemini', nativeId: 'g1', title: 'A chat', updatedAt: 0 },
     });
     expect($('[data-testid=sk-collapsed-list-nudge]')).toBeNull();
+  });
+});
+
+describe('Tier badge reflects settings (tier-gate 4.1/4.2/4.3)', () => {
+  it('shows the FREE label (not PRO) on a fresh install', async () => {
+    await mountShell();
+    const badge = $('[data-testid=sk-pro-badge]')!;
+    expect(badge.textContent).toBe('FREE');
+    expect(badge.getAttribute('data-tier')).toBe('FREE');
+  });
+
+  it('shows PRO when settings persist a PRO tier', async () => {
+    fake.store[SETTINGS_KEY] = { tier: 'PRO' };
+    await mountShell();
+    await flush(); // let the async getSettings read + badge re-render settle
+    await flush();
+    const badge = $('[data-testid=sk-pro-badge]')!;
+    expect(badge.textContent).toBe('PRO');
+    expect(badge.getAttribute('data-tier')).toBe('PRO');
+  });
+
+  it('re-renders the badge on a tier change without a reload', async () => {
+    await mountShell();
+    expect($('[data-testid=sk-pro-badge]')!.textContent).toBe('FREE');
+
+    // A settings change (e.g. an upgrade) fires chrome.storage.onChanged; the badge
+    // subscription updates the label in place — no remount.
+    await fake.chrome.storage.local.set({ [SETTINGS_KEY]: { tier: 'PRO' } });
+    await flush();
+
+    expect($('[data-testid=sk-pro-badge]')!.textContent).toBe('PRO');
   });
 });

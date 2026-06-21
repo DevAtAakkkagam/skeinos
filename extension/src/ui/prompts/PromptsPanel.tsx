@@ -104,6 +104,7 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
           onClose={c.closeEditor}
           onSubmit={c.submitPrompt}
           onCreateCategory={c.createCategory}
+          quota={c.createQuota}
         />
       ) : null}
     </div>

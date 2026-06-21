@@ -8,6 +8,8 @@
 
 import { broadcast, registerHandler } from '../../core/messaging';
 import { workspaceStore, type WorkspaceStore } from '../../core/store';
+import { getSettings } from '../../core/settings';
+import { assertWithinQuota } from '../../core/tier';
 import { indexConversationTitle } from '../conversation-index/pipeline';
 import type { ConversationIndex, Folder } from '../../shared/types';
 import {
@@ -124,6 +126,10 @@ export async function mutateWorkspace(
     case 'folder.create': {
       const folders = await store.folders.query();
       rejectIfInvalid(canCreateUnder(op.parentId ?? null, indexById(folders)));
+      // Tier quota (tier-gate D2/D3): structural validity first (depth/cycle), then
+      // the live folder count against the tier limit — the throw aborts before any
+      // `put`, so a rejected create writes nothing and emits no broadcast.
+      assertWithinQuota('folders', folders.length, (await getSettings()).tier ?? 'FREE');
       await store.folders.put(
         createFolder(folders, {
           id: op.id,

@@ -8,21 +8,31 @@ export const PROFILES_CSS = `
 .sk-profiles { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .sk-profiles__scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: var(--sk-space-2); padding: var(--sk-space-2); }
 .sk-profiles__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sk-space-2); }
-.sk-profiles__item { display: block; }
 
-/* A profile row: a full-width clickable card (opens the editor modal). */
-.sk-profiles__row {
-  display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; cursor: pointer;
-  border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); font: inherit; color: var(--sk-color-fg);
-  background: var(--sk-color-bg); padding: var(--sk-space-2) var(--sk-space-3) var(--sk-space-3);
+/* A profile card: the click-to-edit body grows; the platform logos and the overflow
+   (⋯) actions menu sit top-aligned to its right — mirroring the conversation/prompt
+   rows. The card border highlights on hover or when anything inside it is focused. */
+.sk-profiles__item {
+  display: flex; align-items: flex-start; gap: var(--sk-space-2);
+  border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg);
+  padding: var(--sk-space-2) var(--sk-space-2) var(--sk-space-3) var(--sk-space-3);
 }
-.sk-profiles__row:hover, .sk-profiles__row:focus-visible { border-color: var(--sk-color-accent); outline: none; }
-.sk-profiles__head { display: flex; align-items: center; gap: var(--sk-space-2); }
-.sk-profiles__name { flex: 1 1 auto; min-width: 0; font-size: var(--sk-text-base); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-profiles__item:hover, .sk-profiles__item:focus-within { border-color: var(--sk-color-accent); }
+.sk-profiles__row {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer;
+  border: 0; background: none; padding: 0; font: inherit; color: var(--sk-color-fg);
+}
+.sk-profiles__row:focus-visible { outline: none; }
+.sk-profiles__name { font-size: var(--sk-text-base); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sk-profiles__desc { font-size: var(--sk-text-sm); color: var(--sk-color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sk-profiles__logos { flex: none; display: inline-flex; align-items: center; gap: var(--sk-space-1); margin-left: auto; }
+.sk-profiles__logos { flex: none; display: inline-flex; align-items: center; gap: var(--sk-space-1); padding-top: 2px; }
 .sk-profiles__logo { display: inline-flex; align-items: center; }
 .sk-profiles__logo svg { display: block; }
+/* The ⋯ trigger keeps its slot (opacity-only reveal, base rule in SIDEBAR_CSS) so the
+   row never reflows; it stays visible while its menu is open (Zag data-state). */
+.sk-profiles__menu { flex: none; }
+.sk-profiles__item:hover .sk-row-menu, .sk-profiles__item:focus-within .sk-row-menu,
+.sk-profiles__menu .sk-row-menu[data-state="open"] { opacity: 1; }
 
 /* --- editor dialog (same modal style as the prompt editor) ----------------- */
 .sk-profile-editor { display: flex; flex-direction: column; gap: var(--sk-space-2); min-width: 320px; max-width: 92vw; }
@@ -51,5 +61,13 @@ export const PROFILES_CSS = `
 
 /* The editor's action row: Delete sits left, Cancel/Save right. */
 .sk-profile-editor__actions { display: flex; align-items: center; gap: var(--sk-space-2); }
-.sk-profile-editor__delete { margin-right: auto; }
+.sk-profile-editor__delete {
+  margin-right: auto;
+  color: var(--sk-color-muted);
+  font-size: var(--sk-text-sm);
+}
+.sk-profile-editor__delete:hover, .sk-profile-editor__delete:focus-visible {
+  color: var(--sk-color-danger);
+  background: color-mix(in srgb, var(--sk-color-danger) 10%, transparent);
+}
 `;
