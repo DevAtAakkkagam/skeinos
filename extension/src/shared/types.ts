@@ -71,6 +71,22 @@ export interface ActiveConversation {
   listCollapsedHint?: boolean;
 }
 
+/**
+ * Per-platform UI signal reported by the content script, independent of whether a
+ * conversation is open. One record per platform (keyed by `platform`). Today it
+ * carries only `listCollapsed` — true when the host hides its conversation list
+ * while its side drawer is collapsed (Gemini) and that drawer is currently shut —
+ * so the side panel can nudge the user to open the drawer once and sync the full
+ * list EVEN on a new-chat/home page where no conversation is open (the moment a
+ * fresh user most needs the hint). Local-only metadata, never synced; survives MV3
+ * worker death (SW-2) so the nudge persists across a worker restart.
+ */
+export interface PlatformState {
+  platform: PlatformId;
+  listCollapsed: boolean;
+  updatedAt: number;
+}
+
 /** Local only — never synced. */
 export interface ConversationIndex {
   id: string;
@@ -122,8 +138,6 @@ export interface Prompt extends SyncMeta {
   tags: string[];
   /** Platforms this prompt targets (zero or more) — the cross-platform cards. */
   targetModels: PlatformId[];
-  /** Slash alias (`/exp`) shown on cards. Inert until insertion ships (C13). */
-  slug?: string;
   /**
    * The professional domain this prompt belongs to ({@link DomainId}). Set once when
    * a catalog seed is installed and left as the stable onboarding filter key —

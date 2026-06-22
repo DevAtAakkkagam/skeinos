@@ -11,7 +11,7 @@
 
 import { useState } from 'preact/hooks';
 import { BrandGlyph } from '../components/BrandGlyph';
-import { CheckIcon, ChevronIcon, FolderIcon, LockIcon, ShieldIcon } from '../components/Icon';
+import { CheckIcon, ChevronIcon, FolderIcon, ShieldIcon } from '../components/Icon';
 import { DOMAIN_REGISTRY, type DomainId } from '../../shared/domains';
 import { seedsForDomain } from '../../core/prompts/catalog';
 import { installPromptSeedsRemote } from '../../core/prompts/client';
@@ -26,14 +26,10 @@ const STR = {
   // Welcome
   eyebrow: 'Welcome to Skeinos',
   title: 'One workspace across every AI chat',
-  body: 'Folders, search, prompts and instruction profiles that follow you across Claude, Gemini, Perplexity and more — laid over the sites you already use.',
-  localTitle: 'Local-first by design',
-  localBody:
-    'Your conversations are read and indexed on your device. Message content never reaches our servers.',
-  syncTitle: 'Only metadata syncs',
-  syncBody:
-    'Folders, prompts and tags sync end-to-end encrypted. Nothing else leaves your machine.',
-  haveAccount: 'I already have an account',
+  body: 'Folders, search, prompts and instruction profiles that follow you across Claude, Gemini, Perplexity and more, laid over the sites you already use.',
+  privacy:
+    'Local-first by design. Your chats are read and indexed on this device; nothing is uploaded, and no account is needed.',
+  haveAccount: 'Skip for now',
   getStarted: 'Get started',
 
   // Permissions priming
@@ -291,8 +287,13 @@ export function OnboardingSurface({
       );
     }
 
-    // Step 3 (get started) has no footer nav — its actions are the cards above.
-    return null;
+    // Step 3 (get started): the primary actions are the cards above; the footer
+    // keeps only Back so the user can step back through the flow.
+    return (
+      <button type="button" class="sk-btn--link" data-testid="sk-onboarding-back" onClick={back}>
+        {STR.back}
+      </button>
+    );
   }
 
   function GetStartedStep() {
@@ -353,26 +354,15 @@ function WelcomeStep() {
         <p class="sk-onb__body">{STR.body}</p>
       </div>
 
-      <ul class="sk-onb__features">
-        <li class="sk-onb__feature">
-          <span class="sk-onb__feature-icon" aria-hidden="true">
-            <ShieldIcon size={18} />
-          </span>
-          <div class="sk-onb__feature-text">
-            <p class="sk-onb__feature-title">{STR.localTitle}</p>
-            <p class="sk-onb__feature-body">{STR.localBody}</p>
-          </div>
-        </li>
-        <li class="sk-onb__feature">
-          <span class="sk-onb__feature-icon" aria-hidden="true">
-            <LockIcon size={18} />
-          </span>
-          <div class="sk-onb__feature-text">
-            <p class="sk-onb__feature-title">{STR.syncTitle}</p>
-            <p class="sk-onb__feature-body">{STR.syncBody}</p>
-          </div>
-        </li>
-      </ul>
+      <p
+        class="sk-onb__assurance sk-onb__assurance--solo"
+        data-testid="sk-onboarding-welcome-assurance"
+      >
+        <span class="sk-onb__assurance-icon" aria-hidden="true">
+          <ShieldIcon size={14} />
+        </span>
+        {STR.privacy}
+      </p>
     </div>
   );
 }

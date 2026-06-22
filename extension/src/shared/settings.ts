@@ -11,10 +11,12 @@ import type { DomainId } from './domains';
 export type Theme = 'light' | 'dark' | 'system';
 
 /**
- * The monetization tier (tier-gate). `FREE` is the default and the fallback for
- * any settings record that predates the field; `PRO` lifts every quota. Defined
- * here (not in `core/tier`) so the type is dependency-free and importable by both
- * the worker's limit table and the UI without crossing the deps-inward boundary.
+ * The monetization tier (tier-gate). `PRO` is the current default (every quota
+ * lifted) while billing is unbuilt and Pro is not yet purchasable (M5) — gating
+ * users on FREE with no upgrade path is the wrong launch state. Flip the default
+ * back to `FREE` when billing + server-side entitlement land. Defined here (not in
+ * `core/tier`) so the type is dependency-free and importable by both the worker's
+ * limit table and the UI without crossing the deps-inward boundary.
  */
 export type Tier = 'FREE' | 'PRO';
 
@@ -47,10 +49,10 @@ export interface Settings {
   activeProfileId?: string;
   /**
    * The monetization tier (tier-gate). Additive optional key — a settings object
-   * written before it existed reads back `FREE` via the defaults merge, which is
-   * exactly the free-tier state. Device-local until billing/sync ships (M5): tier
-   * is read by the worker for quota enforcement and by the sidebar badge, both via
-   * the single source here. A `PRO` value lifts every per-resource limit.
+   * written before it existed reads back the default (`PRO`) via the defaults
+   * merge. Device-local until billing/sync ships (M5): tier is read by the worker
+   * for quota enforcement and by the sidebar badge, both via the single source
+   * here. `PRO` lifts every per-resource limit; `FREE` enforces the caps.
    */
   tier?: Tier;
   // Later features extend this: per-platform toggles (adapters), shortcuts
@@ -66,9 +68,10 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   telemetry: false,
   onboardingCompleted: false,
-  // The free tier is the privacy-first, no-cost default; the merge fills it for
-  // every record that predates the field, so quotas are enforced from day one.
-  tier: 'FREE',
+  // PRO is the default while Pro is not yet purchasable (M5): unlock everything
+  // rather than block users on FREE with no checkout. Revert to 'FREE' when
+  // billing + server-side entitlement ship. See the `Tier` doc above.
+  tier: 'PRO',
   // `domain` is intentionally absent — it defaults to undefined until the user
   // picks one, and stays optional so the merge never forces a value.
 };

@@ -26,6 +26,7 @@ import {
 } from '../components/Icon';
 import { Skeleton } from '../components/Skeleton';
 import { UpgradeNudge } from '../components/UpgradeNudge';
+import { EnterHint } from '../components/EnterHint';
 import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import { ConversationList } from './ConversationList';
 import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
@@ -1164,6 +1165,7 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
           <button class="sk-btn sk-btn--icon" type="submit" data-testid="sk-folder-submit" disabled={busy} aria-busy={busy}>
             <CheckIcon size={16} />
             {editing ? STR.save : STR.create}
+            <EnterHint />
           </button>
         </div>
       </form>

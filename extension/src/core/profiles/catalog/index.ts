@@ -10,9 +10,11 @@
 
 import type { DomainId } from '../../../shared/domains';
 import type { InstructionProfile, PlatformId } from '../../../shared/types';
+import { SUPPORTED_PLATFORMS } from '../../../shared/branding';
 
-/** Platforms a seeded profile applies to by default — the targetable set today. */
-const ALL_TARGETABLE: PlatformId[] = ['claude', 'gemini', 'perplexity'];
+/** Platforms a seeded profile applies to by default — the full supported set,
+ *  sourced from the single platform registry so new platforms are covered. */
+const ALL_TARGETABLE: PlatformId[] = SUPPORTED_PLATFORMS;
 
 /** One catalog entry: authored content only. The installer turns it into a stored
  *  `InstructionProfile` by minting an `id`, carrying `seedId`/`domain`, and stamping

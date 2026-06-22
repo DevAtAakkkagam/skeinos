@@ -4,6 +4,8 @@
 // accessors work under test with a fake `chrome` and never depend on ambient
 // extension globals or `@types/chrome`.
 
+import { extApi } from '../platform/ext-api';
+
 export interface StorageChange {
   oldValue?: unknown;
   newValue?: unknown;
@@ -35,7 +37,7 @@ interface ChromeLike {
 }
 
 function chrome(): ChromeLike | undefined {
-  return (globalThis as { chrome?: ChromeLike }).chrome;
+  return extApi<ChromeLike>();
 }
 
 /** The `chrome.storage` surface, or `undefined` outside the extension runtime. */

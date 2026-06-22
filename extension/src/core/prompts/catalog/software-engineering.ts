@@ -20,7 +20,6 @@ export const SOFTWARE_ENGINEERING: SeedPrompt[] = [
     ].join('\n'),
     tags: ['review', 'quality'],
     targetModels: ['claude'],
-    slug: '/review',
   },
   {
     seedId: 'software-engineering/debug-error',
@@ -38,7 +37,6 @@ export const SOFTWARE_ENGINEERING: SeedPrompt[] = [
     ].join('\n'),
     tags: ['debugging'],
     targetModels: ['claude'],
-    slug: '/debug',
   },
   {
     seedId: 'software-engineering/explain-code',
@@ -71,7 +69,6 @@ export const SOFTWARE_ENGINEERING: SeedPrompt[] = [
     ].join('\n'),
     tags: ['testing'],
     targetModels: ['claude'],
-    slug: '/tests',
   },
   {
     seedId: 'software-engineering/refactor',

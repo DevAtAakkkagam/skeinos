@@ -1,8 +1,8 @@
 // The slash-command prompt popover (design D-4). A Skeinos-owned popover with its
 // OWN search field — not host-composer keystroke interception (D-1) — that queries
 // the library through the worker via `usePromptSearch` and lists matches. Each row
-// shows a generic prompt glyph, the title, a highlighted snippet, and the `/slug`
-// alias. Positioning is delegated to the caller's `useFloating` (anchored to the
+// shows a generic prompt glyph, the title, and a highlighted snippet.
+// Positioning is delegated to the caller's `useFloating` (anchored to the
 // bar, opening upward); this component owns only the search field, the listbox, and
 // keyboard navigation. Styled from `--sk-*` tokens, fully ARIA-labelled. Dismissing
 // (Escape / outside click) inserts nothing — that is the caller's `onClose`.
@@ -232,11 +232,6 @@ export function SlashPopover({
                   <span class="sk-ib-row__title">{r.title}</span>
                   <Snippet segments={r.snippet} />
                 </span>
-                {r.slug ? (
-                  <span class="sk-ib-row__slug" data-testid="sk-ib-slug">
-                    {r.slug.startsWith('/') ? r.slug : `/${r.slug}`}
-                  </span>
-                ) : null}
               </li>
             ))}
             </ul>

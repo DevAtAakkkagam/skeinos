@@ -140,7 +140,7 @@ describe('Side panel mounts the shell on a supported host (7.2)', () => {
     // The shell is mounted (not the neutral prompt)…
     expect($('[data-testid=sk-shell]')).toBeTruthy();
     expect($('[data-testid=sk-panel-empty]')).toBeNull();
-    expect(container.textContent).toContain('Personal workspace');
+    expect(container.textContent).toContain('Chats and prompts, one thread');
     // …and its data layer reached the worker over runtime messaging.
     expect(fake.sendMessage).toHaveBeenCalled();
   });
@@ -219,5 +219,22 @@ describe('Auto-close on an unsupported host (7.3)', () => {
     await mountPanel();
     // The platform-independent first-run flow must remain reachable everywhere.
     expect(close).not.toHaveBeenCalled();
+  });
+
+  it('NEVER auto-closes on Firefox (no native side panel to dismiss)', async () => {
+    vi.stubEnv('BROWSER', 'firefox');
+    try {
+      fake = makeChrome('https://claude.ai/');
+      setChrome(fake.chrome);
+      await mountPanel();
+      // Switch to an unsupported host — on Firefox the panel stays put and falls
+      // through to the neutral empty state instead of calling `window.close()`.
+      fake.setActiveUrl('https://example.com/');
+      await flush();
+      await flush();
+      expect(close).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

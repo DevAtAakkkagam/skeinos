@@ -18,6 +18,7 @@ import { SidebarShell } from '../../ui/sidebar/SidebarShell';
 import { OnboardingSurface } from '../../ui/onboarding/OnboardingSurface';
 import { isOnboardingComplete } from '../../ui/onboarding/gate';
 import { getSettings, subscribeSettings } from '../../core/settings';
+import { extApi } from '../../core/platform/ext-api';
 import type { PlatformId } from '../../shared/types';
 
 const STR = {
@@ -35,7 +36,7 @@ interface TabsApi {
 }
 
 function tabsApi(): TabsApi | undefined {
-  return (globalThis as { chrome?: { tabs?: TabsApi } }).chrome?.tabs;
+  return extApi<{ tabs?: TabsApi }>()?.tabs;
 }
 
 /** Resolve the active tab's platform, or `null` when no supported host is active.
@@ -82,10 +83,16 @@ export function SidePanelApp() {
   // closes immediately rather than a switch late. `window.close()` is the only way
   // to dismiss a side panel (there is no `chrome.sidePanel.close()`).
   //
+  // Firefox is EXEMPT: it has no native global side panel (the `sidePanel` API is
+  // Chromium-only — see background/sidePanel.ts), so there is nothing to dismiss and
+  // auto-closing would just kill the user's open Skeinos view. There the panel stays
+  // put and falls through to the neutral "open a supported chat" empty state below.
+  //
   // Strict `=== null` (not `== null`) so the initial `undefined` "still resolving"
   // value never closes the panel mid-open. Gated on `onboarded` so the platform-
   // independent first-run flow can still show on any tab.
   useEffect(() => {
+    if (import.meta.env.BROWSER === 'firefox') return;
     if (onboarded === true && platform === null) window.close();
   }, [onboarded, platform]);
 

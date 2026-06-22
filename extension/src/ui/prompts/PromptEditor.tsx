@@ -1,6 +1,6 @@
 // The create/edit prompt editor (design D-D): a `Dialog` capturing title, body,
-// description, tags, target platforms (multi-select toggle chips), category, and
-// slug. While editing the body it shows a LIVE preview of the variables parsed from
+// description, tags, target platforms (multi-select toggle chips), and category.
+// While editing the body it shows a LIVE preview of the variables parsed from
 // it (name · type · default) via the shared `parseVariables` — preview only; on save
 // it sends `body` + metadata and NEVER `variables` (the worker is the single
 // authority, D-D). Cleared optional fields are sent as `''`, not unset (D-E). The
@@ -11,6 +11,7 @@ import type { JSX } from 'preact';
 import { parseVariables } from '../../core/prompts';
 import { PlatformLogo } from '../components/PlatformLogo';
 import { UpgradeNudge } from '../components/UpgradeNudge';
+import { EnterHint } from '../components/EnterHint';
 import { Dialog } from '../primitives/Dialog';
 import type { PlatformId, Prompt, PromptFolder } from '../../shared/types';
 import type { QuotaErrorDetail } from '../../core/tier';
@@ -25,7 +26,6 @@ export interface PromptEditorSubmit {
   description: string;
   tags: string[];
   targetModels: PlatformId[];
-  slug: string;
   promptFolderId: string | null;
 }
 
@@ -62,7 +62,6 @@ export function PromptEditor({
   const [body, setBody] = useState(prompt?.body ?? '');
   const [description, setDescription] = useState(prompt?.description ?? '');
   const [tagsText, setTagsText] = useState((prompt?.tags ?? []).join(', '));
-  const [slug, setSlug] = useState(prompt?.slug ?? '');
   const [targets, setTargets] = useState<PlatformId[]>(prompt?.targetModels ?? []);
   const [categoryId, setCategoryId] = useState<string | null>(prompt?.promptFolderId ?? null);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -73,8 +72,10 @@ export function PromptEditor({
   // never throws for any input (design D-B).
   const variables = useMemo(() => parseVariables(body), [body]);
 
-  const toggleTarget = (p: PlatformId): void =>
+  const toggleTarget = (p: PlatformId): void => {
     setTargets((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
+    if (error) setError(null);
+  };
 
   const onCategorySelect = (value: string): void => {
     if (value === NEW_CATEGORY) {
@@ -100,6 +101,10 @@ export function PromptEditor({
       setError(STR.titleRequired);
       return;
     }
+    if (targets.length === 0) {
+      setError(STR.targetsRequired);
+      return;
+    }
     onSubmit({
       title: trimmed,
       body,
@@ -109,7 +114,6 @@ export function PromptEditor({
         .map((t) => t.trim())
         .filter(Boolean),
       targetModels: targets,
-      slug: slug.trim(),
       promptFolderId: categoryId,
     });
   };
@@ -125,7 +129,13 @@ export function PromptEditor({
       ariaLabel={isEdit ? STR.editorEditTitle : STR.editorNewTitle}
       contentTestId="sk-prompt-editor"
     >
-      <div class="sk-prompt-editor">
+      <form
+        class="sk-prompt-editor"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
         <div class="sk-dialog__header">
           <h2 class="sk-dialog__title">{isEdit ? STR.editorEditTitle : STR.editorNewTitle}</h2>
         </div>
@@ -214,37 +224,23 @@ export function PromptEditor({
           </div>
         </fieldset>
 
-        <div class="sk-prompt-editor__row">
-          <label class="sk-field sk-prompt-editor__col">
-            <span class="sk-field__label">{STR.fieldCategory}</span>
-            <select
-              class="sk-select"
-              data-testid="sk-prompt-editor-category"
-              value={selectValue}
-              onChange={(e) => onCategorySelect((e.target as HTMLSelectElement).value)}
-            >
-              <option value="">{STR.uncategorized}</option>
-              {folders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-              <option value={NEW_CATEGORY}>{STR.newCategory}</option>
-            </select>
-          </label>
-
-          <label class="sk-field sk-prompt-editor__col">
-            <span class="sk-field__label">{STR.fieldSlug}</span>
-            <input
-              class="sk-input"
-              type="text"
-              data-testid="sk-prompt-editor-slug"
-              placeholder={STR.fieldSlugPlaceholder}
-              value={slug}
-              onInput={(e) => setSlug((e.target as HTMLInputElement).value)}
-            />
-          </label>
-        </div>
+        <label class="sk-field">
+          <span class="sk-field__label">{STR.fieldCategory}</span>
+          <select
+            class="sk-select"
+            data-testid="sk-prompt-editor-category"
+            value={selectValue}
+            onChange={(e) => onCategorySelect((e.target as HTMLSelectElement).value)}
+          >
+            <option value="">{STR.uncategorized}</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+            <option value={NEW_CATEGORY}>{STR.newCategory}</option>
+          </select>
+        </label>
 
         {showNewCategory ? (
           <div class="sk-prompt-editor__new-category">
@@ -304,16 +300,12 @@ export function PromptEditor({
           >
             {STR.cancel}
           </button>
-          <button
-            type="button"
-            class="sk-btn"
-            data-testid="sk-prompt-editor-save"
-            onClick={submit}
-          >
+          <button type="submit" class="sk-btn" data-testid="sk-prompt-editor-save">
             {STR.save}
+            <EnterHint />
           </button>
         </div>
-      </div>
+      </form>
     </Dialog>
   );
 }

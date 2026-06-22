@@ -10,8 +10,9 @@ import { useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { PlatformLogo } from '../components/PlatformLogo';
 import { UpgradeNudge } from '../components/UpgradeNudge';
+import { EnterHint } from '../components/EnterHint';
 import { Dialog } from '../primitives/Dialog';
-import { TARGETABLE_PLATFORMS } from '../prompts/strings';
+import { SUPPORTED_PLATFORMS as TARGETABLE_PLATFORMS } from '../../shared/branding';
 import type { InstructionProfile, PlatformId } from '../../shared/types';
 import type { QuotaErrorDetail } from '../../core/tier';
 import { PLATFORM_LABELS, STR } from './strings';
@@ -102,7 +103,13 @@ export function ProfileEditor({
       ariaLabel={isEdit ? STR.editorEditTitle : STR.editorNewTitle}
       contentTestId="sk-profile-editor"
     >
-      <div class="sk-profile-editor">
+      <form
+        class="sk-profile-editor"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
         <div class="sk-dialog__header">
           <h2 class="sk-dialog__title">{isEdit ? STR.editorEditTitle : STR.editorNewTitle}</h2>
         </div>
@@ -146,40 +153,40 @@ export function ProfileEditor({
           />
         </label>
 
-        {/* Per-platform APPLY TO rows (D-3): a toggle + the injection mode. PREPEND for
-            every platform this slice — no system-prompt mode is advertised. */}
+        {/* APPLY TO (D-3): a wrapping cluster of platform toggle chips. The injection
+            mode is PREPEND for every platform this slice, so it's stated once as a quiet
+            caption rather than repeated per row — no system-prompt mode is advertised. */}
         <fieldset class="sk-fieldset sk-field">
           <legend class="sk-field__label">{STR.appliesToLegend}</legend>
           <div class="sk-profile-editor__applies" data-testid="sk-profile-applies">
             {TARGETABLE_PLATFORMS.map((p) => {
               const on = appliesTo.includes(p);
               return (
-                <div key={p} class="sk-profile-editor__applies-row">
-                  <button
-                    type="button"
-                    class={`sk-chip${on ? ' sk-chip--active' : ''}`}
-                    data-testid={`sk-profile-applies-${p}`}
-                    aria-pressed={on}
-                    onClick={() => toggleApplies(p)}
-                  >
-                    <span class="sk-chip__logo" aria-hidden="true">
-                      <PlatformLogo platform={p} size={14} />
-                    </span>
-                    {PLATFORM_LABELS[p]}
-                  </button>
-                  <span class="sk-profile-editor__mode" data-testid={`sk-profile-mode-${p}`}>
-                    {STR.modePrepend}
+                <button
+                  key={p}
+                  type="button"
+                  class={`sk-chip${on ? ' sk-chip--active' : ''}`}
+                  data-testid={`sk-profile-applies-${p}`}
+                  aria-pressed={on}
+                  onClick={() => toggleApplies(p)}
+                >
+                  <span class="sk-chip__logo" aria-hidden="true">
+                    <PlatformLogo platform={p} size={14} />
                   </span>
-                </div>
+                  {PLATFORM_LABELS[p]}
+                </button>
               );
             })}
           </div>
+          <p class="sk-profile-editor__apply-note" data-testid="sk-profile-apply-mode">
+            {STR.applyModeNote}
+          </p>
         </fieldset>
 
-        {/* Response style (verbosity + format) as two segmented controls. */}
+        {/* Response style: verbosity + format as two label-left segmented rows. */}
         <fieldset class="sk-fieldset sk-field">
           <legend class="sk-field__label">{STR.responseStyleLegend}</legend>
-          <div class="sk-profile-editor__style-group">
+          <div class="sk-profile-editor__style-row">
             <span class="sk-profile-editor__style-label">{STR.verbosityLabel}</span>
             <div class="sk-segmented" role="group" aria-label={STR.verbosityLabel} data-testid="sk-profile-verbosity">
               {VERBOSITY_OPTIONS.map((o) => (
@@ -196,7 +203,7 @@ export function ProfileEditor({
               ))}
             </div>
           </div>
-          <div class="sk-profile-editor__style-group">
+          <div class="sk-profile-editor__style-row">
             <span class="sk-profile-editor__style-label">{STR.formatLabel}</span>
             <div class="sk-segmented" role="group" aria-label={STR.formatLabel} data-testid="sk-profile-format">
               {FORMAT_OPTIONS.map((o) => (
@@ -244,11 +251,12 @@ export function ProfileEditor({
           >
             {STR.cancel}
           </button>
-          <button type="button" class="sk-btn" data-testid="sk-profile-editor-save" onClick={submit}>
+          <button type="submit" class="sk-btn" data-testid="sk-profile-editor-save">
             {STR.save}
+            <EnterHint />
           </button>
         </div>
-      </div>
+      </form>
 
       {confirmDelete && profile ? (
         <Dialog

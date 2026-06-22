@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from 'preact/hooks';
 import { Dialog } from '../primitives/Dialog';
+import { EnterHint } from '../components/EnterHint';
 import type { PromptVar } from '../../shared/types';
 import { STR } from './strings';
 
@@ -57,8 +58,12 @@ export function VariableModal({ title, variables, onConfirm, onCancel }: Variabl
       ariaLabel={STR.modalLabel}
       contentTestId="sk-ib-var-modal"
     >
-      <div
+      <form
         class="sk-ib-modal"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onConfirm(values);
+        }}
         onKeyDown={stopKeyFromHost}
         onKeyUp={stopKeyFromHost}
         onKeyPress={(e) => e.stopPropagation()}
@@ -108,16 +113,12 @@ export function VariableModal({ title, variables, onConfirm, onCancel }: Variabl
           >
             {STR.cancel}
           </button>
-          <button
-            type="button"
-            class="sk-btn"
-            data-testid="sk-ib-var-insert"
-            onClick={() => onConfirm(values)}
-          >
+          <button type="submit" class="sk-btn" data-testid="sk-ib-var-insert">
             {STR.insert}
+            <EnterHint />
           </button>
         </div>
-      </div>
+      </form>
     </Dialog>
   );
 }

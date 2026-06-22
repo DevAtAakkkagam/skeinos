@@ -3,6 +3,8 @@
 // the surface tiny and structural means the transport works under test with a
 // fake `chrome` and never depends on ambient extension globals.
 
+import { extApi } from '../platform/ext-api';
+
 /** A `chrome.runtime.onMessage` listener; return `true` to respond async. */
 export type MessageListener = (
   message: unknown,
@@ -37,7 +39,7 @@ interface ChromeLike {
 }
 
 function chrome(): ChromeLike | undefined {
-  return (globalThis as { chrome?: ChromeLike }).chrome;
+  return extApi<ChromeLike>();
 }
 
 /** The `chrome.runtime` surface, or `undefined` outside the extension runtime. */

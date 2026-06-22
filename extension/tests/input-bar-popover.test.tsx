@@ -1,5 +1,5 @@
 // input-bar slash popover (6.3): the `/` trigger opens the picker, typing drives
-// `prompt.search`, rows render title + snippet + /slug, the empty state appears on
+// `prompt.search`, rows render title + snippet, the empty state appears on
 // no matches, and dismissing (Escape / outside click / trigger toggle) closes
 // WITHOUT inserting. Rows/empty/keyboard are tested against `<SlashPopover>` with an
 // injected `view` (bypassing the 160ms debounce + worker subscription); the search
@@ -84,7 +84,7 @@ describe('SlashPopover rows + states (6.3)', () => {
     expect($$('[data-testid="sk-ib-result"]')).toHaveLength(1);
   });
 
-  it('renders each row with title, highlighted snippet and a /slug', async () => {
+  it('renders each row with title and a highlighted snippet', async () => {
     mountPopover(
       makeView({
         results: [
@@ -92,7 +92,6 @@ describe('SlashPopover rows + states (6.3)', () => {
             id: 'p1',
             title: 'Budget email',
             snippet: [{ text: 'write a ', match: false }, { text: 'budget', match: true }],
-            slug: 'budget',
           }),
         ],
       }),
@@ -103,16 +102,6 @@ describe('SlashPopover rows + states (6.3)', () => {
     const row = $('[data-testid="sk-ib-result"]')!;
     expect(row.querySelector('.sk-ib-row__title')?.textContent).toBe('Budget email');
     expect(row.querySelector('mark')?.textContent).toBe('budget');
-    // Slug shown with a single leading slash.
-    expect($('[data-testid="sk-ib-slug"]')?.textContent).toBe('/budget');
-  });
-
-  it('does not render a slug chip when the result has no slug', async () => {
-    mountPopover(makeView({ results: [result({ id: 'p1', title: 'No slug' })] }));
-    type('x');
-    await Promise.resolve();
-    expect($('[data-testid="sk-ib-result"]')).toBeTruthy();
-    expect($('[data-testid="sk-ib-slug"]')).toBeNull();
   });
 
   it('shows the empty state when a query matches nothing', async () => {

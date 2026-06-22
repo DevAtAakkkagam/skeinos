@@ -7,7 +7,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { render } from 'preact';
 import { PLATFORM_LOGOS, PlatformLogo } from '../src/ui/components/PlatformLogo';
-import { PLATFORM_ORIGINS, platformOrigin, resolveConversationUrl } from '../src/shared/branding';
+import {
+  PLATFORM_ORIGINS,
+  SUPPORTED_PLATFORMS,
+  platformOrigin,
+  resolveConversationUrl,
+} from '../src/shared/branding';
 import type { PlatformId } from '../src/shared/types';
 
 const PRESENT = Object.keys(PLATFORM_LOGOS) as PlatformId[];
@@ -20,9 +25,12 @@ afterEach(() => {
 });
 
 describe('platform-branding registry', () => {
-  it('covers the P0 platforms with both a logo and an origin', () => {
-    expect(PRESENT.sort()).toEqual(['claude', 'gemini', 'perplexity']);
-    for (const id of PRESENT) {
+  it('keeps the supported set, logos, and origins in lockstep', () => {
+    // The registry is the single source of truth: a supported platform has a logo
+    // AND an origin, and nothing has a logo/origin without being supported.
+    expect(PRESENT.sort()).toEqual([...SUPPORTED_PLATFORMS].sort());
+    expect(Object.keys(PLATFORM_ORIGINS).sort()).toEqual([...SUPPORTED_PLATFORMS].sort());
+    for (const id of SUPPORTED_PLATFORMS) {
       expect(typeof PLATFORM_LOGOS[id]).toBe('function');
       expect(platformOrigin(id)).toBe(PLATFORM_ORIGINS[id]);
       expect(PLATFORM_ORIGINS[id]).toMatch(/^https:\/\//);

@@ -25,6 +25,7 @@ const view: WorkspaceView = {
   tree: { active: [], pinned: [], archived: [] },
   conversations: [],
   active: null,
+  listCollapsed: false,
   platformFilter: 'all',
   setPlatformFilter: vi.fn(),
   status: 'ready',
@@ -113,7 +114,7 @@ describe('Framed shell (6.1)', () => {
   it('renders header, tab strip, footer, and the folder body when expanded', async () => {
     await mountShell();
     expect($('[data-testid=sk-shell]')).toBeTruthy();
-    expect(container.textContent).toContain('Personal workspace');
+    expect(container.textContent).toContain('Chats and prompts, one thread');
     expect($('[data-testid=sk-tab-folders]')).toBeTruthy();
     expect($('[data-testid=sk-settings]')).toBeTruthy();
     // the live folder body (with its empty-state) is mounted inside
@@ -128,27 +129,47 @@ describe('Framed shell (6.1)', () => {
     expect($('.sk-brand__mark')).toBeFalsy();
     expect($('.sk-brand__glyph')).toBeFalsy();
     // the live workspace label + presence dot stay
-    expect(container.textContent).toContain('Personal workspace');
+    expect(container.textContent).toContain('Chats and prompts, one thread');
     expect($('.sk-brand__status')).toBeTruthy();
   });
 });
 
 describe('Disabled feature stubs (6.2)', () => {
-  it('Prompts and Profiles are now interactive; search live; PRO badge + sync present', async () => {
+  it('Prompts and Profiles are now interactive; search live; local-only status present', async () => {
     await mountShell();
     const prompts = $('[data-testid=sk-tab-prompts]') as HTMLButtonElement;
     const profiles = $('[data-testid=sk-tab-profiles]') as HTMLButtonElement;
     // Search is now live (C8) — the launcher opens the overlay rather than being inert.
     const search = $('[data-testid=sk-search]') as HTMLButtonElement;
     expect(search.disabled).toBe(false);
-    expect(container.textContent).toContain('⌘K');
+    // The launcher advertises an OS-aware accelerator (⌘K on macOS, Ctrl+K elsewhere).
+    expect(container.textContent).toMatch(/⌘K|Ctrl\+K/);
     // Prompts became interactive earlier; Profiles became interactive in this slice.
     expect(prompts.disabled).toBe(false);
     expect(profiles.disabled).toBe(false);
-    expect($('[data-testid=sk-pro-badge]')).toBeTruthy();
-    expect($('[data-testid=sk-sync]')).toBeTruthy();
+    // The footer states the honest local-first resting state — no tier badge, no
+    // "Synced" stub (both over-promised; they return with billing + sync in M5).
+    expect($('[data-testid=sk-pro-badge]')).toBeNull();
+    expect($('[data-testid=sk-sync]')).toBeNull();
+    expect($('[data-testid=sk-status]')).toBeTruthy();
     // the active Folders tab is not disabled
     expect(($('[data-testid=sk-tab-folders]') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('Cmd/Ctrl+K opens the search overlay (the launcher accelerator now works)', async () => {
+    await mountShell();
+    expect($('[data-testid=sk-search-overlay]')).toBeNull();
+    // Ctrl+K (Windows/Linux) — exactly one of meta/ctrl, no Alt/Shift.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+    await flush();
+    expect($('[data-testid=sk-search-overlay]')).toBeTruthy();
+  });
+
+  it('plain K (no modifier) does not open the search overlay', async () => {
+    await mountShell();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', bubbles: true }));
+    await flush();
+    expect($('[data-testid=sk-search-overlay]')).toBeNull();
   });
 });
 
@@ -309,8 +330,17 @@ describe('Collapsed-list nudge (sidebar-shell)', () => {
     expect(nudge!.querySelector('.sk-nudge__logo svg')).toBeTruthy();
   });
 
-  it('renders no nudge when there is no active conversation', async () => {
-    await mountWith({ ...view, active: null });
+  it('shows the nudge from the platform signal even with no open conversation (home page)', async () => {
+    // The new-chat/home page: no active conversation, but the platform reports its
+    // list is collapsed — the nudge must still appear (the fresh-user case).
+    await mountWith({ ...view, active: null, listCollapsed: true });
+    const nudge = $('[data-testid=sk-collapsed-list-nudge]');
+    expect(nudge).toBeTruthy();
+    expect(nudge!.textContent).toContain('Gemini');
+  });
+
+  it('renders no nudge when no conversation is open and the list is not collapsed', async () => {
+    await mountWith({ ...view, active: null, listCollapsed: false });
     expect($('[data-testid=sk-collapsed-list-nudge]')).toBeNull();
   });
 
@@ -323,33 +353,28 @@ describe('Collapsed-list nudge (sidebar-shell)', () => {
   });
 });
 
-describe('Tier badge reflects settings (tier-gate 4.1/4.2/4.3)', () => {
-  it('shows the FREE label (not PRO) on a fresh install', async () => {
+describe('Footer status is honest about local-first state', () => {
+  it('shows a single "Local-only" status — no tier badge and no "Synced" stub', async () => {
     await mountShell();
-    const badge = $('[data-testid=sk-pro-badge]')!;
-    expect(badge.textContent).toBe('FREE');
-    expect(badge.getAttribute('data-tier')).toBe('FREE');
+    // The over-promising labels are gone (Pro isn't purchasable; sync ships M5).
+    expect($('[data-testid=sk-pro-badge]')).toBeNull();
+    expect($('[data-testid=sk-sync]')).toBeNull();
+
+    const status = $('[data-testid=sk-status]')!;
+    expect(status).toBeTruthy();
+    expect(status.textContent).toContain('Local-only');
+    // It's a status region (announced, not alarming) and carries a privacy tooltip.
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.getAttribute('title')).toMatch(/stays on this device/i);
+    // Paired icon, not colour-only (a11y: color-not-only).
+    expect(status.querySelector('svg')).toBeTruthy();
   });
 
-  it('shows PRO when settings persist a PRO tier', async () => {
-    fake.store[SETTINGS_KEY] = { tier: 'PRO' };
+  it('does not vary with the persisted tier (the badge was removed)', async () => {
+    fake.store[SETTINGS_KEY] = { tier: 'FREE' };
     await mountShell();
-    await flush(); // let the async getSettings read + badge re-render settle
     await flush();
-    const badge = $('[data-testid=sk-pro-badge]')!;
-    expect(badge.textContent).toBe('PRO');
-    expect(badge.getAttribute('data-tier')).toBe('PRO');
-  });
-
-  it('re-renders the badge on a tier change without a reload', async () => {
-    await mountShell();
-    expect($('[data-testid=sk-pro-badge]')!.textContent).toBe('FREE');
-
-    // A settings change (e.g. an upgrade) fires chrome.storage.onChanged; the badge
-    // subscription updates the label in place — no remount.
-    await fake.chrome.storage.local.set({ [SETTINGS_KEY]: { tier: 'PRO' } });
-    await flush();
-
-    expect($('[data-testid=sk-pro-badge]')!.textContent).toBe('PRO');
+    expect($('[data-testid=sk-status]')!.textContent).toContain('Local-only');
+    expect($('[data-testid=sk-pro-badge]')).toBeNull();
   });
 });

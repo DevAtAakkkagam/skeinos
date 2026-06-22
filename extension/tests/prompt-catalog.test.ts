@@ -261,7 +261,7 @@ describe('Prompt domain/seedId additions are a no-data migration (6.4)', () => {
     }
   });
 
-  it('the shipped MIGRATIONS list is at version 5', () => {
-    expect(MIGRATIONS).toHaveLength(5);
+  it('the shipped MIGRATIONS list is at version 6', () => {
+    expect(MIGRATIONS).toHaveLength(6);
   });
 });

@@ -84,7 +84,7 @@ export async function mutateProfileLibrary(
       // count is at the tier limit, so a refused create writes nothing and emits no
       // broadcast. PRO bypasses via the unlimited table entry.
       const existing = await store.profiles.query();
-      assertWithinQuota('profiles', existing.length, (await getSettings()).tier ?? 'FREE');
+      assertWithinQuota('profiles', existing.length, (await getSettings()).tier ?? 'PRO');
       // The envelope is stamped by the repo on `put`. `appliesTo` defaults to empty;
       // `description`/`responseStyle` are only set when provided (optional fields).
       const profile: InstructionProfile = {

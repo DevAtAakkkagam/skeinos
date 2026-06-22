@@ -30,7 +30,7 @@ function makePrompt(over: Partial<Prompt> & { id: string; body: string }): Promp
 }
 
 function searchResult(p: Prompt): PromptSearchResult {
-  return { id: p.id, title: p.title, snippet: [{ text: p.title, match: false }], targetModels: [], slug: p.slug };
+  return { id: p.id, title: p.title, snippet: [{ text: p.title, match: false }], targetModels: [] };
 }
 
 // query stub: prompt.library returns the seeded prompts; prompt.search returns rows.
@@ -146,7 +146,7 @@ describe('input action bar (real browser)', () => {
   });
 
   it('opens the slash popover and positions it with real layout (no render loop)', async () => {
-    mountBar([makePrompt({ id: 'p1', title: 'Budget email', body: 'hi', slug: '/email' })], vi.fn());
+    mountBar([makePrompt({ id: 'p1', title: 'Budget email', body: 'hi' })], vi.fn());
     click($('[data-testid="sk-ib-trigger"]')!);
 
     const popover = await vi.waitFor(() => {
@@ -158,11 +158,10 @@ describe('input action bar (real browser)', () => {
     expect(getComputedStyle(popover).position).toBe('absolute');
     await vi.waitFor(() => expect(parseFloat(popover.style.top || '0')).not.toBeNaN());
 
-    // Typing drives the (debounced) search; the row shows title + /slug.
+    // Typing drives the (debounced) search; the row shows the matched prompt.
     typeInto($('[data-testid="sk-ib-search"]') as HTMLInputElement, 'budget');
     await vi.waitFor(() => {
       expect($('[data-testid="sk-ib-result"]')).toBeTruthy();
-      expect($('[data-testid="sk-ib-slug"]')!.textContent).toBe('/email');
     });
   });
 

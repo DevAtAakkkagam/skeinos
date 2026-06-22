@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { subscribe } from '../../core/messaging';
+import { extApi } from '../../core/platform/ext-api';
 import { mutateProfilesRemote, queryProfilesRemote } from '../../core/profiles';
 import type { InstructionProfile } from '../../shared/types';
 import type { ProfileMutationOp } from '../../shared/profiles';
@@ -153,9 +154,9 @@ export function useProfileLibrary(): ProfileLibraryView {
   // Switching the active browser tab fires no focus/visibilitychange on the always-open
   // side panel; re-read on tab activation/update so a cross-tab change is picked up.
   useEffect(() => {
-    const tabs = (
-      globalThis as { chrome?: { tabs?: { onActivated?: ChromeEvent; onUpdated?: ChromeEvent } } }
-    ).chrome?.tabs;
+    const tabs = extApi<{
+      tabs?: { onActivated?: ChromeEvent; onUpdated?: ChromeEvent };
+    }>()?.tabs;
     if (!tabs) return;
     tabs.onActivated?.addListener(refresh);
     tabs.onUpdated?.addListener(refresh);

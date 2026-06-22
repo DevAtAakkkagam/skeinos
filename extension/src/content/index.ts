@@ -153,6 +153,20 @@ export async function runContent(): Promise<void> {
     handles.inputBar = undefined;
   };
 
+  // Report the platform-level collapsed-list signal (decoupled from any open
+  // conversation). Only platforms that drop their list when collapsed have a
+  // collapsed state to report, so the rest never send the signal at all —
+  // Claude/Perplexity never persist a record or nudge. PRIV-1 holds: a single
+  // boolean, no ids, no content.
+  const reportListState = (): void => {
+    if (!listHidesWhenCollapsed) return;
+    void mutateWorkspaceRemote({
+      op: 'platform.reportListState',
+      platform: platformId,
+      listCollapsed: listEmpty,
+    });
+  };
+
   const ingestList = (): void => {
     if (!isContextValid()) return void teardown();
     const refs = adapter
@@ -160,11 +174,17 @@ export async function runContent(): Promise<void> {
       .map((ref) => ({ nativeId: ref.nativeId, title: ref.title }));
     const wasEmpty = listEmpty;
     listEmpty = refs.length === 0;
-    // The drawer just opened or closed: re-assert the open conversation so its
-    // collapsed-list hint (and thus the panel's nudge) updates now. Guarded on
-    // `lastActiveRef`, which is null until `reportActive` first runs — so the very
-    // first `ingestList()` (before `reportActive` is defined) never reaches it.
-    if (listEmpty !== wasEmpty && lastActiveRef) reportActive(lastActiveRef);
+    // The drawer just opened or closed. Two updates ride this flip:
+    // 1. The PLATFORM-level collapsed signal — reported regardless of whether a
+    //    conversation is open, so the nudge also fires on a new-chat/home page where
+    //    `detectConversation()` is null (the moment a fresh user most needs it).
+    // 2. The open conversation's collapsed hint — re-assert it so the active card's
+    //    nudge updates now. Guarded on `lastActiveRef`, null until `reportActive`
+    //    first runs, so the very first `ingestList()` never reaches it.
+    if (listEmpty !== wasEmpty) {
+      reportListState();
+      if (lastActiveRef) reportActive(lastActiveRef);
+    }
     if (refs.length === 0) {
       // Not an error: the SPA list may simply not have hydrated yet. Stay
       // subscribed — the `list-changed` observer below re-fires this once items

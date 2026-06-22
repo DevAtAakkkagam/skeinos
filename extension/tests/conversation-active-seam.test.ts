@@ -173,3 +173,56 @@ describe('active-conversation seam', () => {
     expect(repeat.stores).toEqual([]);
   });
 });
+
+function platformState(snap: WorkspaceSnapshot) {
+  if (snap.kind !== 'platform.state') throw new Error('expected platform.state');
+  return snap.state;
+}
+
+describe('platform collapsed-list signal', () => {
+  it('returns null when nothing has been reported for the platform', async () => {
+    const store = await openStore(dbName());
+    const snap = await queryWorkspace(store, { kind: 'platform.state', platform: 'gemini' });
+    expect(platformState(snap)).toBeNull();
+  });
+
+  it('persists the collapsed signal per platform and surfaces it on the state read', async () => {
+    const store = await openStore(dbName());
+    const res = await mutateWorkspace(store, {
+      op: 'platform.reportListState',
+      platform: 'gemini',
+      listCollapsed: true,
+    });
+    expect(res.stores).toEqual(['platformState']);
+
+    const snap = await queryWorkspace(store, { kind: 'platform.state', platform: 'gemini' });
+    expect(platformState(snap)).toMatchObject({ platform: 'gemini', listCollapsed: true });
+    // Independent of other platforms.
+    const other = await queryWorkspace(store, { kind: 'platform.state', platform: 'claude' });
+    expect(platformState(other)).toBeNull();
+  });
+
+  it('survives a simulated worker restart (durable, single-writer)', async () => {
+    const name = dbName();
+    const store = await openStore(name);
+    await mutateWorkspace(store, { op: 'platform.reportListState', platform: 'gemini', listCollapsed: true });
+    store.db.close();
+
+    // A fresh store over the same database (worker cold start) still reads the signal.
+    const restarted = await openStore(name);
+    const snap = await queryWorkspace(restarted, { kind: 'platform.state', platform: 'gemini' });
+    expect(platformState(snap)).toMatchObject({ listCollapsed: true });
+  });
+
+  it('dedups an unchanged signal to a no-op (no broadcast)', async () => {
+    const store = await openStore(dbName());
+    const first = await mutateWorkspace(store, { op: 'platform.reportListState', platform: 'gemini', listCollapsed: true });
+    expect(first.stores).toEqual(['platformState']);
+    // Same value again: no write, no broadcast.
+    const repeat = await mutateWorkspace(store, { op: 'platform.reportListState', platform: 'gemini', listCollapsed: true });
+    expect(repeat.stores).toEqual([]);
+    // The drawer opens → false: a real transition, so it writes again.
+    const cleared = await mutateWorkspace(store, { op: 'platform.reportListState', platform: 'gemini', listCollapsed: false });
+    expect(cleared.stores).toEqual(['platformState']);
+  });
+});

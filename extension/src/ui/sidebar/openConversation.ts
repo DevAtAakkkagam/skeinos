@@ -14,6 +14,7 @@
 
 import type { ConversationIndex, PlatformId } from '../../shared/types';
 import { platformOrigin, resolveConversationUrl } from '../../shared/branding';
+import { extApi } from '../../core/platform/ext-api';
 
 interface TabLike {
   id?: number;
@@ -34,7 +35,7 @@ interface WindowsApi {
 }
 
 function chromeApi(): { tabs?: TabsApi; windows?: WindowsApi } | undefined {
-  return (globalThis as { chrome?: { tabs?: TabsApi; windows?: WindowsApi } }).chrome;
+  return extApi<{ tabs?: TabsApi; windows?: WindowsApi }>();
 }
 
 type ConvForOpen = Pick<ConversationIndex, 'platform' | 'nativeId'>;

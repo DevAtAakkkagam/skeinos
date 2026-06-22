@@ -1,8 +1,8 @@
 // A single prompt card (the narrow-column reflow of the design's 3-up grid card).
 // Shows the title, a body excerpt with `{{variables}}` rendered as highlighted chips
 // via the SHARED tokenizer (so the highlight can never disagree with the parsed
-// variable list), the variable count, the target-platform brand logos, the inert
-// `slug` badge (no insertion until C13), and an overflow `Menu` (Edit / Delete). A
+// variable list), the variable count, the target-platform brand logos, and an
+// overflow `Menu` (Edit / Delete). A
 // destructive delete is confirmed through a lightweight `Dialog` before it runs
 // (PRIV: deletes are explicit and never lose work silently). Styled only from
 // `--sk-*` tokens, keyboard-operable, and ARIA-labelled.
@@ -68,7 +68,6 @@ export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.E
   // Only target platforms that actually have a brand mark draw a logo; the rest are
   // skipped (a prompt with no targetable models shows no platform logo).
   const logos = prompt.targetModels.filter((p) => PLATFORM_LOGOS[p]);
-  const slug = prompt.slug?.trim();
 
   const onMenuSelect = (value: string): void => {
     if (value === 'edit') onEdit(prompt);
@@ -81,11 +80,6 @@ export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.E
         <h3 class="sk-prompt-card__title" data-testid="sk-prompt-card-title">
           {prompt.title}
         </h3>
-        {slug ? (
-          <span class="sk-prompt-card__slug" data-testid="sk-prompt-card-slug" aria-label={slug}>
-            {slug}
-          </span>
-        ) : null}
         <span class="sk-prompt-card__menu">
           <OverflowMenu
             trigger={<MoreIcon size={16} />}

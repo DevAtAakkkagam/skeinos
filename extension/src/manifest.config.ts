@@ -1,22 +1,33 @@
-// Single source of truth for the host surface area. Kept tiny and auditable:
-// host permissions cover the P0 launch platforms ONLY (PRD §5), with no broad
-// access and no credential-bearing permissions (PRD §8.3-8.4, decision D6).
+// Host surface area, derived from the SINGLE platform source of truth: the host
+// permissions are exactly the `hostMatch` of each bundled adapter config, so a
+// platform that ships an adapter gets (only) its host here automatically and one
+// that is removed loses it — no hand-maintained second list to drift. This keeps
+// the surface tiny and auditable: every entry traces to a shipped adapter, with no
+// broad access and no credential-bearing permissions (PRD §5/§8.3-8.4, decision D6).
+import { BUNDLED_CONFIGS } from './adapters/configs';
 
-export const P0_MATCHES = [
-  '*://claude.ai/*',
-  '*://gemini.google.com/*',
-  '*://*.perplexity.ai/*',
-] as const;
+export const P0_MATCHES: readonly string[] = Object.values(BUNDLED_CONFIGS).flatMap(
+  (config) => config?.hostMatch ?? [],
+);
 
 export const skeinosManifest = {
   name: 'Skeinos',
   description: 'A unified workspace layer for your LLM chats.',
   // Branded toolbar button. Icon-only for now (no popup/command wiring — that is a
-  // later UX change); Chrome falls back to the extension `icons` set (auto-discovered
-  // by WXT from src/public/icon/*.png) for the toolbar image, so no `default_icon` is
-  // declared here. The `icons` map and Firefox `theme_icons` are likewise populated by
-  // WXT's public/ discovery (icon/{size}.png and icon-light/icon-dark-{size}.png).
-  action: { default_title: 'Skeinos' },
+  // later UX change). `default_icon` is declared explicitly: Chrome would fall back to
+  // the extension `icons` set, but Firefox does NOT — its `browser_action` renders
+  // nothing when only `theme_icons` is present, so the toolbar icon was blank in
+  // Firefox. `theme_icons` then overrides the default per light/dark theme. The
+  // `icons` map and Firefox `theme_icons` are populated by WXT's public/ discovery
+  // (icon/{size}.png and icon-light/icon-dark-{size}.png).
+  action: {
+    default_title: 'Skeinos',
+    default_icon: {
+      16: 'icon/16.png',
+      24: 'icon/24.png',
+      32: 'icon/32.png',
+    },
+  },
   host_permissions: [...P0_MATCHES],
   // `alarms` powers the adapter-resilience canary watchdog (LLD §4.3): a durable,
   // worker-death-surviving schedule that re-surfaces a degraded platform within

@@ -250,6 +250,39 @@ describe('content script is DOM-only (7.4)', () => {
       );
     });
 
+    it('reports the platform collapsed signal even on a new-chat/home page (no open chat)', async () => {
+      m.loadConfig.mockResolvedValueOnce(geminiLike);
+      m.listConversations.mockReturnValueOnce([]); // collapsed drawer: no list items
+      m.detectConversation.mockReturnValueOnce(null); // home/new-chat: nothing open
+      await runContent();
+
+      // The platform-level collapsed signal fires regardless of an open conversation,
+      // so the panel can nudge on the home page — the moment a fresh user needs it.
+      expect(mutateWorkspaceRemote).toHaveBeenCalledWith({
+        op: 'platform.reportListState',
+        platform: 'claude',
+        listCollapsed: true,
+      });
+      // No conversation is open, so the active record is cleared, never reported.
+      expect(mutateWorkspaceRemote).toHaveBeenCalledWith(
+        expect.objectContaining({ op: 'conversation.clearActive' }),
+      );
+      expect(mutateWorkspaceRemote).not.toHaveBeenCalledWith(
+        expect.objectContaining({ op: 'conversation.reportActive' }),
+      );
+    });
+
+    it('never reports the platform signal on a platform whose list survives collapse', async () => {
+      // The default mock config omits `listHiddenWhenCollapsed` (Claude/Perplexity):
+      // these platforms have no collapsed state, so the signal is never sent.
+      m.listConversations.mockReturnValueOnce([]);
+      await runContent();
+
+      expect(mutateWorkspaceRemote).not.toHaveBeenCalledWith(
+        expect.objectContaining({ op: 'platform.reportListState' }),
+      );
+    });
+
     it('clears the hint and ingests once the list renders (drawer opened)', async () => {
       vi.useFakeTimers();
       try {

@@ -14,7 +14,6 @@ export const MARKETING_CONTENT: SeedPrompt[] = [
     ].join('\n'),
     tags: ['blog', 'writing'],
     targetModels: ['claude', 'gemini'],
-    slug: '/outline',
   },
   {
     seedId: 'marketing-content/social-post',
@@ -27,7 +26,6 @@ export const MARKETING_CONTENT: SeedPrompt[] = [
     ].join('\n'),
     tags: ['social'],
     targetModels: ['claude'],
-    slug: '/post',
   },
   {
     seedId: 'marketing-content/email-campaign',
@@ -65,6 +63,5 @@ export const MARKETING_CONTENT: SeedPrompt[] = [
     ].join('\n'),
     tags: ['copywriting', 'editing'],
     targetModels: ['claude'],
-    slug: '/rewrite',
   },
 ];

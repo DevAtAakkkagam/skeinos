@@ -73,6 +73,16 @@ export const MIGRATIONS: Migration[] = [
     // Intentionally empty — additive optional record fields require no structural
     // change to the (schemaless-per-record) IndexedDB object store.
   },
+  // v6 — add the local-only `platformState` store (collapsed-list nudge, decoupled
+  // from `activeConversations` so the nudge fires on a host's new-chat/home page).
+  // Presence-guarded exactly like the v2 `activeConversations` step: a fresh install
+  // already has it from the v1 `ALL_STORES` sweep, while an existing database gains
+  // it on upgrade. Idempotent either way.
+  (db) => {
+    if (!db.objectStoreNames.contains('platformState')) {
+      db.createObjectStore('platformState', { keyPath: 'platform' });
+    }
+  },
 ];
 
 /**

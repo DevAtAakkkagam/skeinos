@@ -14,6 +14,7 @@ describe('manifest permission policy', () => {
       '*://claude.ai/*',
       '*://gemini.google.com/*',
       '*://*.perplexity.ai/*',
+      '*://chatgpt.com/*',
     ]);
   });
 

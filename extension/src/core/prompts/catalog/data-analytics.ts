@@ -14,7 +14,6 @@ export const DATA_ANALYTICS: SeedPrompt[] = [
     ].join('\n'),
     tags: ['sql'],
     targetModels: ['claude'],
-    slug: '/sql',
   },
   {
     seedId: 'data-analytics/explain-dataset',

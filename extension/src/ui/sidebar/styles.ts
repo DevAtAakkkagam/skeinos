@@ -11,6 +11,12 @@ import { SEARCH_CSS } from '../search/styles';
 import { PROMPTS_CSS } from '../prompts/styles';
 import { PROFILES_CSS } from '../profiles/styles';
 
+// The visible gap above "Personal workspace" is the browser's native side-panel
+// title bar (which shows the Skeinos name + icon) plus our header's own top
+// padding. We zero the header's top padding so the only gap is the native title
+// bar itself — as tight and uniform across browsers as we can make it.
+const SHELL_HEADER_PAD_TOP = '0px';
+
 const SIDEBAR_FEATURE_CSS = `
 /* The sidebar fills the shell body and splits into a scrolling region (pinned ·
    folders · unfiled) and a bottom-docked archive region, so the archive sections
@@ -239,7 +245,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 
 /* --- shell frame (header · search · tabs · filters · body · footer) --------- */
 .sk-shell { position: relative; display: flex; flex-direction: column; height: 100%; min-width: 260px; background: var(--sk-color-bg); color: var(--sk-color-fg); }
-.sk-shell__header { display: flex; align-items: center; justify-content: space-between; gap: var(--sk-space-2); padding: var(--sk-space-2) var(--sk-space-3); border-bottom: 1px solid var(--sk-color-border); }
+.sk-shell__header { display: flex; align-items: center; justify-content: space-between; gap: var(--sk-space-2); padding: ${SHELL_HEADER_PAD_TOP} var(--sk-space-3) var(--sk-space-2); border-bottom: 1px solid var(--sk-color-border); }
 /* The expanded header shows only the workspace label — the app name/glyph live in
    the browser's native side-panel title bar (see SidebarShell), not here. */
 .sk-brand { display: flex; align-items: center; gap: var(--sk-space-2); }
@@ -252,14 +258,15 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-search__icon svg { display: block; }
 .sk-search__placeholder { flex: 1; text-align: left; }
 .sk-search__kbd { font-family: var(--sk-font-system); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); font-size: var(--sk-text-xs); }
-/* Underline tabs (DESIGN §5): equal-width text tabs sharing one hairline baseline; the
-   active tab fills that baseline with an accent rule and takes Ink text at 700. Flat —
-   no inset track, no raised thumb, no shadow (DESIGN §4 Flat-By-Default). */
-.sk-tabs { display: flex; gap: var(--sk-space-3); margin: var(--sk-space-2) var(--sk-space-3) 0; border-bottom: 1px solid var(--sk-color-border); }
-.sk-tab { flex: 1; text-align: center; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--sk-color-muted); font: inherit; font-size: var(--sk-text-title); font-weight: 500; padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-2); cursor: pointer; transition: color 120ms ease, border-color 120ms ease; }
+/* Segmented control (DESIGN §5): equal-width segments share one inset track; the active
+   segment lifts to a Page-coloured thumb — the one floating surface here, so it earns a
+   real (subtle) shadow under the Flat-By-Default rule. Inactive segments stay flat on the
+   track in Muted text. */
+.sk-tabs { display: flex; gap: 2px; margin: var(--sk-space-2) var(--sk-space-3) 0; padding: 3px; background: color-mix(in srgb, var(--sk-color-muted) 12%, transparent); border-radius: calc(var(--sk-radius) + 3px); }
+.sk-tab { flex: 1; text-align: center; background: none; border: 0; border-radius: var(--sk-radius); color: var(--sk-color-muted); font: inherit; font-size: var(--sk-text-base); font-weight: 500; padding: var(--sk-space-1) var(--sk-space-2); cursor: pointer; transition: color 120ms ease, background-color 120ms ease, box-shadow 120ms ease; }
 .sk-tab:not([disabled]):not(.sk-tab--active):hover { color: var(--sk-color-fg); }
-.sk-tab--active { color: var(--sk-color-fg); font-weight: 700; border-bottom-color: var(--sk-color-accent); }
-.sk-tab:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: -2px; border-radius: var(--sk-radius); }
+.sk-tab--active { color: var(--sk-color-fg); font-weight: 600; background: var(--sk-color-bg); box-shadow: 0 1px 2px color-mix(in srgb, var(--sk-color-shadow) 14%, transparent), 0 0 0 0.5px color-mix(in srgb, var(--sk-color-border) 70%, transparent); }
+.sk-tab:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: -2px; }
 @media (prefers-reduced-motion: reduce) { .sk-tab { transition: none; } }
 /* One unified filter row: platform chips and the inert "+ Tag" seam share a single
    wrapping chip flow. No leading captions — a lone "All" reset chip needs none. */
@@ -284,15 +291,18 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-nudge__logo { display: inline-flex; flex: none; margin-top: 1px; }
 .sk-nudge__logo svg { display: block; }
 .sk-nudge__text { color: var(--sk-color-fg); font-size: var(--sk-text-sm); line-height: 1.4; }
+/* The upgrade variant lives inside dialogs/editors (not the sidebar gutter), so it
+   drops the sidebar margins and aligns flush with the form fields above it. */
+.sk-nudge--upgrade { margin: var(--sk-space-1) 0 0; }
 /* The body delegates scrolling to the sidebar's own scroll region so the archive
    dock can stay pinned to the bottom; it only frames the sidebar to fill height. */
 .sk-shell__body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sk-shell__footer { display: flex; align-items: center; gap: var(--sk-space-2); padding: var(--sk-space-2) var(--sk-space-3); border-top: 1px solid var(--sk-color-border); }
-.sk-badge { font-size: var(--sk-text-xs); font-weight: 700; letter-spacing: 0.04em; color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--sk-color-accent) 40%, transparent); border-radius: var(--sk-radius); padding: 0 var(--sk-space-1); }
-/* The tier badge reflects real state (tier-gate D6): PRO keeps the accent treatment;
-   FREE is muted/neutral so the free plan never reads as a premium chip. */
-.sk-badge--free { color: var(--sk-color-muted); background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); border-color: var(--sk-color-border); }
-.sk-sync { flex: 1; color: var(--sk-color-muted); font-size: var(--sk-text-sm); }
+/* Footer status: the honest local-first resting state. Muted, icon + label, takes
+   the free space so the settings gear stays right-aligned. The lock icon inherits
+   the muted text colour (currentColor). Upgrades to sync states when sync ships. */
+.sk-status { flex: 1; display: inline-flex; align-items: center; gap: var(--sk-space-1); color: var(--sk-color-muted); font-size: var(--sk-text-sm); }
+.sk-status svg { flex: none; }
 
 /* --- disabled feature stubs: present but visibly inert --------------------- */
 .sk-search[disabled], .sk-tab[disabled], .sk-chip[disabled] { opacity: 0.55; cursor: not-allowed; }

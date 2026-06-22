@@ -92,10 +92,11 @@ describe('Persistence (3.2)', () => {
 });
 
 describe('Tier setting (tier-gate)', () => {
-  it('getSettings returns tier FREE for a record without a tier key', async () => {
+  it('getSettings returns the default tier (PRO) for a record without a tier key', async () => {
+    // PRO is the default while billing is unbuilt (M5) — see DEFAULT_SETTINGS.
     setChrome(makeChrome({ [SETTINGS_KEY]: { theme: 'dark' } as Partial<Settings> }));
     const settings = await getSettings();
-    expect(settings.tier).toBe('FREE');
+    expect(settings.tier).toBe('PRO');
   });
 
   it('a tier change notifies subscribers with the new value', async () => {

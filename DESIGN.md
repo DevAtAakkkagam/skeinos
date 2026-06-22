@@ -209,8 +209,9 @@ a shadow.
 
 ### Named Rules
 **The Flat-By-Default Rule.** Surfaces are flat at rest. A real `box-shadow` is permitted
-only on a surface that genuinely floats above the shell (overlay, snackbar). Everywhere
-else, depth is a tonal tint, never a shadow.
+only on a surface that genuinely floats above the shell (overlay, snackbar) or lifts off an
+inset track (the active segmented-control thumb). Everywhere else, depth is a tonal tint,
+never a shadow.
 
 ## 5. Components
 
@@ -255,8 +256,11 @@ radius, decisive focus states.
   `+ Tag` seam) use this to read as present-but-not-yet.
 
 ### Navigation (tabs)
-- **Style:** equal-width text tabs with a 3px transparent bottom border; active tab takes Ink
-  text, 700 weight, and an accent bottom border. Disabled tabs (Profiles) dim to 0.55.
+- **Style:** a segmented control — equal-width segments sharing one inset, Muted-tinted
+  track. The active segment lifts to a Page-coloured thumb (Ink text, 600 weight) with a
+  subtle shadow; it is the one floating surface in the chrome and so earns a real shadow
+  under the Flat-By-Default rule. Inactive segments sit flat on the track in Muted text.
+  Disabled tabs dim to 0.55.
 
 ### Signature: the Section Overline
 The IBM Plex Mono overline (FOLDERS / PROMPTS / ARCHIVE) with 0.2em tracking and a full-width
@@ -273,7 +277,8 @@ Urbanist's prose.
 - **Do** lead with the user's real content. Demote empty states and create-nudges to a slim
   dashed ghost-row (`.sk-ghost-row`) when conversations or prompts already exist.
 - **Do** carry hierarchy on weight (700/600 vs 500) and tonal tint, not on new colours.
-- **Do** keep the system flat; add a real shadow only to a surface that floats over the shell.
+- **Do** keep the system flat; add a real shadow only to a surface that floats over the shell
+  or lifts off an inset track (the active segmented-control thumb).
 - **Do** gate every animation behind `prefers-reduced-motion: reduce`, and ease out
   (`cubic-bezier(0.22, 1, 0.36, 1)`), never bounce or elastic.
 - **Do** use `system-ui` for keycaps so shortcut hints read as the user's real OS keys.

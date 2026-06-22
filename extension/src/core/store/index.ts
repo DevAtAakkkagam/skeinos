@@ -10,6 +10,7 @@ import type {
   ConversationIndex,
   Folder,
   InstructionProfile,
+  PlatformState,
   Prompt,
   PromptFolder,
   SearchShard,
@@ -37,6 +38,7 @@ export interface WorkspaceStore {
   comparisons: Repo<Comparison>;
   searchPostings: Repo<SearchShard>;
   activeConversations: Repo<ActiveConversation>;
+  platformState: Repo<PlatformState>;
   /** Names of stores eligible for sync (envelope-carrying). */
   syncableStores(): StoreName[];
   /** Run `fn` across `stores` in one transaction; commit all or none. */
@@ -64,6 +66,7 @@ export function makeWorkspaceStore(db: IDBPDatabase): WorkspaceStore {
     comparisons: makeRepo<Comparison>(db, STORES.comparisons),
     searchPostings: makeRepo<SearchShard>(db, STORES.searchPostings),
     activeConversations: makeRepo<ActiveConversation>(db, STORES.activeConversations),
+    platformState: makeRepo<PlatformState>(db, STORES.platformState),
     syncableStores,
     async tx(stores, fn) {
       const t = db.transaction(stores, 'readwrite') as Txn;

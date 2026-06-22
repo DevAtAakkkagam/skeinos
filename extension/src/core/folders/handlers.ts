@@ -111,6 +111,10 @@ export async function queryWorkspace(
       const active = (await store.activeConversations.get(selector.platform)) ?? null;
       return { kind: 'conversation.active', active };
     }
+    case 'platform.state': {
+      const state = (await store.platformState.get(selector.platform)) ?? null;
+      return { kind: 'platform.state', state };
+    }
   }
 }
 
@@ -129,7 +133,7 @@ export async function mutateWorkspace(
       // Tier quota (tier-gate D2/D3): structural validity first (depth/cycle), then
       // the live folder count against the tier limit — the throw aborts before any
       // `put`, so a rejected create writes nothing and emits no broadcast.
-      assertWithinQuota('folders', folders.length, (await getSettings()).tier ?? 'FREE');
+      assertWithinQuota('folders', folders.length, (await getSettings()).tier ?? 'PRO');
       await store.folders.put(
         createFolder(folders, {
           id: op.id,
@@ -259,6 +263,20 @@ export async function mutateWorkspace(
       if (!prev) return { stores: [] };
       await store.activeConversations.delete(op.platform);
       return { stores: ['activeConversations'] };
+    }
+    case 'platform.reportListState': {
+      // The content script reports whether this platform currently hides its
+      // conversation list (drawer collapsed) — independent of any open conversation,
+      // so the collapsed-list nudge can fire on a new-chat/home page too. Dedup an
+      // unchanged report so a steady stream of identical signals raises no broadcast.
+      const prev = await store.platformState.get(op.platform);
+      if ((prev?.listCollapsed ?? false) === op.listCollapsed) return { stores: [] };
+      await store.platformState.put({
+        platform: op.platform,
+        listCollapsed: op.listCollapsed,
+        updatedAt: Date.now(),
+      });
+      return { stores: ['platformState'] };
     }
   }
 }

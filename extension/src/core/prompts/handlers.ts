@@ -115,13 +115,12 @@ export function recentPrompts(prompts: Prompt[], limit: number): PromptSearchRes
       // as a single unmatched segment, reusing the search-row snippet shape.
       snippet: buildSnippet(p.body || (p.description ?? ''), []),
       targetModels: p.targetModels ?? [],
-      ...(p.slug !== undefined ? { slug: p.slug } : {}),
     }));
 }
 
 // ---------------------------------------------------------------------------
 // Prompt search (slice 4, design D-A..D-C) — a linear scan over the loaded
-// library. AND across terms over title/body/description/tags/slug, ranked
+// library. AND across terms over title/body/description/tags, ranked
 // title-over-body with a recency tiebreak, each carrying a highlighted snippet.
 // ---------------------------------------------------------------------------
 
@@ -143,13 +142,11 @@ function normalizeTerms(terms: string[]): string[] {
   return [...out];
 }
 
-/** Build a `{title, body, description, tags, slug}` haystack of normalized field
+/** Build a `{title, body, description, tags}` haystack of normalized field
  *  text for one prompt — the surface matching and ranking read from. */
 function fieldsOf(p: Prompt): { title: string; rest: string } {
   const title = normalize(p.title);
-  const rest = normalize(
-    [p.body, p.description ?? '', (p.tags ?? []).join(' '), p.slug ?? ''].join(' '),
-  );
+  const rest = normalize([p.body, p.description ?? '', (p.tags ?? []).join(' ')].join(' '));
   return { title, rest };
 }
 
@@ -221,7 +218,6 @@ export function searchPrompts(prompts: Prompt[], rawTerms: string[]): PromptSear
       title: p.title,
       snippet,
       targetModels: p.targetModels ?? [],
-      ...(p.slug !== undefined ? { slug: p.slug } : {}),
     };
   });
 }
@@ -240,7 +236,7 @@ export async function mutatePromptLibrary(
       // count is at the tier limit, so a refused create writes nothing and emits no
       // broadcast. PRO bypasses via the unlimited table entry.
       const existing = await store.prompts.query();
-      assertWithinQuota('prompts', existing.length, (await getSettings()).tier ?? 'FREE');
+      assertWithinQuota('prompts', existing.length, (await getSettings()).tier ?? 'PRO');
       // The worker derives `variables` from `body` (D-C) and initializes the dormant
       // usage fields; the envelope is stamped by the repo on `put`. `usageCount` is 0
       // and `lastUsedAt` is left unset until C25 owns usage.
@@ -254,7 +250,6 @@ export async function mutatePromptLibrary(
         promptFolderId: op.promptFolderId ?? null,
         usageCount: 0,
         ...(op.description !== undefined ? { description: op.description } : {}),
-        ...(op.slug !== undefined ? { slug: op.slug } : {}),
       } as Prompt;
       await store.prompts.put(prompt);
       return { stores: ['prompts'] };
@@ -269,7 +264,6 @@ export async function mutatePromptLibrary(
       if (op.description !== undefined) next.description = op.description;
       if (op.tags !== undefined) next.tags = op.tags;
       if (op.targetModels !== undefined) next.targetModels = op.targetModels;
-      if (op.slug !== undefined) next.slug = op.slug;
       if (op.promptFolderId !== undefined) next.promptFolderId = op.promptFolderId;
       if (op.body !== undefined) {
         next.body = op.body;

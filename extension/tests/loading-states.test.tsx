@@ -73,6 +73,7 @@ function makeView(tree: FolderTreeSnapshot, over: Partial<WorkspaceView> = {}): 
     tree,
     conversations: [],
     active: null,
+    listCollapsed: false,
     platformFilter: 'all',
     setPlatformFilter: vi.fn(),
     status: 'ready',

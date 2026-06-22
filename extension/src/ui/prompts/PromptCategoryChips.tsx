@@ -8,6 +8,7 @@
 
 import type { JSX } from 'preact';
 import { MoreIcon } from '../components/Icon';
+import { EnterHint } from '../components/EnterHint';
 import { Dialog } from '../primitives/Dialog';
 import { OverflowMenu } from './OverflowMenu';
 import { STR } from './strings';
@@ -100,7 +101,13 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
         ariaLabel={c.categoryDialog?.mode === 'rename' ? STR.renameCategoryTitle : STR.createCategoryTitle}
         contentTestId="sk-prompt-category-dialog"
       >
-        <div class="sk-dialog__body">
+        <form
+          class="sk-dialog__body"
+          onSubmit={(e) => {
+            e.preventDefault();
+            c.submitCategoryDialog();
+          }}
+        >
           <h2 class="sk-dialog__title">
             {c.categoryDialog?.mode === 'rename' ? STR.renameCategoryTitle : STR.createCategoryTitle}
           </h2>
@@ -111,12 +118,6 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
             placeholder={STR.categoryNamePlaceholder}
             value={c.categoryName}
             onInput={(e) => c.setCategoryName((e.target as HTMLInputElement).value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                c.submitCategoryDialog();
-              }
-            }}
           />
           <div class="sk-dialog__actions">
             <button
@@ -127,16 +128,12 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
             >
               {STR.cancel}
             </button>
-            <button
-              type="button"
-              class="sk-btn"
-              data-testid="sk-prompt-category-save"
-              onClick={c.submitCategoryDialog}
-            >
+            <button type="submit" class="sk-btn" data-testid="sk-prompt-category-save">
               {STR.save}
+              <EnterHint />
             </button>
           </div>
-        </div>
+        </form>
       </Dialog>
 
       {/* Delete-category confirm (reassigns its prompts to uncategorized). */}

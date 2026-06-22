@@ -14,7 +14,6 @@ export const EDUCATION_RESEARCH: SeedPrompt[] = [
     ].join('\n'),
     tags: ['teaching'],
     targetModels: ['claude', 'gemini'],
-    slug: '/explain',
   },
   {
     seedId: 'education-research/lesson-plan',
@@ -41,7 +40,6 @@ export const EDUCATION_RESEARCH: SeedPrompt[] = [
     ].join('\n'),
     tags: ['summary', 'research'],
     targetModels: ['claude', 'perplexity'],
-    slug: '/summarize',
   },
   {
     seedId: 'education-research/quiz-questions',

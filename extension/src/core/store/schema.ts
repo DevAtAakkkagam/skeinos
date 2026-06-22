@@ -91,6 +91,16 @@ export const STORES = {
     indexes: [],
     synced: false,
   },
+  // Per-platform UI signal (collapsed-list nudge), keyed by `platform` — one
+  // record each. Decoupled from `activeConversations` so the nudge can fire on a
+  // host's new-chat/home page where no conversation is open. Local-only, never
+  // synced; survives worker death (SW-2).
+  platformState: {
+    name: 'platformState',
+    keyPath: 'platform',
+    indexes: [],
+    synced: false,
+  },
   // Prefix-shard postings (D6/D26/LLD §8.1): keyed by the 2-char term `prefix`,
   // each record holding many terms. Reshaped from the shipped per-term layout by
   // the v4 migration (no-data — indexing had never run). Local-only (PRIV-1).

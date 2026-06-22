@@ -55,10 +55,19 @@ function dockBeforeComposer(anchor: HTMLElement, host: HTMLElement): void {
   node.insertAdjacentElement('beforebegin', host);
 }
 
+/** Marks the bar's host node so a later mount can find and evict a bar left behind
+ *  by a dead content-script context (an extension reload without a page reload, or
+ *  Firefox's separate `executeScript` injection sandbox, both of which skip the
+ *  JS-global re-entrancy guard). Keeps the bar a single instance in the page. */
+const INPUT_BAR_HOST_ATTR = 'data-skeinos-input-bar';
+
 export function mountInputBar(
   target: HTMLElement,
   { platform, onInsert, onClear, onOpenSidebar, isComposerEmpty, containFocus, ...opts }: MountInputBarOptions,
 ): MountHandle {
+  // Singleton invariant: drop any bar orphaned by a now-invalidated context before
+  // mounting ours, so reloads/multi-sandbox injection never stack duplicate bars.
+  document.querySelectorAll(`[${INPUT_BAR_HOST_ATTR}]`).forEach((el) => el.remove());
   const handle = mount(
     target,
     <InputBar
@@ -74,6 +83,7 @@ export function mountInputBar(
   // The host node carries no feature CSS (that lives in the shadow root), but it must
   // be a full-width block with a stacking context so the bar lands on its own line
   // and above the host composer chrome regardless of the anchor's display/overflow.
+  handle.host.setAttribute(INPUT_BAR_HOST_ATTR, '');
   handle.host.style.display = 'block';
   handle.host.style.width = '100%';
   handle.host.style.position = 'relative';

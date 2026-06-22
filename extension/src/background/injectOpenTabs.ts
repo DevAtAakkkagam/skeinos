@@ -17,6 +17,7 @@
 // their own load.
 
 import { P0_MATCHES } from '../manifest.config';
+import { extApi } from '../core/platform/ext-api';
 
 // WXT emits each content entry to `content-scripts/<entry>.js` in the build output;
 // these are stable as long as the entrypoints keep their names. The page bridge runs
@@ -43,14 +44,13 @@ interface RuntimeOnInstalled {
 }
 
 function scriptingApi(): ScriptingApi | undefined {
-  return (globalThis as { chrome?: { scripting?: ScriptingApi } }).chrome?.scripting;
+  return extApi<{ scripting?: ScriptingApi }>()?.scripting;
 }
 function tabsApi(): TabsQueryApi | undefined {
-  return (globalThis as { chrome?: { tabs?: TabsQueryApi } }).chrome?.tabs;
+  return extApi<{ tabs?: TabsQueryApi }>()?.tabs;
 }
 function onInstalledApi(): RuntimeOnInstalled | undefined {
-  return (globalThis as { chrome?: { runtime?: { onInstalled?: RuntimeOnInstalled } } }).chrome
-    ?.runtime?.onInstalled;
+  return extApi<{ runtime?: { onInstalled?: RuntimeOnInstalled } }>()?.runtime?.onInstalled;
 }
 
 /** Query every open P0 tab and inject the content script into each. The `url`

@@ -34,11 +34,12 @@ describe('content-script match patterns', () => {
     expect(matchesAny('https://gemini.google.com/app')).toBe(true);
     expect(matchesAny('https://www.perplexity.ai/search')).toBe(true);
     expect(matchesAny('https://perplexity.ai/')).toBe(true);
+    expect(matchesAny('https://chatgpt.com/c/abc')).toBe(true);
   });
 
   it('does not match unsupported pages', () => {
     expect(matchesAny('https://example.com/')).toBe(false);
-    expect(matchesAny('https://chatgpt.com/')).toBe(false);
+    // ChatGPT is scoped to chatgpt.com only — the legacy host stays out.
     expect(matchesAny('https://chat.openai.com/')).toBe(false);
     // look-alike host must not match
     expect(matchesAny('https://claude.ai.attacker.com/')).toBe(false);

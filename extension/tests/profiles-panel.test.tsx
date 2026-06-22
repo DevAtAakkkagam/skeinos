@@ -1,6 +1,6 @@
 // Profiles tab UI (happy-dom) over an injected library view — no worker. Mirrors the
 // prompts-panel modal-editor test: the single first-run empty state (the old double-
-// empty bug is fixed), loading/error states, clicking a row opens the editor MODAL
+// empty bug is fixed), loading/error states, the row menu Edit opens the editor MODAL
 // seeded with the profile, editing fields + Save sends ONE profile.update, the create
 // flow sends profile.create, the name-required guard, the PREPEND-only per-platform
 // mode indicator (never a SYSTEM mode), and the confirm-gated delete. Maps to
@@ -50,6 +50,12 @@ function setValue(el: HTMLElement | null, value: string) {
   (el as HTMLInputElement).value = value;
   el!.dispatchEvent(new Event('input', { bubbles: true }));
 }
+// The row is non-interactive; editing is reached through the row's ⋯ menu.
+const openEditor = async () => {
+  $('[data-testid=sk-profile-row-menu]')!.click();
+  await flush();
+  $('[data-testid=sk-profile-menu-edit]')!.click();
+};
 const mockOf = (v: ProfileLibraryView) => v.mutate as ReturnType<typeof vi.fn>;
 const lastOp = (v: ProfileLibraryView) => {
   const calls = mockOf(v).mock.calls;
@@ -90,7 +96,7 @@ describe('ProfilesPanel states (5.3)', () => {
     expect($('[data-testid=sk-profiles-empty-first-run]')).toBeNull();
   });
 
-  it('lists a row per profile and opens no editor until a row is clicked', () => {
+  it('lists a row per profile and opens no editor until the row menu Edit is used', () => {
     mount(<Tab view={makeView({ profiles: [profile('a'), profile('b')] })} />);
     expect($('[data-testid=sk-profile-row-a]')).toBeTruthy();
     expect($('[data-testid=sk-profile-row-b]')).toBeTruthy();
@@ -105,9 +111,9 @@ describe('ProfilesPanel editor modal (5.3)', () => {
     instructionText: 'Be terse.',
   });
 
-  it('clicking a row opens the editor modal seeded with the profile values', async () => {
+  it('the row menu Edit opens the editor modal seeded with the profile values', async () => {
     mount(<Tab view={makeView({ profiles: [p] })} />);
-    $('[data-testid=sk-profile-row-p1]')!.click();
+    await openEditor();
     await flush();
     expect($('[data-testid=sk-profile-editor]')).toBeTruthy();
     expect(($('[data-testid=sk-profile-name]') as HTMLInputElement).value).toBe('Staff engineer');
@@ -118,7 +124,7 @@ describe('ProfilesPanel editor modal (5.3)', () => {
   it('editing fields then Save sends ONE profile.update carrying those fields', async () => {
     const view = makeView({ profiles: [profile('p1', { name: 'Original' })] });
     mount(<Tab view={view} />);
-    $('[data-testid=sk-profile-row-p1]')!.click();
+    await openEditor();
     await flush();
 
     setValue($('[data-testid=sk-profile-name]'), 'Renamed');
@@ -174,12 +180,14 @@ describe('ProfilesPanel editor modal (5.3)', () => {
 describe('ProfilesPanel mode indicator is PREPEND-only (5.3)', () => {
   it('shows PREPEND for every per-platform mode and never a system-prompt mode', async () => {
     mount(<Tab view={makeView({ profiles: [profile('p1', { appliesTo: ['claude', 'gemini', 'perplexity'] })] })} />);
-    $('[data-testid=sk-profile-row-p1]')!.click();
+    await openEditor();
     await flush();
 
-    const modes = $$('[data-testid^=sk-profile-mode-]');
-    expect(modes.length).toBeGreaterThan(0);
-    for (const m of modes) expect(m.textContent).toBe('PREPEND');
+    // The injection mode is stated once as a caption (PREPEND-only this slice), not
+    // repeated per platform.
+    const mode = $('[data-testid=sk-profile-apply-mode]');
+    expect(mode).toBeTruthy();
+    expect(mode!.textContent?.toLowerCase()).toContain('prepend');
 
     // The editor never advertises a system-prompt mode.
     const text = $('[data-testid=sk-profile-editor]')!.textContent ?? '';
@@ -250,7 +258,7 @@ describe('ProfilesPanel delete is confirm-gated (5.3)', () => {
   it('shows a confirm before deleting and only deletes on confirm', async () => {
     const view = makeView({ profiles: [profile('p1')] });
     mount(<Tab view={view} />);
-    $('[data-testid=sk-profile-row-p1]')!.click();
+    await openEditor();
     await flush();
 
     $('[data-testid=sk-profile-delete]')!.click();
@@ -267,7 +275,7 @@ describe('ProfilesPanel delete is confirm-gated (5.3)', () => {
   it('cancelling the confirm sends no delete', async () => {
     const view = makeView({ profiles: [profile('p1')] });
     mount(<Tab view={view} />);
-    $('[data-testid=sk-profile-row-p1]')!.click();
+    await openEditor();
     await flush();
 
     $('[data-testid=sk-profile-delete]')!.click();

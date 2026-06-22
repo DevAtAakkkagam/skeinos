@@ -60,7 +60,6 @@ describe('prompt.create derives variables from the body (4.1)', () => {
         description: 'd',
         tags: ['x'],
         targetModels: ['claude'],
-        slug: '/w',
         promptFolderId: null,
       }),
     );
@@ -79,7 +78,6 @@ describe('prompt.create derives variables from the body (4.1)', () => {
       description: 'd',
       tags: ['x'],
       targetModels: ['claude'],
-      slug: '/w',
       promptFolderId: null,
     });
   });
@@ -299,12 +297,11 @@ describe('prompt.recents read (prompt-recents 6.1)', () => {
     expect((await recents(store, 5)).results).toEqual([]);
   });
 
-  it('shapes each row as a result with a snippet and slug when present', async () => {
-    await mutatePromptLibrary(store, createOp({ id: 'p1', body: 'Draft a quarterly report', slug: '/qr' }));
+  it('shapes each row as a result with a snippet', async () => {
+    await mutatePromptLibrary(store, createOp({ id: 'p1', body: 'Draft a quarterly report' }));
     await store.prompts.put({ ...(await store.prompts.get('p1'))!, lastUsedAt: 100 });
     const [row] = (await recents(store, 5)).results;
     expect(row.id).toBe('p1');
-    expect(row.slug).toBe('/qr');
     // A leading body excerpt, no highlight.
     expect(row.snippet.length).toBeGreaterThan(0);
     expect(row.snippet.every((s) => s.match === false)).toBe(true);

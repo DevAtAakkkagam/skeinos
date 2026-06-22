@@ -102,7 +102,6 @@ const INPUT_BAR_FEATURE_CSS = `
 .sk-ib-row__title { font-size: var(--sk-text-base); font-weight: 600; color: var(--sk-color-fg); }
 .sk-ib-row__snippet { font-size: var(--sk-text-sm); color: var(--sk-color-muted); overflow: hidden; text-overflow: ellipsis; }
 .sk-ib-row__hit { background: color-mix(in srgb, var(--sk-color-accent) 28%, transparent); color: inherit; border-radius: 2px; }
-.sk-ib-row__slug { flex: none; align-self: center; font-family: var(--sk-font-mono, monospace); font-size: var(--sk-text-xs); color: var(--sk-color-muted); }
 
 /* The variable-fill modal body (the Dialog shell comes from PRIMITIVES_CSS). */
 .sk-ib-modal { display: flex; flex-direction: column; gap: var(--sk-space-2); min-width: 280px; max-width: 420px; }

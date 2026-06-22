@@ -5,6 +5,8 @@
 // `@types/chrome`. The service worker schedules durable work with alarms, never
 // `setTimeout`/`setInterval`, which a terminated worker would lose ([SW-4]).
 
+import { extApi } from '../../core/platform/ext-api';
+
 /** A fired alarm — we only care about its `name`. */
 export interface Alarm {
   name: string;
@@ -29,7 +31,7 @@ interface ChromeLike {
 }
 
 function chrome(): ChromeLike | undefined {
-  return (globalThis as { chrome?: ChromeLike }).chrome;
+  return extApi<ChromeLike>();
 }
 
 /** The `chrome.alarms` surface, or `undefined` outside the extension runtime. */

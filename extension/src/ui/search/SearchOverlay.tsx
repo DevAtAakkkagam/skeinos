@@ -13,6 +13,7 @@ import { PlatformLogo } from '../components/PlatformLogo';
 import { openConversation } from '../sidebar/openConversation';
 import { formatRelativeTime } from '../sidebar/relativeTime';
 import type { Folder, PlatformId, SearchResult, SnippetSegment } from '../../shared/types';
+import { PLATFORM_LABELS } from '../../shared/branding';
 import type { PromptSearchResult } from '../../shared/prompts';
 import { useSearch, type SearchView } from './useSearch';
 import { usePromptSearch, type PromptSearchView } from './usePromptSearch';
@@ -53,16 +54,6 @@ const STR = {
   week: 'w',
   ago: 'ago',
 } as const;
-
-const PLATFORM_LABELS: Record<PlatformId, string> = {
-  claude: 'Claude',
-  gemini: 'Gemini',
-  perplexity: 'Perplexity',
-  grok: 'Grok',
-  deepseek: 'DeepSeek',
-  chatgpt: 'ChatGPT',
-  mistral: 'Mistral',
-};
 
 // Sentinel for the "Unfiled" folder option (folderId === null), distinct from both
 // "no folder filter" (empty string) and any real folder id (UUIDs never match this).

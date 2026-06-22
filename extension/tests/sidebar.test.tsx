@@ -40,6 +40,7 @@ function makeView(
     tree,
     conversations: [],
     active: null,
+    listCollapsed: false,
     platformFilter: 'all',
     setPlatformFilter: vi.fn(),
     status: 'ready',

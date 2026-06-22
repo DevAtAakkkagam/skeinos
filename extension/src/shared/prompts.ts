@@ -39,7 +39,6 @@ export interface PromptSearchResult {
   title: string;
   snippet: SnippetSegment[];
   targetModels: PlatformId[];
-  slug?: string;
 }
 
 /** The result of a {@link PromptSelector}, discriminated by `kind`. `prompt.library`
@@ -73,7 +72,6 @@ export type PromptMutationOp =
       description?: string;
       tags?: string[];
       targetModels?: PlatformId[];
-      slug?: string;
       promptFolderId?: string | null;
     }
   | {
@@ -84,7 +82,6 @@ export type PromptMutationOp =
       body?: string;
       tags?: string[];
       targetModels?: PlatformId[];
-      slug?: string;
       promptFolderId?: string | null;
     }
   | { op: 'prompt.delete'; id: string }

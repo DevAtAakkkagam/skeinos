@@ -1,7 +1,8 @@
 // A single profile row — now structurally uniform with the conversation/prompt rows:
-// the name + description are one click-to-edit button (opens the editor modal), the
-// per-platform brand logos sit to its right, and an overflow (`⋯`) `Menu` revealed on
-// row hover / keyboard focus carries the row actions (Edit / Delete) — the same
+// the name + description are a non-interactive label (editing is reached through the
+// row menu, not by clicking the row), the per-platform brand logos sit to its right,
+// and an overflow (`⋯`) `Menu` revealed on row hover / keyboard focus carries the row
+// actions (Edit / Delete) — the same
 // affordance used everywhere else in the overlay (folders, conversations, prompts).
 // A destructive delete is confirmed through a lightweight `Dialog` before it runs
 // (PRIV: deletes are explicit and never lose work silently). Tokens only, ARIA-labelled.
@@ -11,7 +12,7 @@ import type { JSX } from 'preact';
 import type { InstructionProfile } from '../../shared/types';
 import { MoreIcon } from '../components/Icon';
 import { PlatformLogo } from '../components/PlatformLogo';
-import { TARGETABLE_PLATFORMS } from '../prompts/strings';
+import { SUPPORTED_PLATFORMS as TARGETABLE_PLATFORMS } from '../../shared/branding';
 import { Dialog } from '../primitives/Dialog';
 import { OverflowMenu } from '../prompts/OverflowMenu';
 import { STR } from './strings';
@@ -35,17 +36,12 @@ export function ProfileRow({ profile: p, onEdit, onDelete }: ProfileRowProps): J
 
   return (
     <li class="sk-profiles__item">
-      <button
-        type="button"
-        class="sk-profiles__row"
-        data-testid={`sk-profile-row-${p.id}`}
-        onClick={() => onEdit(p)}
-      >
+      <div class="sk-profiles__row" data-testid={`sk-profile-row-${p.id}`}>
         <span class="sk-profiles__name" data-testid="sk-profile-row-name">
           {name}
         </span>
         {p.description ? <span class="sk-profiles__desc">{p.description}</span> : null}
-      </button>
+      </div>
 
       {logos.length > 0 ? (
         <span class="sk-profiles__logos" aria-hidden="true">

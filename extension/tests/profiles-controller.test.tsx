@@ -50,6 +50,12 @@ function setValue(el: HTMLElement | null, value: string) {
   (el as HTMLInputElement).value = value;
   el!.dispatchEvent(new Event('input', { bubbles: true }));
 }
+// The row is non-interactive; editing is reached through the row's ⋯ menu.
+const openEditor = async () => {
+  $('[data-testid=sk-profile-row-menu]')!.click();
+  await flush();
+  $('[data-testid=sk-profile-menu-edit]')!.click();
+};
 const mockOf = (v: ProfileLibraryView) => v.mutate as ReturnType<typeof vi.fn>;
 const lastOp = (v: ProfileLibraryView) => {
   const calls = mockOf(v).mock.calls;
@@ -101,7 +107,7 @@ describe('useProfilesController (5.2)', () => {
     const view = makeView({ profiles: [profile('p1', { name: 'Original' })] });
     mount(<Tab view={view} />);
 
-    $('[data-testid=sk-profile-row-p1]')!.click();
+    await openEditor();
     await flush();
     setValue($('[data-testid=sk-profile-name]'), 'Renamed');
     await flush();
@@ -116,7 +122,7 @@ describe('useProfilesController (5.2)', () => {
     const view = makeView({ profiles: [profile('p1')] });
     mount(<Tab view={view} />);
 
-    $('[data-testid=sk-profile-row-p1]')!.click();
+    await openEditor();
     await flush();
     $('[data-testid=sk-profile-delete]')!.click();
     await flush();

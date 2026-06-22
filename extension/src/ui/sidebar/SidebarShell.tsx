@@ -1,18 +1,18 @@
 // The framed sidebar shell (design screens 01/02): a brand header, a search
 // launcher, the section tab strip, a tag filter, the folder body, and a footer
-// (tier · sync · settings). It frames the live folder tree (Sidebar) and renders
-// the not-yet-built features (search M3, prompts/profiles M4, tags M2, tier M7,
-// sync M5) as disabled "coming soon" stubs that reserve their layout slot.
+// (local-only status · settings). It frames the live folder tree (Sidebar). The
+// footer states the honest resting state (data is local to this device); the tier
+// badge and cross-device sync return when billing + sync ship (M5).
 //
 // The only live interaction here is the settings gear (opens the options page).
 // Everything draws from `--sk-*` tokens and is keyboard-operable and ARIA-labelled.
 
 import { useEffect, useState } from 'preact/hooks';
-import { getSettings, subscribeSettings } from '../../core/settings';
-import type { Tier } from '../../shared/settings';
 import type { Folder, PlatformId } from '../../shared/types';
-import { SearchIcon, SettingsIcon } from '../components/Icon';
+import { extApi } from '../../core/platform/ext-api';
+import { LockIcon, SearchIcon, SettingsIcon } from '../components/Icon';
 import { PlatformLogo } from '../components/PlatformLogo';
+import { PLATFORM_LABELS } from '../../shared/branding';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { PromptsPanel } from '../prompts/PromptsPanel';
 import { PromptCategoryChips } from '../prompts/PromptCategoryChips';
@@ -30,23 +30,14 @@ import type { FolderTreeSnapshot } from '../../shared/workspace';
  *  body region; the Profiles tab became interactive in the profiles-library slice. */
 type ActiveTab = 'folders' | 'prompts' | 'profiles';
 
-/** Display labels for the platform view-filter chips (i18n-ready; no inline
- *  literals in markup). Keyed by `PlatformId`. */
-const PLATFORM_LABELS: Record<PlatformId, string> = {
-  claude: 'Claude',
-  gemini: 'Gemini',
-  perplexity: 'Perplexity',
-  grok: 'Grok',
-  deepseek: 'DeepSeek',
-  chatgpt: 'ChatGPT',
-  mistral: 'Mistral',
-};
-
 // The header omits the app name/glyph on purpose: the browser's native side-panel
 // title bar already shows the Skeinos name + icon, so repeating them here would be
-// redundant. We keep only the live workspace label + presence dot.
+// redundant. The sub-line is a calm identity label, not a feature list: it states
+// the why (the skein — one thread from many strands, the chats + prompts scattered
+// across every AI woven into one) and leaves the what to the tabs below. Privacy
+// is shown by behaviour, not asserted here; the mint presence dot carries "live".
 const STR = {
-  workspace: 'Personal workspace',
+  workspace: 'Chats and prompts, one thread',
   searchPlaceholder: 'Search everything…',
   search: 'Search',
   tabFolders: 'Folders',
@@ -56,50 +47,36 @@ const STR = {
   platformAll: 'All',
   filterLabel: 'Filter conversations',
   sections: 'Sidebar sections',
-  // The tier badge label is now driven by settings (tier-gate D6): one label per
-  // tier, i18n-ready, with a descriptive title (no "coming soon" — the badge
-  // reflects real state, not a stub).
-  tierFree: 'FREE',
-  tierPro: 'PRO',
-  tierFreeTitle: 'Free plan',
-  tierProTitle: 'Pro plan',
-  synced: 'Synced',
+  // The footer status states the honest resting state — data is local to this
+  // device (privacy-first, local-first). No tier badge (Pro isn't purchasable yet)
+  // and no "Synced" stub (sync ships M5). i18n-ready.
+  localOnly: 'Local-only',
+  localOnlyTitle: 'Your data stays on this device — nothing is synced or sent.',
   settings: 'Settings',
   comingSoon: 'Coming soon',
 } as const;
 
 /** The collapsed-list nudge copy (i18n-ready: the platform name is interpolated,
- *  not concatenated from fragments). Shown when the active tab's platform reports
- *  an open conversation but an empty list — its side drawer is collapsed and it
- *  hides the list when collapsed (Gemini). */
+ *  not concatenated from fragments). Shown whenever the active tab's platform hides
+ *  its conversation list because its side drawer is collapsed (Gemini) — driven by
+ *  the per-platform `listCollapsed` signal, so it fires on a new-chat/home page too,
+ *  not only while a conversation is open. */
 const collapsedListNudge = (label: string): string =>
   `${label}'s chat list is hidden while its sidebar is collapsed. Open it once to sync all your conversations here.`;
 
-/** The effective tier from settings (tier-gate D6), defaulting to `FREE` and
- *  re-reading on every settings change so the badge updates without a reload. A
- *  pure read of settings state — the single source the worker also enforces from. */
-function useTier(): Tier {
-  const [tier, setTier] = useState<Tier>('FREE');
-  useEffect(() => {
-    let live = true;
-    void getSettings().then((s) => {
-      if (live) setTier(s.tier ?? 'FREE');
-    });
-    const dispose = subscribeSettings((s) => {
-      if (live) setTier(s.tier ?? 'FREE');
-    });
-    return () => {
-      live = false;
-      dispose();
-    };
-  }, []);
-  return tier;
+/** True on macOS, where the accelerator is ⌘K rather than Ctrl+K. Reads the modern
+ *  `userAgentData.platform` first, falling back to the legacy `platform`/UA string.
+ *  Mirrors the input bar's detection so both shortcuts stay OS-consistent. */
+function detectIsMac(): boolean {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = nav.userAgentData?.platform || nav.platform || nav.userAgent || '';
+  return /mac/i.test(platform);
 }
 
 /** Open the extension options page. Guarded so a non-extension context (tests
  *  without a chrome shim) is a no-op rather than a throw. */
 function openOptions(): void {
-  const c = (globalThis as { chrome?: { runtime?: { openOptionsPage?: () => void } } }).chrome;
+  const c = extApi<{ runtime?: { openOptionsPage?: () => void } }>();
   c?.runtime?.openOptionsPage?.();
 }
 
@@ -172,9 +149,29 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
   // over worker state and holds no workspace data of its own.
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // The effective tier drives the footer badge (tier-gate D6) — real state from
-  // settings, not the old hardcoded `PRO` stub.
-  const tier = useTier();
+  // OS-aware accelerator for "Search everything": ⌘K on macOS, Ctrl+K elsewhere —
+  // the same convention the input bar uses for its ⌘/ chord. Computed once (the
+  // platform never changes within a session) and used for both the badge and the hint.
+  const isMac = detectIsMac();
+  const searchKbd = isMac ? '⌘K' : 'Ctrl+K';
+
+  // Global accelerator — Cmd/Ctrl + K opens the search overlay (the badge on the
+  // launcher advertised it, but nothing bound it until now). Bound on the shell's
+  // `ownerDocument` so it works wherever the panel is mounted; it only opens, never
+  // toggles, so the overlay owns its own dismissal (Esc / backdrop). A single named
+  // chord that never inspects typed content, in line with the privacy stance.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      // `Cmd/Ctrl + K` with no other modifier: exactly one of meta (macOS) / ctrl
+      // (others), never Alt/Shift.
+      if ((e.key !== 'k' && e.key !== 'K') || e.altKey || e.shiftKey || e.metaKey === e.ctrlKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setSearchOpen(true);
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, []);
 
   // The platform view-filter chips (D28): "All" (unified) plus one chip per
   // platform actually present in the workspace, so the control never offers a
@@ -225,7 +222,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
       >
         <span class="sk-search__icon" aria-hidden="true"><SearchIcon size={16} /></span>
         <span class="sk-search__placeholder">{STR.searchPlaceholder}</span>
-        <kbd class="sk-search__kbd">⌘K</kbd>
+        <kbd class="sk-search__kbd">{searchKbd}</kbd>
       </button>
 
       <nav class="sk-tabs" role="tablist" aria-label={STR.sections}>
@@ -305,13 +302,13 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
             </div>
           </div>
 
-          {ws.active?.listCollapsedHint && (
+          {(ws.active?.listCollapsedHint || ws.listCollapsed) && (
             <div class="sk-nudge" role="status" data-testid="sk-collapsed-list-nudge">
               <span class="sk-nudge__logo" aria-hidden="true">
-                <PlatformLogo platform={ws.active.platform} size={16} />
+                <PlatformLogo platform={platform} size={16} />
               </span>
               <span class="sk-nudge__text">
-                {collapsedListNudge(PLATFORM_LABELS[ws.active.platform])}
+                {collapsedListNudge(PLATFORM_LABELS[platform])}
               </span>
             </div>
           )}
@@ -333,15 +330,13 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
       </div>
 
       <footer class="sk-shell__footer">
-        <span
-          class={`sk-badge${tier === 'PRO' ? ' sk-badge--pro' : ' sk-badge--free'}`}
-          data-testid="sk-pro-badge"
-          data-tier={tier}
-          title={tier === 'PRO' ? STR.tierProTitle : STR.tierFreeTitle}
-        >
-          {tier === 'PRO' ? STR.tierPro : STR.tierFree}
+        {/* Honest resting status: data is local to this device. No tier badge and no
+            "Synced" stub — both over-promised (Pro isn't purchasable, sync ships M5).
+            This slot upgrades to real Syncing…/Synced/Offline states when sync lands. */}
+        <span class="sk-status" data-testid="sk-status" role="status" title={STR.localOnlyTitle}>
+          <LockIcon size={14} />
+          {STR.localOnly}
         </span>
-        <span class="sk-sync" data-testid="sk-sync" aria-disabled="true" title={STR.comingSoon}>{STR.synced}</span>
         <button
           class="sk-icon-btn"
           type="button"

@@ -172,6 +172,37 @@ describe('MoveToFolderPicker inline create (quick-file)', () => {
     expect($('[data-testid=sk-move-error]')).toBeTruthy();
   });
 
+  it('shows the upgrade nudge (not the generic error) when the create hits the tier quota', async () => {
+    // The worker refuses the create with a typed quota_exceeded envelope.
+    const onSubmit = vi.fn(
+      async (_op: MutationOp): Promise<MutateResult> => ({
+        ok: false,
+        applied: false,
+        error: { code: 'quota_exceeded', message: 'over', detail: { resource: 'folders', count: 5, limit: 5 } },
+      }),
+    );
+    const onClose = vi.fn();
+    renderPicker(unfiled, onSubmit, onClose);
+    await flush();
+    typeFilter('Travel');
+    await flush();
+    $('[data-testid=sk-move-create]')!.click();
+    await flush();
+
+    // Create refused → assign is skipped, picker stays open, typed name intact.
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(($('[data-testid=sk-move-filter]') as HTMLInputElement).value).toBe('Travel');
+    // The informational nudge replaces the generic "try again" error.
+    expect($('[data-testid=sk-move-quota-nudge]')).toBeTruthy();
+    expect($('[data-testid=sk-move-error]')).toBeNull();
+
+    // Editing the name dismisses the nudge (the new name may match an existing folder).
+    typeFilter('Work');
+    await flush();
+    expect($('[data-testid=sk-move-quota-nudge]')).toBeNull();
+  });
+
   it('reuses the same folder id when a create is retried after a lost ack', async () => {
     // First attempt: create acked but assign reports not-applied → stays open.
     const onSubmit = vi

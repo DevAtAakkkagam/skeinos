@@ -1,0 +1,24 @@
+{
+  "platformId": "chatgpt",
+  "configVersion": "1.0.0",
+  "hostMatch": ["*://chatgpt.com/*"],
+  "selectors": {
+    "conversationList": "#history",
+    "conversationItem": "a[href^=\"/c/\"]",
+    "conversationTitle": ".truncate",
+    "conversationIdAttr": "href",
+    "conversationUrlPattern": "/c/[^/?#]+",
+    "messageUser": "[data-message-author-role=\"user\"]",
+    "messageAssistant": "[data-message-author-role=\"assistant\"]",
+    "composer": "#prompt-textarea",
+    "sendButton": "button[data-testid=\"send-button\"]",
+    "sidebarAnchor": "nav[aria-label=\"Chat history\"]",
+    "inputBarAnchor": "form[class*=\"composer\"]"
+  },
+  "behaviors": {
+    "insertMode": "execCommand",
+    "submitMode": "click",
+    "supportsSystemPrompt": false,
+    "listHiddenWhenCollapsed": true
+  }
+}

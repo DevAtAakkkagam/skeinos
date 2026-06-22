@@ -11,6 +11,7 @@ import type {
   Folder,
   FolderTreeNode,
   PlatformId,
+  PlatformState,
 } from './types';
 
 /** A lightweight conversation reference ingested from a platform adapter. */
@@ -23,7 +24,8 @@ export interface ConversationRefLite {
 export type WorkspaceSelector =
   | { kind: 'folder.tree' }
   | { kind: 'conversation.list' }
-  | { kind: 'conversation.active'; platform: PlatformId };
+  | { kind: 'conversation.active'; platform: PlatformId }
+  | { kind: 'platform.state'; platform: PlatformId };
 
 /** The folder hierarchy split into the sections the sidebar renders. */
 export interface FolderTreeSnapshot {
@@ -42,7 +44,8 @@ export interface FolderTreeSnapshot {
 export type WorkspaceSnapshot =
   | { kind: 'folder.tree'; tree: FolderTreeSnapshot }
   | { kind: 'conversation.list'; conversations: ConversationIndex[] }
-  | { kind: 'conversation.active'; active: ActiveConversation | null };
+  | { kind: 'conversation.active'; active: ActiveConversation | null }
+  | { kind: 'platform.state'; state: PlatformState | null };
 
 /** A write request against the workspace, discriminated by `op`. */
 export type MutationOp =
@@ -60,7 +63,8 @@ export type MutationOp =
   | { op: 'conversation.archive'; conversationId: string; archived: boolean }
   | { op: 'conversation.recolor'; conversationId: string; color?: string }
   | { op: 'conversation.reportActive'; platform: PlatformId; nativeId: string; title: string; listCollapsedHint?: boolean }
-  | { op: 'conversation.clearActive'; platform: PlatformId };
+  | { op: 'conversation.clearActive'; platform: PlatformId }
+  | { op: 'platform.reportListState'; platform: PlatformId; listCollapsed: boolean };
 
 /** The result of a successful mutation: the stores that changed (for the broadcast). */
 export interface MutationResult {

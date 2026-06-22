@@ -172,6 +172,25 @@ describe('input bar mount lifecycle (6.2)', () => {
     expect(bars()).toHaveLength(0);
   });
 
+  it('evicts a bar orphaned by a dead context — mounting is a singleton', () => {
+    // Simulates an extension reload (or Firefox multi-sandbox injection) that left a
+    // previous context's bar in the page: the old host node is still attached but its
+    // owner is gone, so it cannot dispose itself. A fresh mount must remove it rather
+    // than stack a second bar (the "3 Skeinos bars" bug).
+    mountFixture();
+    const anchor = root.querySelector<HTMLElement>('.input-bar')!;
+    const orphan = mountInputBar(anchor, { platform: 'claude', onInsert: vi.fn() });
+    expect(bars()).toHaveLength(1);
+
+    // A new context mounts WITHOUT disposing the orphan handle first.
+    const fresh = mountInputBar(anchor, { platform: 'claude', onInsert: vi.fn() });
+    expect(bars()).toHaveLength(1);
+    expect(orphan.host.isConnected).toBe(false);
+    expect(fresh.host.isConnected).toBe(true);
+
+    fresh.dispose();
+  });
+
   it('disposes the bar on teardown (context invalidation)', () => {
     mountFixture();
     const adapter = createAdapter(makeConfig(), { root });

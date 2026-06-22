@@ -33,7 +33,6 @@ export interface SeedPrompt {
   description?: string;
   tags?: string[];
   targetModels?: PlatformId[];
-  slug?: string;
 }
 
 /** Every starter prompt across all domains, in registry order. */

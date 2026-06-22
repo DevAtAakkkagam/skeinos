@@ -1,5 +1,5 @@
 // Prompts tab UI (happy-dom) over an injected library view — no worker. Covers the
-// card (variable chips · count · platform logos · inert slug), the panel's category/
+// card (variable chips · count · platform logos), the panel's category/
 // tag filtering with client-derived counts, the empty/loading/error states, the
 // editor's live variable preview + create/update wiring (body, never `variables`),
 // and the category create/rename/delete lifecycle. Maps to the prompts spec.
@@ -68,13 +68,12 @@ afterEach(() => {
 
 // --- 6.1 card ----------------------------------------------------------------
 describe('PromptCard (6.1)', () => {
-  it('renders variable chips, the variable count, platform logos, and the inert slug', () => {
+  it('renders variable chips, the variable count, and platform logos', () => {
     const p = prompt('p1', {
       title: 'Explainer',
       body: 'Write about {{topic}} for {{audience}}',
       variables: [{ name: 'topic', type: 'text' }, { name: 'audience', type: 'text' }],
       targetModels: ['claude', 'gemini'],
-      slug: '/exp',
     });
     mount(<PromptCard prompt={p} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
@@ -83,15 +82,13 @@ describe('PromptCard (6.1)', () => {
     const chips = $$('[data-testid=sk-prompt-var]').map((c) => c.textContent);
     expect(chips).toEqual(['topic', 'audience']);
     expect($('[data-testid=sk-prompt-card-vars]')!.textContent).toBe('2 vars');
-    // One brand logo per targetable platform; the slug badge shows verbatim.
+    // One brand logo per targetable platform.
     expect($$('[data-testid=sk-prompt-card-logos] svg')).toHaveLength(2);
-    expect($('[data-testid=sk-prompt-card-slug]')!.textContent).toBe('/exp');
   });
 
-  it('shows no platform logos for a prompt with no target models, and no slug badge', () => {
+  it('shows no platform logos for a prompt with no target models', () => {
     mount(<PromptCard prompt={prompt('p1', { targetModels: [] })} onEdit={vi.fn()} onDelete={vi.fn()} />);
     expect($('[data-testid=sk-prompt-card-logos]')).toBeNull();
-    expect($('[data-testid=sk-prompt-card-slug]')).toBeNull();
   });
 
   it('the overflow menu deletes only after an explicit confirm', async () => {
@@ -190,6 +187,7 @@ describe('PromptEditor through the panel (6.3)', () => {
     await flush();
     setValue($('[data-testid=sk-prompt-editor-title]'), 'Audience picker');
     setValue($('[data-testid=sk-prompt-editor-body]'), 'For {{audience = devs | execs}}');
+    $('[data-testid=sk-prompt-editor-target-claude]')!.click();
     await flush();
     // The live preview shows the parsed select variable as it is typed.
     expect($('[data-testid=sk-prompt-editor-vars]')!.textContent).toContain('audience');
@@ -203,6 +201,27 @@ describe('PromptEditor through the panel (6.3)', () => {
     expect(op.body).toBe('For {{audience = devs | execs}}');
     expect(op.title).toBe('Audience picker');
     expect(Object.keys(op)).not.toContain('variables');
+  });
+
+  it('requires at least one target platform before it will save', async () => {
+    const view = makeView({ prompts: [], folders: [] });
+    mount(<Tab view={view} />);
+    $('[data-testid=sk-prompt-new]')!.click();
+    await flush();
+    setValue($('[data-testid=sk-prompt-editor-title]'), 'No targets');
+    await flush();
+    $('[data-testid=sk-prompt-editor-save]')!.click();
+    await flush();
+    // Nothing persisted; the editor stays open and shows the error.
+    expect(view.mutate).not.toHaveBeenCalled();
+    expect($('[data-testid=sk-prompt-editor-error]')).toBeTruthy();
+    // Picking a target clears the error and lets the save through.
+    $('[data-testid=sk-prompt-editor-target-claude]')!.click();
+    await flush();
+    expect($('[data-testid=sk-prompt-editor-error]')).toBeNull();
+    $('[data-testid=sk-prompt-editor-save]')!.click();
+    await flush();
+    expect(view.mutate).toHaveBeenCalledTimes(1);
   });
 
   it('multi-select target platforms persist on the created op', async () => {
@@ -221,7 +240,7 @@ describe('PromptEditor through the panel (6.3)', () => {
   });
 
   it('editing a prompt sends a prompt.update carrying the changed body', async () => {
-    const p = prompt('p1', { title: 'Original', body: 'old' });
+    const p = prompt('p1', { title: 'Original', body: 'old', targetModels: ['claude'] });
     const view = makeView({ prompts: [p], folders: [] });
     mount(<Tab view={view} />);
 

@@ -4,6 +4,7 @@
 
 import type { PlatformId } from '../../shared/types';
 import type { AdapterConfig } from '../types';
+import chatgptConfig from './chatgpt.json';
 import claudeConfig from './claude.json';
 import geminiConfig from './gemini.json';
 import perplexityConfig from './perplexity.json';
@@ -14,6 +15,7 @@ export const BUNDLED_CONFIGS: Partial<Record<PlatformId, AdapterConfig>> = {
   claude: claudeConfig as unknown as AdapterConfig,
   gemini: geminiConfig as unknown as AdapterConfig,
   perplexity: perplexityConfig as unknown as AdapterConfig,
+  chatgpt: chatgptConfig as unknown as AdapterConfig,
 };
 
 /** The bundled config for a platform, or `undefined` if none has shipped yet. */

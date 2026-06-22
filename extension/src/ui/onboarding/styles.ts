@@ -66,52 +66,6 @@ export const ONBOARDING_CSS = `
   color: var(--sk-color-muted);
 }
 
-/* Assurance cards — local-first / metadata-only. */
-.sk-onb__features {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sk-space-2);
-}
-.sk-onb__feature {
-  display: flex;
-  gap: var(--sk-space-3);
-  padding: var(--sk-space-3);
-  border: 1px solid var(--sk-color-border);
-  border-radius: var(--sk-radius);
-}
-.sk-onb__feature-icon {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--sk-color-success) 26%, transparent);
-  color: var(--sk-color-fg);
-}
-.sk-onb__feature-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: left;
-}
-.sk-onb__feature-title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sk-color-fg);
-}
-.sk-onb__feature-body {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--sk-color-muted);
-}
-
 /* One step's content block — stacks like the hero/feature group it replaces. */
 .sk-onb__step {
   display: flex;
@@ -211,6 +165,12 @@ export const ONBOARDING_CSS = `
   display: inline-flex;
   margin-top: 1px;
   color: var(--sk-color-success);
+}
+/* Welcome variant: a single centred trust line under the lede, not a full-width
+   footnote. One quiet assurance instead of the two redundant feature cards. */
+.sk-onb__assurance--solo {
+  align-self: center;
+  max-width: 36ch;
 }
 
 /* Starter library — the domain picker (step 3, picker sub-state). */

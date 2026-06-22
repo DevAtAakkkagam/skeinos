@@ -3,6 +3,7 @@
 // whole point of `Repo` — feature code cannot forget to bump the envelope.
 
 import type { SyncMeta } from '../../shared/types';
+import { extApi } from '../platform/ext-api';
 
 /** Envelope fields excluded from the content hash (they describe sync, not content). */
 const ENVELOPE_FIELDS = new Set(['rev', 'updatedAt', 'deviceId', 'hash', 'deleted']);
@@ -48,7 +49,7 @@ interface LocalArea {
 }
 
 function chromeLocal(): LocalArea | undefined {
-  const c = (globalThis as { chrome?: { storage?: { local?: unknown } } }).chrome;
+  const c = extApi<{ storage?: { local?: unknown } }>();
   return c?.storage?.local as LocalArea | undefined;
 }
 

@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { subscribe } from '../../core/messaging';
+import { extApi } from '../../core/platform/ext-api';
 import { mutatePromptLibraryRemote, queryPromptLibraryRemote } from '../../core/prompts';
 import type { Prompt, PromptFolder } from '../../shared/types';
 import type { PromptMutationOp } from '../../shared/prompts';
@@ -178,9 +179,9 @@ export function usePromptLibrary(): PromptLibraryView {
   // open side panel; re-read on tab activation/update so a cross-tab change is picked
   // up promptly. Coalesced by `refresh`. Guarded for non-extension/test contexts.
   useEffect(() => {
-    const tabs = (
-      globalThis as { chrome?: { tabs?: { onActivated?: ChromeEvent; onUpdated?: ChromeEvent } } }
-    ).chrome?.tabs;
+    const tabs = extApi<{
+      tabs?: { onActivated?: ChromeEvent; onUpdated?: ChromeEvent };
+    }>()?.tabs;
     if (!tabs) return;
     tabs.onActivated?.addListener(refresh);
     tabs.onUpdated?.addListener(refresh);

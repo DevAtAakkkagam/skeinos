@@ -22,19 +22,19 @@ two models), so the panel must resolve it fast and then recede from attention.
 
 Skeinos is a Manifest V3 browser extension that overlays a unified organisation, search,
 prompt-library, and multi-model-comparison layer on top of LLM chat sites. It is
-local-first and privacy-first: conversation content never leaves the device on the free
-tier; only encrypted metadata syncs on paid tiers. It exists because the assistants are
-silos: each has its own history, folders (or none), and prompt storage, and none talk to
-each other. Skeinos is the connective tissue across all of them.
+local-first and privacy-first: in v1 everything is stored locally and nothing leaves the
+device, with no account and no sync. It exists because the assistants are silos: each has
+its own history, folders (or none), and prompt storage, and none talk to each other.
+Skeinos is the connective tissue across all of them.
 
 Success looks like: a user with conversations scattered across three LLM sites can file,
-re-find, and reuse them in seconds from one panel; trusts that nothing private syncs; and
-reaches for Skeinos reflexively instead of scrolling each platform's native history.
+re-find, and reuse them in seconds from one panel; trusts that nothing leaves their device;
+and reaches for Skeinos reflexively instead of scrolling each platform's native history.
 
 ## Brand Personality
 
 Calm, precise, trustworthy. The voice is quiet and competent: it states system status
-plainly ("Synced", "Couldn't load your folders, try again"), never shouts, never
+plainly ("Saved locally", "Couldn't load your folders, try again"), never shouts, never
 gamifies. Confidence comes from restraint and reliability, not decoration or reassurance
 copy. The product should feel like an instrument that respects the user's attention and
 their data. Where personality surfaces, it draws on the namesake (a skein, a thread,
@@ -62,8 +62,8 @@ weaving many strands into one) as a quiet, tactile signature rather than a loud 
   prompts. Empty states and self-promoting nudges are demoted to where they belong; they
   never sit front-and-center over real data that already exists.
 - **Trust is the feature.** Local-first and privacy-first are the product, not a bullet
-  point. Surface system and sync status honestly and legibly; never lose user input; make
-  the private/never-syncs boundary visible through behaviour rather than asserted in copy.
+  point. Surface system status honestly and legibly; never lose user input; make the
+  stays-on-device boundary visible through behaviour rather than asserted in copy.
 - **Resolve and recede, reward fluency.** Each task is small and frequent. Finish it fast
   and return attention to the conversation. Built for repeat daily use: keyboard-first,
   discoverable shortcuts, consistent patterns across tabs so muscle memory transfers.

@@ -75,12 +75,6 @@ describe('prompt.search matches across searchable fields (4.1)', () => {
     expect(ids(await search(store, ['marigold']))).toEqual(['p1']);
   });
 
-  it('includes a prompt when a term appears in its slug', async () => {
-    await mutatePromptLibrary(store, createOp({ id: 'p1', title: 't', body: 'b', slug: '/zephyr' }));
-    await mutatePromptLibrary(store, createOp({ id: 'p2', title: 't', body: 'b', slug: '/other' }));
-    expect(ids(await search(store, ['zephyr']))).toEqual(['p1']);
-  });
-
   it('matches case-insensitively (normalized like conversation search)', async () => {
     await mutatePromptLibrary(store, createOp({ id: 'p1', title: 'QUARTZ Report', body: 'b' }));
     expect(ids(await search(store, ['quartz']))).toEqual(['p1']);
@@ -130,14 +124,14 @@ describe('prompt.search results carry a highlighted snippet (4.1)', () => {
     expect(matched.some((seg: SnippetSegment) => seg.text.toLowerCase().includes('obsidian'))).toBe(true);
   });
 
-  it('a result carries the fields a row renders (id, title, targetModels, optional slug)', async () => {
+  it('a result carries the fields a row renders (id, title, targetModels)', async () => {
     const store = await freshStore();
     await mutatePromptLibrary(
       store,
-      createOp({ id: 'p1', title: 'Kestrel', body: 'kestrel body', targetModels: ['claude', 'gemini'], slug: '/k' }),
+      createOp({ id: 'p1', title: 'Kestrel', body: 'kestrel body', targetModels: ['claude', 'gemini'] }),
     );
     const [hit] = await search(store, ['kestrel']);
-    expect(hit).toMatchObject({ id: 'p1', title: 'Kestrel', targetModels: ['claude', 'gemini'], slug: '/k' });
+    expect(hit).toMatchObject({ id: 'p1', title: 'Kestrel', targetModels: ['claude', 'gemini'] });
     expect(Array.isArray(hit.snippet)).toBe(true);
   });
 });

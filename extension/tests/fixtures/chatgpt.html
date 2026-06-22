@@ -1,0 +1,36 @@
+<!-- Representative ChatGPT DOM snapshot, shaped from the live chatgpt.com sidebar +
+     ProseMirror composer (captured 2026-06). Conversations are `/c/<id>` links inside
+     `#history` (within `nav[aria-label="Chat history"]`), each wrapping its title in a
+     `.truncate`; the open conversation's anchor carries aria-current="page". Messages
+     are tagged with `data-message-author-role="user"|"assistant"`. The composer is the
+     ProseMirror `#prompt-textarea` contenteditable inside `form[class*="composer"]`,
+     alongside `button[data-testid="send-button"]`. Only framework-stable hooks are
+     used — the `#prompt-textarea`/`#history` ids, `data-message-author-role` and
+     `data-testid` attributes, the `aria-label` and `href` prefix — never the volatile
+     Tailwind utility classes (the lone exceptions, `.truncate` and `class*="composer"`,
+     are the only stable handles ChatGPT exposes there). See tests/fixtures/README.md;
+     re-capture if the live selectors drift. -->
+<div class="app">
+  <nav aria-label="Chat history">
+    <aside id="history">
+      <a href="/c/conv-1" aria-current="page">
+        <div class="truncate"><span>Rump steaks</span></div>
+      </a>
+      <a href="/c/conv-2">
+        <div class="truncate"><span>Cast-iron skillet care</span></div>
+      </a>
+    </aside>
+  </nav>
+
+  <main>
+    <div class="thread">
+      <div data-message-author-role="user">How do I cook a rump steak?</div>
+      <div data-message-author-role="assistant">Sear it hot, then rest it for five minutes.</div>
+    </div>
+
+    <form class="composer-parent flex">
+      <div id="prompt-textarea" role="textbox" contenteditable="true"></div>
+      <button data-testid="send-button" aria-label="Send prompt">Send</button>
+    </form>
+  </main>
+</div>

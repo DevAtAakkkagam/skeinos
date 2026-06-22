@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { subscribe } from '../../core/messaging';
+import { extApi } from '../../core/platform/ext-api';
 import { mutateWorkspaceRemote, queryWorkspaceRemote } from '../../core/folders';
 import type {
   ActiveConversation,
@@ -69,6 +70,10 @@ export interface WorkspaceView {
   /** The conversation open in the active tab for this platform, or `null` when
    *  none is resolvable. A pure read of worker state — reconciled like the rest. */
   active: ActiveConversation | null;
+  /** True when the active tab's platform currently hides its conversation list
+   *  because its side drawer is collapsed (Gemini). Drives the collapsed-list nudge
+   *  even on a new-chat/home page where no conversation is open. */
+  listCollapsed: boolean;
   /** The active platform view-filter; defaults to `'all'` (unified). */
   platformFilter: PlatformFilter;
   /** Set the platform view-filter (a view control only — no worker round-trip). */
@@ -145,6 +150,7 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
   const [tree, setTree] = useState<FolderTreeSnapshot>(EMPTY_TREE);
   const [conversations, setConversations] = useState<ConversationIndex[]>([]);
   const [active, setActive] = useState<ActiveConversation | null>(null);
+  const [listCollapsed, setListCollapsed] = useState(false);
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [status, setStatus] = useState<WorkspaceStatus>('loading');
 
@@ -178,25 +184,34 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
   platformRef.current = platform;
 
   const readAux = useCallback(async () => {
-    const [convRes, activeRes] = await Promise.all([
+    const [convRes, activeRes, stateRes] = await Promise.all([
       queryWorkspaceRemote({ kind: 'conversation.list' }),
       queryWorkspaceRemote({ kind: 'conversation.active', platform }),
+      queryWorkspaceRemote({ kind: 'platform.state', platform }),
     ]);
     // The list is unified (platform-agnostic), so a late-resolving read is always
     // safe to apply.
     if (convRes.ok && convRes.data.kind === 'conversation.list') {
       setConversations(convRes.data.conversations);
     }
-    // The active card is keyed by `platform`. Drop this result if the active tab's
-    // platform has since changed: a read dispatched for the PREVIOUS platform must
-    // not resolve late and overwrite the new platform's card (or the `setActive(null)`
-    // the switch just applied). `platform` here is the closure's captured platform.
+    // The active card and the platform signal are both keyed by `platform`. Drop a
+    // result if the active tab's platform has since changed: a read dispatched for
+    // the PREVIOUS platform must not resolve late and overwrite the new platform's
+    // state (or the resets the switch just applied). `platform` here is the closure's
+    // captured platform.
     if (
       activeRes.ok &&
       activeRes.data.kind === 'conversation.active' &&
       platformRef.current === platform
     ) {
       setActive(activeRes.data.active);
+    }
+    if (
+      stateRes.ok &&
+      stateRes.data.kind === 'platform.state' &&
+      platformRef.current === platform
+    ) {
+      setListCollapsed(stateRes.data.state?.listCollapsed ?? false);
     }
   }, [platform]);
 
@@ -255,6 +270,7 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
   // they are simply re-read (not cleared) by the same `refresh`.
   useEffect(() => {
     setActive(null);
+    setListCollapsed(false);
     refresh();
   }, [platform, refresh]);
 
@@ -286,9 +302,9 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
   // `onUpdated` (any tab's load progress) collapses to one read. Guarded for
   // non-extension/test contexts. (PRIV: this reads no tab content.)
   useEffect(() => {
-    const tabs = (
-      globalThis as { chrome?: { tabs?: { onActivated?: ChromeEvent; onUpdated?: ChromeEvent } } }
-    ).chrome?.tabs;
+    const tabs = extApi<{
+      tabs?: { onActivated?: ChromeEvent; onUpdated?: ChromeEvent };
+    }>()?.tabs;
     if (!tabs) return;
     tabs.onActivated?.addListener(refresh);
     tabs.onUpdated?.addListener(refresh);
@@ -320,6 +336,7 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
     tree,
     conversations,
     active,
+    listCollapsed,
     platformFilter,
     setPlatformFilter,
     status,

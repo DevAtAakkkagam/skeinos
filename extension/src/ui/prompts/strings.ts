@@ -53,8 +53,6 @@ export const STR = {
   fieldDescriptionPlaceholder: 'Optional — what is this for?',
   fieldTags: 'Tags',
   fieldTagsPlaceholder: 'Comma-separated',
-  fieldSlug: 'Slash alias',
-  fieldSlugPlaceholder: 'e.g. /exp',
   fieldTargets: 'Target platforms',
   fieldCategory: 'Category',
   variablesPreview: 'Variables',
@@ -65,6 +63,7 @@ export const STR = {
   add: 'Add',
   cancel: 'Cancel',
   titleRequired: 'A title is required.',
+  targetsRequired: 'Select at least one target platform.',
 
   // Category management
   renameCategory: 'Rename',
@@ -82,18 +81,7 @@ export const STR = {
   confirmDelete: 'Delete',
 } as const;
 
-/** Display labels for the platform target chips/logos (keyed by `PlatformId`). */
-import type { PlatformId } from '../../shared/types';
-export const PLATFORM_LABELS: Record<PlatformId, string> = {
-  claude: 'Claude',
-  gemini: 'Gemini',
-  perplexity: 'Perplexity',
-  grok: 'Grok',
-  deepseek: 'DeepSeek',
-  chatgpt: 'ChatGPT',
-  mistral: 'Mistral',
-};
-
-/** Platforms offered as target toggles in the editor: the ones with a real brand
- *  mark today (mirrors `PLATFORM_LOGOS`). Grows with the adapter set. */
-export const TARGETABLE_PLATFORMS: PlatformId[] = ['claude', 'gemini', 'perplexity'];
+// Platform labels and the targetable set both come from the single platform
+// registry (`shared/branding`); re-exported here so existing call sites keep their
+// import path. `TARGETABLE_PLATFORMS` is exactly the supported set.
+export { PLATFORM_LABELS, SUPPORTED_PLATFORMS as TARGETABLE_PLATFORMS } from '../../shared/branding';

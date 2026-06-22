@@ -12,6 +12,8 @@ import { useMemo, useRef, useState } from 'preact/hooks';
 import type { Folder, FolderTreeNode } from '../../shared/types';
 import type { FolderTreeSnapshot, MutationOp } from '../../shared/workspace';
 import { FOLDER_ICON_SENTINEL, FolderRowIcon, PlusIcon } from '../components/Icon';
+import { UpgradeNudge } from '../components/UpgradeNudge';
+import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import { Dialog } from '../primitives';
 import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
 import type { MutateResult } from './useWorkspace';
@@ -68,6 +70,10 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
   const [highlight, setHighlight] = useState(0);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The tier quota that refused an inline folder create, if any (block-with-nudge):
+  // when set, the picker stays open with the typed name intact and shows the
+  // informational upgrade nudge instead of the generic "try again" error.
+  const [quota, setQuota] = useState<QuotaErrorDetail | null>(null);
   const listId = useRef(`sk-move-list-${Math.random().toString(36).slice(2)}`).current;
 
   const candidates = useMemo(() => flattenCandidates(tree.active), [tree]);
@@ -119,6 +125,7 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
   const confirm = async (opt: Option | undefined) => {
     if (!opt || busy) return;
     setFailed(false);
+    setQuota(null);
     setBusy(true);
     let ok: boolean;
     if (opt.kind === 'create') {
@@ -135,6 +142,16 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
         // Folders are platform-agnostic in the unified model (D28 / D-FSR4).
         platformScope: 'unified',
       });
+      // A tier quota refusal is not a transient failure ([PRIV] block-with-nudge):
+      // keep the picker open with the typed name intact and surface the upgrade
+      // nudge, not the generic error. The existing-folder list stays usable as the
+      // recovery path (filing into an existing folder isn't quota-governed).
+      const blocked = quotaDetailOf(created.error);
+      if (blocked) {
+        setBusy(false);
+        setQuota(blocked);
+        return;
+      }
       ok = took(created) && took(await assign(id));
     } else {
       ok = took(await assign(opt.kind === 'unfile' ? null : opt.candidate.folder.id));
@@ -180,6 +197,9 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
           onInput={(e) => {
             setQuery((e.currentTarget as HTMLInputElement).value);
             setHighlight(0);
+            // Editing the name dismisses a prior quota nudge — the new name may name
+            // an existing folder (file into it) or simply lets the user retry.
+            setQuota(null);
           }}
           onKeyDown={onKeyDown}
         />
@@ -251,6 +271,9 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
         </ul>
         {failed && (
           <p class="sk-dialog__error" data-testid="sk-move-error" role="alert">{STR.error}</p>
+        )}
+        {quota && (
+          <UpgradeNudge resource="folders" limit={quota.limit} testId="sk-move-quota-nudge" />
         )}
       </div>
     </Dialog>

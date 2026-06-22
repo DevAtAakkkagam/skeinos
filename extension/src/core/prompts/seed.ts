@@ -52,7 +52,6 @@ export async function installSeeds(store: WorkspaceStore, domain: DomainId): Pro
       domain: seed.domain,
       seedId: seed.seedId,
       ...(seed.description !== undefined ? { description: seed.description } : {}),
-      ...(seed.slug !== undefined ? { slug: seed.slug } : {}),
     } as Prompt;
     await store.prompts.put(prompt);
     installed += 1;

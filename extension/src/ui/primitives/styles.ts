@@ -37,6 +37,8 @@ export const PRIMITIVES_CSS = `
 /* Tinted-dark scrim (indigo-tinted, never pure black) that darkens in both themes. */
 .sk-dialog__backdrop { position: fixed; inset: 0; z-index: 2147483646; background: rgba(22, 21, 31, 0.4); }
 .sk-dialog__positioner { position: fixed; inset: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; }
-.sk-dialog { background: var(--sk-color-bg); color: var(--sk-color-fg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: var(--sk-space-3); display: flex; flex-direction: column; gap: var(--sk-space-2); min-width: 260px; }
+/* Bound the width so long content (e.g. an upgrade nudge) wraps in place instead
+   of stretching the dialog toward the viewport edge (no CLS / layout-shift). */
+.sk-dialog { background: var(--sk-color-bg); color: var(--sk-color-fg); border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); padding: var(--sk-space-3); display: flex; flex-direction: column; gap: var(--sk-space-2); min-width: 260px; max-width: min(440px, calc(100vw - 24px)); box-sizing: border-box; }
 .sk-dialog:focus-visible { outline: none; }
 `;

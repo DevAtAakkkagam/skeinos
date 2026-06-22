@@ -67,6 +67,7 @@ function makeWorkspaceView(over: Partial<WorkspaceView> = {}): WorkspaceView {
     tree,
     conversations: [],
     active: null,
+    listCollapsed: false,
     platformFilter: 'all',
     setPlatformFilter: vi.fn(),
     status: 'ready',
@@ -184,6 +185,7 @@ describe('prompt create — block-with-nudge (3.3/3.6)', () => {
     await flush();
     setValue($('[data-testid=sk-prompt-editor-title]'), 'My prompt');
     setValue($('[data-testid=sk-prompt-editor-body]'), 'Do the thing.');
+    $('[data-testid=sk-prompt-editor-target-claude]')!.click();
     await flush(); // let the title/body state settle before submit
     $('[data-testid=sk-prompt-editor-save]')!.click();
     await flush();

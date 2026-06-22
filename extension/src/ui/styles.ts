@@ -52,6 +52,16 @@ export const COMPONENT_CSS = `
 /* Buttons that lead with an inline-SVG icon: center the icon against the label
    and give them a consistent gap. */
 .sk-btn--icon { display: inline-flex; align-items: center; gap: var(--sk-space-1); }
+/* The ↵ affordance inside a dialog's primary (submit) button: a faint inline glyph
+   that signals Enter submits the form. Decorative only — the button stays
+   type="submit", which is what actually carries the behaviour. */
+.sk-btn { display: inline-flex; align-items: center; gap: var(--sk-space-1); }
+.sk-btn__enter {
+  font: inherit;
+  font-size: 0.9em;
+  line-height: 1;
+  opacity: 0.65;
+}
 /* Inline icons render as blocks so they don't inherit the text baseline gap. */
 .sk-btn svg, .sk-icon-btn svg { display: block; }
 .sk-select {

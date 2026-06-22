@@ -48,7 +48,7 @@ function makeView(over: Partial<PromptLibraryView> = {}): PromptLibraryView {
 
 const workspaceView: WorkspaceView = {
   tree: { active: [], pinned: [], archived: [] },
-  conversations: [], active: null, platformFilter: 'all', setPlatformFilter: vi.fn(),
+  conversations: [], active: null, listCollapsed: false, platformFilter: 'all', setPlatformFilter: vi.fn(),
   status: 'ready', refresh: vi.fn(), retry: vi.fn(), mutate: vi.fn(async () => ({ ok: true, applied: true })),
 };
 

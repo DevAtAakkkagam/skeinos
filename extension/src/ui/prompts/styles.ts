@@ -47,13 +47,6 @@ export const PROMPTS_CSS = `
 }
 .sk-prompt-card__head { display: flex; align-items: center; gap: var(--sk-space-2); }
 .sk-prompt-card__title { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--sk-text-base); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The inert slash alias (no insertion until C13): a quiet monospace badge. */
-.sk-prompt-card__slug {
-  flex: none; font-family: var(--sk-font-label, monospace); font-size: var(--sk-text-xs); color: var(--sk-color-accent);
-  background: color-mix(in srgb, var(--sk-color-accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--sk-color-accent) 35%, transparent);
-  border-radius: var(--sk-radius); padding: 0 var(--sk-space-1);
-}
 /* The card's overflow trigger reuses the icon-button look (Menu's filled sk-btn is
    overridden here only inside the card). */
 .sk-prompt-card__menu .sk-menu-root { display: inline-flex; }
@@ -95,9 +88,6 @@ export const PROMPTS_CSS = `
 .sk-prompt-editor__var-type { color: var(--sk-color-muted); font-size: var(--sk-text-xs); text-transform: uppercase; letter-spacing: 0.04em; }
 .sk-prompt-editor__var-default { color: var(--sk-color-muted); font-size: var(--sk-text-xs); }
 .sk-prompt-editor__targets { display: flex; flex-wrap: wrap; gap: var(--sk-space-1); }
-.sk-prompt-editor__row { display: flex; gap: var(--sk-space-2); }
-.sk-prompt-editor__col { flex: 1 1 0; min-width: 0; }
-.sk-prompt-editor__col .sk-select { width: 100%; box-sizing: border-box; }
 .sk-prompt-editor__new-category { display: flex; align-items: center; gap: var(--sk-space-2); }
 .sk-prompt-editor__new-category .sk-input { flex: 1 1 auto; }
 

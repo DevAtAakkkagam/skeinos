@@ -31,9 +31,10 @@ export const STR = {
 
   // Apply-to (per-platform)
   appliesToLegend: 'Apply to',
-  // The injection mode shown per platform. PREPEND-only this slice (D-3 / D13): no
-  // system-prompt mode is advertised until the injection exists.
-  modePrepend: 'PREPEND',
+  // The injection mode, stated once beneath the platform chips. PREPEND-only this slice
+  // (D-3 / D13): no system-prompt mode is advertised until the injection exists. Shown as
+  // a quiet caption rather than a label repeated per platform.
+  applyModeNote: 'Prepended to your message on each.',
 
   // Response style
   responseStyleLegend: 'Response style',
@@ -56,14 +57,6 @@ export const STR = {
   cancel: 'Cancel',
 } as const;
 
-/** Display labels for the per-platform apply-to rows (keyed by `PlatformId`). */
-import type { PlatformId } from '../../shared/types';
-export const PLATFORM_LABELS: Record<PlatformId, string> = {
-  claude: 'Claude',
-  gemini: 'Gemini',
-  perplexity: 'Perplexity',
-  grok: 'Grok',
-  deepseek: 'DeepSeek',
-  chatgpt: 'ChatGPT',
-  mistral: 'Mistral',
-};
+// Per-platform apply-to labels come from the single platform registry
+// (`shared/branding`); re-exported so existing call sites keep their import path.
+export { PLATFORM_LABELS } from '../../shared/branding';
