@@ -10,6 +10,7 @@ import { broadcast, registerHandler } from '../../core/messaging';
 import { workspaceStore, type WorkspaceStore } from '../../core/store';
 import { getSettings } from '../../core/settings';
 import { assertWithinQuota } from '../../core/tier';
+import { mutateTags, queryTags } from '../tags';
 import { indexConversationTitle } from '../conversation-index/pipeline';
 import type { ConversationIndex, Folder } from '../../shared/types';
 import {
@@ -115,6 +116,9 @@ export async function queryWorkspace(
       const state = (await store.platformState.get(selector.platform)) ?? null;
       return { kind: 'platform.state', state };
     }
+    case 'tag.list':
+      // Tags ride the same workspace.query kind; the tag domain owns the read (C7).
+      return queryTags(store, selector);
   }
 }
 
@@ -278,6 +282,15 @@ export async function mutateWorkspace(
       });
       return { stores: ['platformState'] };
     }
+    case 'tag.create':
+    case 'tag.rename':
+    case 'tag.recolor':
+    case 'tag.delete':
+    case 'conversation.tag':
+    case 'prompt.tag':
+      // Tags ride the same workspace.mutate kind; the tag domain owns the write and
+      // returns the stores it touched (the wrapper below broadcasts on those). C7.
+      return mutateTags(store, op);
   }
 }
 

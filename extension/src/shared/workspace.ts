@@ -12,6 +12,7 @@ import type {
   FolderTreeNode,
   PlatformId,
   PlatformState,
+  Tag,
 } from './types';
 
 /** A lightweight conversation reference ingested from a platform adapter. */
@@ -25,7 +26,8 @@ export type WorkspaceSelector =
   | { kind: 'folder.tree' }
   | { kind: 'conversation.list' }
   | { kind: 'conversation.active'; platform: PlatformId }
-  | { kind: 'platform.state'; platform: PlatformId };
+  | { kind: 'platform.state'; platform: PlatformId }
+  | { kind: 'tag.list' };
 
 /** The folder hierarchy split into the sections the sidebar renders. */
 export interface FolderTreeSnapshot {
@@ -45,7 +47,8 @@ export type WorkspaceSnapshot =
   | { kind: 'folder.tree'; tree: FolderTreeSnapshot }
   | { kind: 'conversation.list'; conversations: ConversationIndex[] }
   | { kind: 'conversation.active'; active: ActiveConversation | null }
-  | { kind: 'platform.state'; state: PlatformState | null };
+  | { kind: 'platform.state'; state: PlatformState | null }
+  | { kind: 'tag.list'; tags: Tag[] };
 
 /** A write request against the workspace, discriminated by `op`. */
 export type MutationOp =
@@ -64,7 +67,16 @@ export type MutationOp =
   | { op: 'conversation.recolor'; conversationId: string; color?: string }
   | { op: 'conversation.reportActive'; platform: PlatformId; nativeId: string; title: string; listCollapsedHint?: boolean }
   | { op: 'conversation.clearActive'; platform: PlatformId }
-  | { op: 'platform.reportListState'; platform: PlatformId; listCollapsed: boolean };
+  | { op: 'platform.reportListState'; platform: PlatformId; listCollapsed: boolean }
+  // Tag lifecycle (C7/M2). The `tags` array on conversations/prompts stores Tag
+  // *ids* (design D-1), so rename/recolor touch only the one `Tag` record and never
+  // rewrite carriers. `conversation.tag` / `prompt.tag` toggle one id on one record.
+  | { op: 'tag.create'; id: string; label: string; color?: string }
+  | { op: 'tag.rename'; id: string; label: string }
+  | { op: 'tag.recolor'; id: string; color?: string }
+  | { op: 'tag.delete'; id: string }
+  | { op: 'conversation.tag'; id: string; tagId: string; assigned: boolean }
+  | { op: 'prompt.tag'; id: string; tagId: string; assigned: boolean };
 
 /** The result of a successful mutation: the stores that changed (for the broadcast). */
 export interface MutationResult {

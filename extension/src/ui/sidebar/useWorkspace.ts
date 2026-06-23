@@ -78,6 +78,12 @@ export interface WorkspaceView {
   platformFilter: PlatformFilter;
   /** Set the platform view-filter (a view control only — no worker round-trip). */
   setPlatformFilter: (filter: PlatformFilter) => void;
+  /** The selected tag-filter ids (AND semantics): the unified list is narrowed to
+   *  conversations carrying EVERY id. Ephemeral panel-local state (design D-4) — never
+   *  a record mutation, never persisted across reopen. Empty = no tag narrowing. */
+  tagFilter: string[];
+  /** Set the tag-filter selection (a view control only — no worker round-trip). */
+  setTagFilter: (ids: string[]) => void;
   /** Load status driving the loading/empty/error rendering. */
   status: WorkspaceStatus;
   /** Re-read all selectors from the worker (reconcile). */
@@ -152,6 +158,8 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
   const [active, setActive] = useState<ActiveConversation | null>(null);
   const [listCollapsed, setListCollapsed] = useState(false);
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
+  // Ephemeral tag-filter selection (design D-4): not persisted, reset on reload.
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [status, setStatus] = useState<WorkspaceStatus>('loading');
 
   // Always read through the latest status without re-creating the read callback
@@ -339,6 +347,8 @@ export function useWorkspace(platform: PlatformId): WorkspaceView {
     listCollapsed,
     platformFilter,
     setPlatformFilter,
+    tagFilter,
+    setTagFilter,
     status,
     refresh,
     retry,
