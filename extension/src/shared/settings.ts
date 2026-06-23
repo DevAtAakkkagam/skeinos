@@ -26,6 +26,14 @@ export interface Settings {
   /** Usage telemetry opt-in. Off by default — a product commitment (PRD §8.3). */
   telemetry: boolean;
   /**
+   * Diagnostics telemetry consent (`observability`, D-OBS-4): gates crashes +
+   * adapter-health events — the only telemetry stream. **Off by default** ([PRIV-4]):
+   * an explicit opt-in the user makes on the final onboarding step or in settings.
+   * Read by the worker before any egress; flipping it off instantly drops buffered
+   * diagnostics events.
+   */
+  diagnosticsOptIn: boolean;
+  /**
    * First-run gate (onboarding-foundation). Additive optional key: a settings
    * object written before it existed reads back `false` via the defaults merge,
    * which is exactly the "not yet onboarded" first-run state.
@@ -67,6 +75,9 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   telemetry: false,
+  // Diagnostics is the only telemetry stream and is opt-in, off by default ([PRIV-4],
+  // D-OBS-4) — the user enables it on the final onboarding step or in settings.
+  diagnosticsOptIn: false,
   onboardingCompleted: false,
   // PRO is the default while Pro is not yet purchasable (M5): unlock everything
   // rather than block users on FREE with no checkout. Revert to 'FREE' when

@@ -61,7 +61,8 @@ export function SidePanelApp() {
     let live = true;
     const update = () => {
       void resolveActivePlatform().then((p) => {
-        if (live) setPlatform(p);
+        if (!live) return;
+        setPlatform(p);
       });
     };
     update();

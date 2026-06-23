@@ -10,6 +10,11 @@ import { registerFolderHandlers } from '../core/folders';
 import { registerPromptHandlers } from '../core/prompts';
 import { registerProfileHandlers } from '../core/profiles';
 import { registerSearchHandlers } from '../core/conversation-index';
+import {
+  installExceptionCapture,
+  registerTelemetryFlush,
+  registerTelemetryHandlers,
+} from '../core/observability';
 import { registerSidePanel } from './sidePanel';
 import { registerInjectOpenTabs } from './injectOpenTabs';
 
@@ -47,6 +52,15 @@ registerPromptHandlers();
 registerProfileHandlers();
 // Search query + indexing (search.run, conversation.index/indexBulk).
 registerSearchHandlers();
+
+// Observability (diagnostics only). The worker is the SINGLE telemetry egress
+// (D-OBS-2): the `telemetry.emit` handler is the only ingress for content/UI events,
+// and the flush alarm drains the durable buffer to PostHog EU (instant opt-out drops
+// buffered events). Crashes in the worker itself are captured for the
+// `service_worker` source. All gated on the diagnostics consent flag.
+registerTelemetryHandlers();
+registerTelemetryFlush();
+installExceptionCapture('service_worker');
 
 // Install the dispatch listener LAST — after every handler is registered — so a
 // woken worker never answers a request before its handlers exist. Worker-only.
