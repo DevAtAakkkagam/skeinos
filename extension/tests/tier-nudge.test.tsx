@@ -70,6 +70,8 @@ function makeWorkspaceView(over: Partial<WorkspaceView> = {}): WorkspaceView {
     listCollapsed: false,
     platformFilter: 'all',
     setPlatformFilter: vi.fn(),
+    tagFilter: [],
+    setTagFilter: vi.fn(),
     status: 'ready',
     refresh: vi.fn(),
     retry: vi.fn(),

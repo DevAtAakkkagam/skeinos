@@ -4,11 +4,11 @@
   "entries": [
     {
       "name": "content-script",
-      "$reason": "Bumped 65->90 for the input-action-bar change: the bar is a content-script shadow-DOM overlay (design D-2), so the content bundle now legitimately carries Preact + the floating/dialog primitives (useFloating, Zag dialog) it mounts. WXT inlines content-script deps, so lazy-loading would not reliably trim this entry.",
+      "$reason": "Bumped 65->90 for the input-action-bar change: the bar is a content-script shadow-DOM overlay (design D-2), so the content bundle now legitimately carries Preact + the floating/dialog primitives (useFloating, Zag dialog) it mounts. WXT inlines content-script deps, so lazy-loading would not reliably trim this entry. Bumped 90->100 for the i18n change (C33): the in-tab input bar is translated, so the content bundle carries the i18n runtime + message catalogs. Non-English catalogs are code-split for the side panel / options pages, but WXT inlines content-script dynamic imports (as noted above), so all five catalogs land here — an irreducible, text-only cost for in-tab translation.",
       "files": [
         "content-scripts/skeinos.js"
       ],
-      "budgetKb": 90
+      "budgetKb": 100
     },
     {
       "name": "background",
@@ -19,9 +19,9 @@
     },
     {
       "name": "sidepanel",
-      "$reason": "Dropped the bundled IBM Plex Mono face (labels now use the platform monospace stack), reclaiming ~14.6KB gzip across every entry. Bumped 110->118 for the remaining gap: the side panel carries the full app surface that landed after the original budget (onboarding stepper, instruction profiles, the docked input bar + prompt library), and the single bundled face (Urbanist) is shared design infra. Trimmed first, then bumped.",
+      "$reason": "Dropped the bundled IBM Plex Mono face (labels now use the platform monospace stack), reclaiming ~14.6KB gzip across every entry. Bumped 110->118 for the remaining gap: the side panel carries the full app surface that landed after the original budget (onboarding stepper, instruction profiles, the docked input bar + prompt library), and the single bundled face (Urbanist) is shared design infra. Trimmed first, then bumped. Bumped 118->124 for the observability change: the panel now carries the privacy-consent UI (the onboarding privacy step's two toggles + the shared ConsentToggle) and the leaf telemetry client wired into the side panel, search, and tier-gate surfaces. Trimmed first (UI imports the leaf client/buckets, never the worker-side egress/taxonomy barrel), then bumped for the irreducible consent-UI delta. Bumped 124->127 for the i18n change (C33): the four non-English catalogs are code-split out of this entry (~14KB reclaimed), but the English catalog is the source of truth + per-key fallback, so it is statically bundled — an irreducible, text-only delta. Trimmed first (lazy-loaded DE/FR/ES/PT), then bumped for English.",
       "html": "sidepanel.html",
-      "budgetKb": 118
+      "budgetKb": 127
     },
     {
       "name": "options",

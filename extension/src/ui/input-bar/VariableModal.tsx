@@ -10,7 +10,7 @@ import { useMemo, useState } from 'preact/hooks';
 import { Dialog } from '../primitives/Dialog';
 import { EnterHint } from '../components/EnterHint';
 import type { PromptVar } from '../../shared/types';
-import { STR } from './strings';
+import { useT } from '../../core/i18n';
 
 export interface VariableModalProps {
   /** The prompt's title, shown in the modal heading. */
@@ -32,6 +32,7 @@ function initialValues(variables: PromptVar[]): Record<string, string> {
 }
 
 export function VariableModal({ title, variables, onConfirm, onCancel }: VariableModalProps) {
+  const t = useT();
   const [values, setValues] = useState<Record<string, string>>(() => initialValues(variables));
 
   // Stable field id seed so each label binds to its control across re-renders.
@@ -55,7 +56,7 @@ export function VariableModal({ title, variables, onConfirm, onCancel }: Variabl
     <Dialog
       open
       onClose={onCancel}
-      ariaLabel={STR.modalLabel}
+      ariaLabel={t('inputBar.modalLabel')}
       contentTestId="sk-ib-var-modal"
     >
       <form
@@ -71,7 +72,7 @@ export function VariableModal({ title, variables, onConfirm, onCancel }: Variabl
         onBeforeInput={(e) => e.stopPropagation()}
       >
         <div class="sk-dialog__header">
-          <h2 class="sk-dialog__title">{STR.modalTitle(title)}</h2>
+          <h2 class="sk-dialog__title">{t('inputBar.modalTitle', { title })}</h2>
         </div>
 
         {variables.map((v) => (
@@ -111,10 +112,10 @@ export function VariableModal({ title, variables, onConfirm, onCancel }: Variabl
             data-testid="sk-ib-var-cancel"
             onClick={onCancel}
           >
-            {STR.cancel}
+            {t('inputBar.cancel')}
           </button>
           <button type="submit" class="sk-btn" data-testid="sk-ib-var-insert">
-            {STR.insert}
+            {t('inputBar.insert')}
             <EnterHint />
           </button>
         </div>

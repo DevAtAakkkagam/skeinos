@@ -28,7 +28,7 @@ import { queryProfilesRemote } from '../../core/profiles';
 import { useFloating } from '../primitives/useFloating';
 import { composeProfileText } from '../profiles/compose';
 import { useShadowDismiss } from './hooks';
-import { STR } from './strings';
+import { useT } from '../../core/i18n';
 
 type QueryProfilesFn = (selector: ProfileSelector) => Promise<Response<ProfileSnapshot>>;
 type LoadStatus = 'loading' | 'ready' | 'error';
@@ -58,6 +58,7 @@ export function ProfileChip({
   setSettings = setSettingsLive,
   subscribeSettings = subscribeSettingsLive,
 }: ProfileChipProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [profiles, setProfiles] = useState<InstructionProfile[]>([]);
   const [status, setStatus] = useState<LoadStatus>('loading');
@@ -141,7 +142,7 @@ export function ProfileChip({
   };
 
   // The chip's accessible name reflects the active profile when one is set.
-  const chipLabel = active ? STR.profileActiveLabel(active.name) : STR.profileChipLabel;
+  const chipLabel = active ? t('inputBar.profileActiveLabel', { name: active.name }) : t('inputBar.profileChipLabel');
 
   return (
     <>
@@ -151,13 +152,13 @@ export function ProfileChip({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={chipLabel}
-        title={active && !activeApplies ? STR.profileInactiveHere : chipLabel}
+        title={active && !activeApplies ? t('inputBar.profileInactiveHere') : chipLabel}
         data-testid="sk-ib-profile"
         ref={floating.setReference}
         onClick={() => setOpen((v) => !v)}
       >
         <span class="sk-ib-chip__name" data-testid="sk-ib-profile-name">
-          {active ? active.name : STR.profileChip}
+          {active ? active.name : t('inputBar.profileChip')}
         </span>
       </button>
 
@@ -167,7 +168,7 @@ export function ProfileChip({
           class="sk-ib-menu"
           style={floating.floatingStyles}
           role="menu"
-          aria-label={STR.profileMenuLabel}
+          aria-label={t('inputBar.profileMenuLabel')}
           data-testid="sk-ib-profile-menu"
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
@@ -178,23 +179,23 @@ export function ProfileChip({
         >
           {status === 'loading' ? (
             <p class="sk-ib-menu__status" data-testid="sk-ib-profile-loading">
-              {STR.profileMenuLoading}
+              {t('inputBar.profileMenuLoading')}
             </p>
           ) : status === 'error' ? (
             <div class="sk-ib-menu__status" data-testid="sk-ib-profile-error" role="alert">
-              <span>{STR.profileMenuError}</span>
+              <span>{t('inputBar.profileMenuError')}</span>
               <button
                 type="button"
                 class="sk-ib-menu__retry"
                 data-testid="sk-ib-profile-retry"
                 onClick={() => void load()}
               >
-                {STR.profileMenuRetry}
+                {t('inputBar.profileMenuRetry')}
               </button>
             </div>
           ) : profiles.length === 0 ? (
             <p class="sk-ib-menu__status" data-testid="sk-ib-profile-empty">
-              {STR.profileMenuEmpty}
+              {t('inputBar.profileMenuEmpty')}
             </p>
           ) : (
             <ul class="sk-ib-menu__list" role="none">
@@ -212,15 +213,15 @@ export function ProfileChip({
                       class={`sk-ib-menu__item${isActive ? ' sk-ib-menu__item--active' : ''}`}
                       data-testid="sk-ib-profile-item"
                       data-profile-id={p.id}
-                      title={applies ? undefined : STR.profileNotApplicable}
+                      title={applies ? undefined : t('inputBar.profileNotApplicable')}
                       onClick={() => handleSelect(p)}
                     >
                       <span class="sk-ib-menu__mark" aria-hidden="true">
-                        {isActive ? STR.profileActiveMark : ''}
+                        {isActive ? t('inputBar.profileActiveMark') : ''}
                       </span>
-                      <span class="sk-ib-menu__name">{p.name || STR.profileChip}</span>
+                      <span class="sk-ib-menu__name">{p.name || t('inputBar.profileChip')}</span>
                       {!applies ? (
-                        <span class="sk-ib-menu__note">{STR.profileNotApplicable}</span>
+                        <span class="sk-ib-menu__note">{t('inputBar.profileNotApplicable')}</span>
                       ) : null}
                     </button>
                   </li>

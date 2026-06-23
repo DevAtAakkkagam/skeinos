@@ -17,43 +17,7 @@ import { PLATFORM_LABELS } from '../../shared/branding';
 import type { PromptSearchResult } from '../../shared/prompts';
 import { useSearch, type SearchView } from './useSearch';
 import { usePromptSearch, type PromptSearchView } from './usePromptSearch';
-
-const STR = {
-  title: 'Search conversations',
-  inputLabel: 'Search query',
-  placeholder: 'Search everything…',
-  close: 'Close search',
-  results: 'Search results',
-  filters: 'Search filters',
-  platform: 'Platform',
-  platformAll: 'All platforms',
-  folder: 'Folder',
-  folderAll: 'All folders',
-  folderUnfiled: 'Uncategorized',
-  dateFrom: 'Updated after',
-  dateTo: 'Updated before',
-  archived: 'Include archived',
-  tag: 'Tag',
-  tagComingSoon: 'Tag filter — coming soon',
-  empty: 'No conversations or prompts match your search.',
-  idle: 'Type to search your conversations.',
-  groupConversations: 'Conversations',
-  groupPrompts: 'Prompts',
-  searching: 'Searching…',
-  error: 'Search is unavailable right now. Try again.',
-  unfiled: 'Uncategorized',
-  // Privacy reassurance + keyboard legend pinned to the panel foot (design D-7).
-  indexedLocally: 'Indexed locally on your device',
-  hintNavigate: 'navigate',
-  hintOpen: 'open',
-  // Relative-time units for a result's timestamp (terse, to fit the meta line).
-  justNow: 'just now',
-  minute: 'm',
-  hour: 'h',
-  day: 'd',
-  week: 'w',
-  ago: 'ago',
-} as const;
+import { useT, activeLocale } from '../../core/i18n';
 
 // Sentinel for the "Unfiled" folder option (folderId === null), distinct from both
 // "no folder filter" (empty string) and any real folder id (UUIDs never match this).
@@ -101,6 +65,8 @@ export function SearchOverlay({
   view,
   promptView,
 }: SearchOverlayProps) {
+  const t = useT();
+  const locale = activeLocale();
   const live = useSearch();
   const search = view ?? live;
   const { queryText, setQueryText, filters, setFilters, results, status } = search;
@@ -236,7 +202,7 @@ export function SearchOverlay({
       class="sk-search-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={STR.title}
+      aria-label={t('search.title')}
       data-testid="sk-search-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -255,8 +221,8 @@ export function SearchOverlay({
             aria-expanded={total > 0}
             aria-controls="sk-search-results"
             aria-activedescendant={activeId}
-            aria-label={STR.inputLabel}
-            placeholder={STR.placeholder}
+            aria-label={t('search.inputLabel')}
+            placeholder={t('search.placeholder')}
             value={queryText}
             data-testid="sk-search-input"
             onInput={(e) => onQueryInput((e.target as HTMLInputElement).value)}
@@ -265,8 +231,8 @@ export function SearchOverlay({
           <button
             type="button"
             class="sk-icon-btn"
-            aria-label={STR.close}
-            title={STR.close}
+            aria-label={t('search.close')}
+            title={t('search.close')}
             data-testid="sk-search-close"
             onClick={onClose}
           >
@@ -274,16 +240,16 @@ export function SearchOverlay({
           </button>
         </div>
 
-        <div class="sk-search-filters" role="group" aria-label={STR.filters}>
+        <div class="sk-search-filters" role="group" aria-label={t('search.filters')}>
           <label class="sk-search-filter">
-            <span class="sk-search-filter__label">{STR.platform}</span>
+            <span class="sk-search-filter__label">{t('search.platform')}</span>
             <select
               class="sk-search-filter__control"
               data-testid="sk-filter-platform"
               value={filters.platform ?? ''}
               onChange={(e) => setPlatform((e.target as HTMLSelectElement).value)}
             >
-              <option value="">{STR.platformAll}</option>
+              <option value="">{t('search.platformAll')}</option>
               {platforms.map((p) => (
                 <option key={p} value={p}>
                   {PLATFORM_LABELS[p]}
@@ -293,15 +259,15 @@ export function SearchOverlay({
           </label>
 
           <label class="sk-search-filter">
-            <span class="sk-search-filter__label">{STR.folder}</span>
+            <span class="sk-search-filter__label">{t('search.folder')}</span>
             <select
               class="sk-search-filter__control"
               data-testid="sk-filter-folder"
               value={folderValue}
               onChange={(e) => setFolder((e.target as HTMLSelectElement).value)}
             >
-              <option value="">{STR.folderAll}</option>
-              <option value={UNFILED}>{STR.folderUnfiled}</option>
+              <option value="">{t('search.folderAll')}</option>
+              <option value={UNFILED}>{t('search.folderUnfiled')}</option>
               {folders.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -311,7 +277,7 @@ export function SearchOverlay({
           </label>
 
           <label class="sk-search-filter">
-            <span class="sk-search-filter__label">{STR.dateFrom}</span>
+            <span class="sk-search-filter__label">{t('search.dateFrom')}</span>
             <input
               type="date"
               class="sk-search-filter__control"
@@ -321,7 +287,7 @@ export function SearchOverlay({
             />
           </label>
           <label class="sk-search-filter">
-            <span class="sk-search-filter__label">{STR.dateTo}</span>
+            <span class="sk-search-filter__label">{t('search.dateTo')}</span>
             <input
               type="date"
               class="sk-search-filter__control"
@@ -338,46 +304,46 @@ export function SearchOverlay({
               checked={!!filters.archived}
               onChange={(e) => setArchived((e.target as HTMLInputElement).checked)}
             />
-            <span class="sk-search-filter__label">{STR.archived}</span>
+            <span class="sk-search-filter__label">{t('search.archived')}</span>
           </label>
 
           {/* C7 seam: the tag filter dimension exists but tag assignment ships in
               C7, so the control is present-but-inert (no hard C7 dependency). */}
-          <label class="sk-search-filter sk-search-filter--check" title={STR.tagComingSoon}>
+          <label class="sk-search-filter sk-search-filter--check" title={t('search.tagComingSoon')}>
             <input type="checkbox" data-testid="sk-filter-tag" disabled aria-disabled="true" />
-            <span class="sk-search-filter__label">{STR.tag}</span>
+            <span class="sk-search-filter__label">{t('search.tag')}</span>
           </label>
         </div>
 
         <div class="sk-search-body">
           {!hasQuery ? (
             <p class="sk-search-status" data-testid="sk-search-idle">
-              {STR.idle}
+              {t('search.idle')}
             </p>
           ) : searching ? (
             <p class="sk-search-status" data-testid="sk-search-searching">
-              {STR.searching}
+              {t('search.searching')}
             </p>
           ) : errored ? (
             <p class="sk-search-status" data-testid="sk-search-error">
-              {STR.error}
+              {t('search.error')}
             </p>
           ) : total === 0 ? (
             <p class="sk-search-status" data-testid="sk-search-empty">
-              {STR.empty}
+              {t('search.empty')}
             </p>
           ) : (
             <ul
               class="sk-search-results"
               id="sk-search-results"
               role="listbox"
-              aria-label={STR.results}
+              aria-label={t('search.results')}
             >
               {/* Conversations group (design D-F): a group with zero results renders
                   no header, so a prompt-only match shows no empty "Conversations". */}
               {convCount > 0 && (
                 <li class="sk-search-group" role="presentation" data-testid="sk-search-group-header">
-                  {STR.groupConversations}
+                  {t('search.groupConversations')}
                 </li>
               )}
               {results.map((r, i) => (
@@ -405,7 +371,7 @@ export function SearchOverlay({
                         </span>
                       ) : (
                         <span class="sk-sr__folder sk-sr__folder--unfiled" data-testid="sk-sr-folder">
-                          {STR.unfiled}
+                          {t('search.unfiled')}
                         </span>
                       )}
                       <span class="sk-sr__dot" aria-hidden="true">·</span>
@@ -414,7 +380,7 @@ export function SearchOverlay({
                         data-testid="sk-sr-time"
                         dateTime={new Date(r.updatedAt).toISOString()}
                       >
-                        {formatRelativeTime(r.updatedAt, now, STR)}
+                        {formatRelativeTime(r.updatedAt, now, locale, t('time.justNow'))}
                       </time>
                     </span>
                   </span>
@@ -425,7 +391,7 @@ export function SearchOverlay({
                   conversations so ↑/↓ crosses the boundary seamlessly. */}
               {promptResults.length > 0 && (
                 <li class="sk-search-group" role="presentation" data-testid="sk-search-group-header">
-                  {STR.groupPrompts}
+                  {t('search.groupPrompts')}
                 </li>
               )}
               {promptResults.map((p, j) => {
@@ -456,16 +422,16 @@ export function SearchOverlay({
         </div>
 
         <div class="sk-search-foot" data-testid="sk-search-foot">
-          <span class="sk-search-foot__privacy">{STR.indexedLocally}</span>
+          <span class="sk-search-foot__privacy">{t('search.indexedLocally')}</span>
           <span class="sk-search-foot__hints" aria-hidden="true">
             <span class="sk-search-foot__hint">
               <kbd class="sk-kbd">↑</kbd>
               <kbd class="sk-kbd">↓</kbd>
-              {STR.hintNavigate}
+              {t('search.hintNavigate')}
             </span>
             <span class="sk-search-foot__hint">
               <kbd class="sk-kbd">↵</kbd>
-              {STR.hintOpen}
+              {t('search.hintOpen')}
             </span>
           </span>
         </div>

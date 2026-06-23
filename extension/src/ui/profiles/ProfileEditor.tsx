@@ -15,7 +15,8 @@ import { Dialog } from '../primitives/Dialog';
 import { SUPPORTED_PLATFORMS as TARGETABLE_PLATFORMS } from '../../shared/branding';
 import type { InstructionProfile, PlatformId } from '../../shared/types';
 import type { QuotaErrorDetail } from '../../core/tier';
-import { PLATFORM_LABELS, STR } from './strings';
+import { PLATFORM_LABELS } from '../../shared/branding';
+import { t, useT } from '../../core/i18n';
 
 type ResponseStyle = NonNullable<InstructionProfile['responseStyle']>;
 type Verbosity = ResponseStyle['verbosity'];
@@ -49,13 +50,13 @@ const DEFAULT_VERBOSITY: Verbosity = 'balanced';
 const DEFAULT_FORMAT: Format = 'markdown';
 
 const VERBOSITY_OPTIONS: { value: Verbosity; label: string }[] = [
-  { value: 'brief', label: STR.verbosityBrief },
-  { value: 'balanced', label: STR.verbosityBalanced },
-  { value: 'thorough', label: STR.verbosityThorough },
+  { value: 'brief', label: t('profiles.verbosityBrief') },
+  { value: 'balanced', label: t('profiles.verbosityBalanced') },
+  { value: 'thorough', label: t('profiles.verbosityThorough') },
 ];
 const FORMAT_OPTIONS: { value: Format; label: string }[] = [
-  { value: 'markdown', label: STR.formatMarkdown },
-  { value: 'plain', label: STR.formatPlain },
+  { value: 'markdown', label: t('profiles.formatMarkdown') },
+  { value: 'plain', label: t('profiles.formatPlain') },
 ];
 
 export function ProfileEditor({
@@ -66,6 +67,7 @@ export function ProfileEditor({
   onDelete,
   quota,
 }: ProfileEditorProps): JSX.Element {
+  const t = useT();
   const isEdit = !!profile;
   const [name, setName] = useState(profile?.name ?? '');
   const [description, setDescription] = useState(profile?.description ?? '');
@@ -84,7 +86,7 @@ export function ProfileEditor({
   const submit = (): void => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setError(STR.nameRequired);
+      setError(t('profiles.nameRequired'));
       return;
     }
     onSubmit({
@@ -100,7 +102,7 @@ export function ProfileEditor({
     <Dialog
       open={open}
       onClose={onClose}
-      ariaLabel={isEdit ? STR.editorEditTitle : STR.editorNewTitle}
+      ariaLabel={isEdit ? t('profiles.editorEditTitle') : t('profiles.editorNewTitle')}
       contentTestId="sk-profile-editor"
     >
       <form
@@ -111,16 +113,16 @@ export function ProfileEditor({
         }}
       >
         <div class="sk-dialog__header">
-          <h2 class="sk-dialog__title">{isEdit ? STR.editorEditTitle : STR.editorNewTitle}</h2>
+          <h2 class="sk-dialog__title">{isEdit ? t('profiles.editorEditTitle') : t('profiles.editorNewTitle')}</h2>
         </div>
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldName}</span>
+          <span class="sk-field__label">{t('profiles.fieldName')}</span>
           <input
             class="sk-input"
             type="text"
             data-testid="sk-profile-name"
-            placeholder={STR.fieldNamePlaceholder}
+            placeholder={t('profiles.fieldNamePlaceholder')}
             value={name}
             onInput={(e) => {
               setName((e.target as HTMLInputElement).value);
@@ -130,24 +132,24 @@ export function ProfileEditor({
         </label>
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldDescription}</span>
+          <span class="sk-field__label">{t('profiles.fieldDescription')}</span>
           <input
             class="sk-input"
             type="text"
             data-testid="sk-profile-description"
-            placeholder={STR.fieldDescriptionPlaceholder}
+            placeholder={t('profiles.fieldDescriptionPlaceholder')}
             value={description}
             onInput={(e) => setDescription((e.target as HTMLInputElement).value)}
           />
         </label>
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldInstruction}</span>
+          <span class="sk-field__label">{t('profiles.fieldInstruction')}</span>
           <textarea
             class="sk-input sk-profile-editor__instruction"
             rows={5}
             data-testid="sk-profile-instruction"
-            placeholder={STR.fieldInstructionPlaceholder}
+            placeholder={t('profiles.fieldInstructionPlaceholder')}
             value={instructionText}
             onInput={(e) => setInstructionText((e.target as HTMLTextAreaElement).value)}
           />
@@ -157,7 +159,7 @@ export function ProfileEditor({
             mode is PREPEND for every platform this slice, so it's stated once as a quiet
             caption rather than repeated per row — no system-prompt mode is advertised. */}
         <fieldset class="sk-fieldset sk-field">
-          <legend class="sk-field__label">{STR.appliesToLegend}</legend>
+          <legend class="sk-field__label">{t('profiles.appliesToLegend')}</legend>
           <div class="sk-profile-editor__applies" data-testid="sk-profile-applies">
             {TARGETABLE_PLATFORMS.map((p) => {
               const on = appliesTo.includes(p);
@@ -179,16 +181,16 @@ export function ProfileEditor({
             })}
           </div>
           <p class="sk-profile-editor__apply-note" data-testid="sk-profile-apply-mode">
-            {STR.applyModeNote}
+            {t('profiles.applyModeNote')}
           </p>
         </fieldset>
 
         {/* Response style: verbosity + format as two label-left segmented rows. */}
         <fieldset class="sk-fieldset sk-field">
-          <legend class="sk-field__label">{STR.responseStyleLegend}</legend>
+          <legend class="sk-field__label">{t('profiles.responseStyleLegend')}</legend>
           <div class="sk-profile-editor__style-row">
-            <span class="sk-profile-editor__style-label">{STR.verbosityLabel}</span>
-            <div class="sk-segmented" role="group" aria-label={STR.verbosityLabel} data-testid="sk-profile-verbosity">
+            <span class="sk-profile-editor__style-label">{t('profiles.verbosityLabel')}</span>
+            <div class="sk-segmented" role="group" aria-label={t('profiles.verbosityLabel')} data-testid="sk-profile-verbosity">
               {VERBOSITY_OPTIONS.map((o) => (
                 <button
                   key={o.value}
@@ -204,8 +206,8 @@ export function ProfileEditor({
             </div>
           </div>
           <div class="sk-profile-editor__style-row">
-            <span class="sk-profile-editor__style-label">{STR.formatLabel}</span>
-            <div class="sk-segmented" role="group" aria-label={STR.formatLabel} data-testid="sk-profile-format">
+            <span class="sk-profile-editor__style-label">{t('profiles.formatLabel')}</span>
+            <div class="sk-segmented" role="group" aria-label={t('profiles.formatLabel')} data-testid="sk-profile-format">
               {FORMAT_OPTIONS.map((o) => (
                 <button
                   key={o.value}
@@ -240,7 +242,7 @@ export function ProfileEditor({
               data-testid="sk-profile-delete"
               onClick={() => setConfirmDelete(true)}
             >
-              {STR.deleteProfile}
+              {t('profiles.deleteProfile')}
             </button>
           ) : null}
           <button
@@ -249,10 +251,10 @@ export function ProfileEditor({
             data-testid="sk-profile-editor-cancel"
             onClick={onClose}
           >
-            {STR.cancel}
+            {t('profiles.cancel')}
           </button>
           <button type="submit" class="sk-btn" data-testid="sk-profile-editor-save">
-            {STR.save}
+            {t('profiles.save')}
             <EnterHint />
           </button>
         </div>
@@ -262,13 +264,13 @@ export function ProfileEditor({
         <Dialog
           open={confirmDelete}
           onClose={() => setConfirmDelete(false)}
-          ariaLabel={STR.confirmDeleteTitle}
+          ariaLabel={t('profiles.confirmDeleteTitle')}
           contentTestId="sk-profile-delete-confirm"
         >
           <div class="sk-dialog__body">
-            <h2 class="sk-dialog__title">{STR.confirmDeleteTitle}</h2>
+            <h2 class="sk-dialog__title">{t('profiles.confirmDeleteTitle')}</h2>
             <p class="sk-text sk-text--muted">
-              {STR.confirmDeleteBody(profile.name || STR.defaultName)}
+              {t('profiles.confirmDeleteBody', { name: profile.name || t('profiles.defaultName') })}
             </p>
             <div class="sk-dialog__actions">
               <button
@@ -277,7 +279,7 @@ export function ProfileEditor({
                 data-testid="sk-profile-delete-cancel"
                 onClick={() => setConfirmDelete(false)}
               >
-                {STR.cancel}
+                {t('profiles.cancel')}
               </button>
               <button
                 type="button"
@@ -288,7 +290,7 @@ export function ProfileEditor({
                   onDelete(profile);
                 }}
               >
-                {STR.confirmDelete}
+                {t('profiles.confirmDelete')}
               </button>
             </div>
           </div>

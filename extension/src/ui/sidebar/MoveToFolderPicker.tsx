@@ -17,17 +17,7 @@ import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import { Dialog } from '../primitives';
 import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
 import type { MutateResult } from './useWorkspace';
-
-const STR = {
-  title: 'Move to folder',
-  filterLabel: 'Filter folders',
-  filterPlaceholder: 'Search folders…',
-  unfile: 'Remove from folder',
-  noMatches: 'No folders match',
-  create: 'Create',
-  error: 'Couldn’t file this conversation. Try again.',
-  in: 'in',
-} as const;
+import { useT } from '../../core/i18n';
 
 /** The conversation the picker acts on — only the fields filing needs. */
 export interface PickerConversation {
@@ -66,6 +56,7 @@ type Option =
   | { kind: 'create'; name: string };
 
 export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: MoveToFolderPickerProps) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -178,9 +169,9 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
   };
 
   return (
-    <Dialog open onClose={onClose} ariaLabel={STR.title} contentTestId="sk-move-picker">
+    <Dialog open onClose={onClose} ariaLabel={t('moveFolder.title')} contentTestId="sk-move-picker">
       <div class="sk-picker">
-        <p class="sk-picker__title">{STR.title}</p>
+        <p class="sk-picker__title">{t('moveFolder.title')}</p>
         <input
           class="sk-input sk-picker__input"
           data-testid="sk-move-filter"
@@ -189,9 +180,9 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
           aria-expanded="true"
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-label={STR.filterLabel}
+          aria-label={t('moveFolder.filterLabel')}
           aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
-          placeholder={STR.filterPlaceholder}
+          placeholder={t('moveFolder.filterPlaceholder')}
           value={query}
           autoFocus
           onInput={(e) => {
@@ -203,10 +194,10 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
           }}
           onKeyDown={onKeyDown}
         />
-        <ul class="sk-picker__list" id={listId} role="listbox" aria-label={STR.title}>
+        <ul class="sk-picker__list" id={listId} role="listbox" aria-label={t('moveFolder.title')}>
           {options.length === 0 ? (
             <li class="sk-picker__empty" data-testid="sk-move-empty" role="option" aria-disabled="true">
-              {STR.noMatches}
+              {t('moveFolder.noMatches')}
             </li>
           ) : (
             options.map((opt, i) => {
@@ -223,7 +214,7 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
                     onMouseEnter={() => setHighlight(i)}
                     onClick={() => void confirm(opt)}
                   >
-                    {STR.unfile}
+                    {t('moveFolder.unfile')}
                   </li>
                 );
               }
@@ -240,7 +231,7 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
                     onClick={() => void confirm(opt)}
                   >
                     <PlusIcon size={16} />
-                    <span class="sk-picker__label">{`${STR.create} “${opt.name}”`}</span>
+                    <span class="sk-picker__label">{`${t('moveFolder.create')} “${opt.name}”`}</span>
                   </li>
                 );
               }
@@ -262,7 +253,7 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
                     {folder.name}
                   </span>
                   {path.length > 0 ? (
-                    <span class="sk-picker__path">{`${STR.in} ${path.join(' / ')}`}</span>
+                    <span class="sk-picker__path">{`${t('moveFolder.in')} ${path.join(' / ')}`}</span>
                   ) : null}
                 </li>
               );
@@ -270,7 +261,7 @@ export function MoveToFolderPicker({ conversation, tree, onSubmit, onClose }: Mo
           )}
         </ul>
         {failed && (
-          <p class="sk-dialog__error" data-testid="sk-move-error" role="alert">{STR.error}</p>
+          <p class="sk-dialog__error" data-testid="sk-move-error" role="alert">{t('moveFolder.error')}</p>
         )}
         {quota && (
           <UpgradeNudge resource="folders" limit={quota.limit} testId="sk-move-quota-nudge" />

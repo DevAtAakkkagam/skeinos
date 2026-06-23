@@ -7,26 +7,18 @@ import {
 import { DEFAULT_SETTINGS, type Settings, type Theme } from '../../shared/settings';
 import { Panel } from '../components/Panel';
 import { Text } from '../components/Text';
+import { ConsentToggle } from '../components/ConsentToggle';
+import { useT, type MessageKey } from '../../core/i18n';
 
 // The options-page skeleton (T0.5). It reads current settings, renders them, and
 // wires a theme control to setSettings. Per-platform toggles, shortcut editing,
 // and sync controls are added later by their owning features — they extend this
 // surface rather than create it.
 
-// User-facing strings kept in one place so this stays i18n-ready (no inline
-// literals in markup), matching the [PREACT] guardrail.
-const STR = {
-  heading: 'Skeinos settings',
-  theme: 'Theme',
-  telemetry: 'Usage telemetry',
-  on: 'On',
-  off: 'Off',
-} as const;
-
-const THEME_OPTIONS: { value: Theme; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
+const THEME_OPTIONS: { value: Theme; labelKey: MessageKey }[] = [
+  { value: 'system', labelKey: 'options.themeSystem' },
+  { value: 'light', labelKey: 'options.themeLight' },
+  { value: 'dark', labelKey: 'options.themeDark' },
 ];
 
 export interface OptionsAppProps {
@@ -35,6 +27,7 @@ export interface OptionsAppProps {
 }
 
 export function OptionsApp({ onThemeChange }: OptionsAppProps) {
+  const t = useT();
   const [settings, setLocal] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
@@ -56,28 +49,41 @@ export function OptionsApp({ onThemeChange }: OptionsAppProps) {
     onThemeChange?.(theme);
   };
 
+  const toggleConsent = async (key: 'diagnosticsOptIn', value: boolean) => {
+    setLocal((s) => ({ ...s, [key]: value })); // optimistic
+    await setSettings({ [key]: value });
+  };
+
   return (
     <Panel>
-      <Text>{STR.heading}</Text>
+      <Text>{t('options.heading')}</Text>
       <label class="sk-stack">
-        <Text muted>{STR.theme}</Text>
+        <Text muted>{t('options.theme')}</Text>
         <select
           class="sk-select"
           data-testid="sk-theme-select"
-          aria-label={STR.theme}
+          aria-label={t('options.theme')}
           value={settings.theme}
           onChange={(e) =>
             void changeTheme((e.currentTarget as HTMLSelectElement).value as Theme)
           }
         >
           {THEME_OPTIONS.map((o) => (
-            <option value={o.value}>{o.label}</option>
+            <option value={o.value}>{t(o.labelKey)}</option>
           ))}
         </select>
       </label>
-      <Text muted>
-        {STR.telemetry}: {settings.telemetry ? STR.on : STR.off}
-      </Text>
+      <div class="sk-stack" data-testid="sk-privacy-settings">
+        <Text>{t('options.privacyHeading')}</Text>
+        <Text muted>{t('options.privacyIntro')}</Text>
+        <ConsentToggle
+          testId="sk-consent-diagnostics"
+          label={t('options.diagnosticsLabel')}
+          body={t('options.diagnosticsBody')}
+          checked={settings.diagnosticsOptIn}
+          onChange={(v) => void toggleConsent('diagnosticsOptIn', v)}
+        />
+      </div>
     </Panel>
   );
 }

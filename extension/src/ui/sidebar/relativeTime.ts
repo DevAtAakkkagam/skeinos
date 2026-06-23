@@ -1,18 +1,10 @@
 // A compact relative-time formatter for conversation rows ("2d ago"). Pure and
-// `now`-injectable so it is deterministic to test. Units stay terse to fit the
-// row's meta line; the unit suffixes live in `STR` (i18n-ready) and are passed in
-// rather than hard-coded here, so this stays a pure number→bucket mapper.
-
-export interface RelativeTimeStrings {
-  justNow: string;
-  /** Single-letter unit suffixes, combined as `${value}${unit} ${ago}`. */
-  minute: string;
-  hour: string;
-  day: string;
-  week: string;
-  /** Trailing word, e.g. "ago". */
-  ago: string;
-}
+// `now`-injectable so it is deterministic to test. Buckets the gap, then formats
+// the value through `Intl.RelativeTimeFormat` so the units and ordering follow the
+// active locale (D-i18n-5) rather than hard-coded English suffixes. The terse
+// "narrow" style keeps it inside the row's meta line. The sub-minute / future
+// "just now" copy is the one phrase Intl has no slot for, so it is passed in from
+// the catalog.
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -20,16 +12,21 @@ const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 
 /**
- * Bucket the gap between `then` and `now` into a terse relative label. Caps at
- * weeks (a row is "at a glance" — older than that, the exact age stops mattering
- * and the absolute date would be a separate affordance). Future timestamps and
- * sub-minute gaps both render as "just now".
+ * Bucket the gap between `then` and `now` into a terse, locale-formatted relative
+ * label. Caps at weeks (a row is "at a glance" — older than that, the exact age
+ * stops mattering). Future timestamps and sub-minute gaps both render as `justNow`.
  */
-export function formatRelativeTime(then: number, now: number, str: RelativeTimeStrings): string {
+export function formatRelativeTime(
+  then: number,
+  now: number,
+  locale: string,
+  justNow: string,
+): string {
   const delta = now - then;
-  if (delta < MINUTE) return str.justNow;
-  if (delta < HOUR) return `${Math.floor(delta / MINUTE)}${str.minute} ${str.ago}`;
-  if (delta < DAY) return `${Math.floor(delta / HOUR)}${str.hour} ${str.ago}`;
-  if (delta < WEEK) return `${Math.floor(delta / DAY)}${str.day} ${str.ago}`;
-  return `${Math.floor(delta / WEEK)}${str.week} ${str.ago}`;
+  if (delta < MINUTE) return justNow;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'always', style: 'narrow' });
+  if (delta < HOUR) return rtf.format(-Math.floor(delta / MINUTE), 'minute');
+  if (delta < DAY) return rtf.format(-Math.floor(delta / HOUR), 'hour');
+  if (delta < WEEK) return rtf.format(-Math.floor(delta / DAY), 'day');
+  return rtf.format(-Math.floor(delta / WEEK), 'week');
 }

@@ -15,7 +15,8 @@ import { EnterHint } from '../components/EnterHint';
 import { Dialog } from '../primitives/Dialog';
 import type { PlatformId, Prompt, PromptFolder } from '../../shared/types';
 import type { QuotaErrorDetail } from '../../core/tier';
-import { STR, PLATFORM_LABELS, TARGETABLE_PLATFORMS } from './strings';
+import { PLATFORM_LABELS, SUPPORTED_PLATFORMS as TARGETABLE_PLATFORMS } from '../../shared/branding';
+import { useT } from '../../core/i18n';
 
 /** The flat field set the editor emits on save; the panel turns it into a
  *  `prompt.create` / `prompt.update` op. Optional text fields are `''` (not unset)
@@ -57,6 +58,7 @@ export function PromptEditor({
   onCreateCategory,
   quota,
 }: PromptEditorProps): JSX.Element {
+  const t = useT();
   const isEdit = !!prompt;
   const [title, setTitle] = useState(prompt?.title ?? '');
   const [body, setBody] = useState(prompt?.body ?? '');
@@ -98,11 +100,11 @@ export function PromptEditor({
   const submit = (): void => {
     const trimmed = title.trim();
     if (!trimmed) {
-      setError(STR.titleRequired);
+      setError(t('prompts.titleRequired'));
       return;
     }
     if (targets.length === 0) {
-      setError(STR.targetsRequired);
+      setError(t('prompts.targetsRequired'));
       return;
     }
     onSubmit({
@@ -126,7 +128,7 @@ export function PromptEditor({
     <Dialog
       open={open}
       onClose={onClose}
-      ariaLabel={isEdit ? STR.editorEditTitle : STR.editorNewTitle}
+      ariaLabel={isEdit ? t('prompts.editorEditTitle') : t('prompts.editorNewTitle')}
       contentTestId="sk-prompt-editor"
     >
       <form
@@ -137,16 +139,16 @@ export function PromptEditor({
         }}
       >
         <div class="sk-dialog__header">
-          <h2 class="sk-dialog__title">{isEdit ? STR.editorEditTitle : STR.editorNewTitle}</h2>
+          <h2 class="sk-dialog__title">{isEdit ? t('prompts.editorEditTitle') : t('prompts.editorNewTitle')}</h2>
         </div>
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldTitle}</span>
+          <span class="sk-field__label">{t('prompts.fieldTitle')}</span>
           <input
             class="sk-input"
             type="text"
             data-testid="sk-prompt-editor-title"
-            placeholder={STR.fieldTitlePlaceholder}
+            placeholder={t('prompts.fieldTitlePlaceholder')}
             value={title}
             onInput={(e) => {
               setTitle((e.target as HTMLInputElement).value);
@@ -156,12 +158,12 @@ export function PromptEditor({
         </label>
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldBody}</span>
+          <span class="sk-field__label">{t('prompts.fieldBody')}</span>
           <textarea
             class="sk-input sk-prompt-editor__body"
             rows={5}
             data-testid="sk-prompt-editor-body"
-            placeholder={STR.fieldBodyPlaceholder}
+            placeholder={t('prompts.fieldBodyPlaceholder')}
             value={body}
             onInput={(e) => setBody((e.target as HTMLTextAreaElement).value)}
           />
@@ -170,17 +172,19 @@ export function PromptEditor({
         {/* Live variable preview (D-D): name · type · default, updating as the body
             changes. Purely informational — never sent to the worker. */}
         <div class="sk-prompt-editor__vars" data-testid="sk-prompt-editor-vars">
-          <span class="sk-field__label">{STR.variablesPreview}</span>
+          <span class="sk-field__label">{t('prompts.variablesPreview')}</span>
           {variables.length === 0 ? (
-            <p class="sk-text sk-text--muted sk-prompt-editor__vars-empty">{STR.variablesNone}</p>
+            <p class="sk-text sk-text--muted sk-prompt-editor__vars-empty">{t('prompts.variablesNone')}</p>
           ) : (
             <ul class="sk-prompt-editor__var-list">
               {variables.map((v) => (
                 <li key={v.name} class="sk-prompt-editor__var" data-testid="sk-prompt-editor-var">
                   <span class="sk-prompt-var">{v.name}</span>
-                  <span class="sk-prompt-editor__var-type">{STR.varType(v.type)}</span>
+                  <span class="sk-prompt-editor__var-type">
+                    {v.type === 'select' ? t('prompts.varTypeSelect') : t('prompts.varTypeText')}
+                  </span>
                   {v.default !== undefined ? (
-                    <span class="sk-prompt-editor__var-default">{STR.varDefault(v.default)}</span>
+                    <span class="sk-prompt-editor__var-default">{t('prompts.varDefault', { value: v.default })}</span>
                   ) : null}
                 </li>
               ))}
@@ -189,20 +193,20 @@ export function PromptEditor({
         </div>
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldDescription}</span>
+          <span class="sk-field__label">{t('prompts.fieldDescription')}</span>
           <input
             class="sk-input"
             type="text"
             data-testid="sk-prompt-editor-description"
-            placeholder={STR.fieldDescriptionPlaceholder}
+            placeholder={t('prompts.fieldDescriptionPlaceholder')}
             value={description}
             onInput={(e) => setDescription((e.target as HTMLInputElement).value)}
           />
         </label>
 
         <fieldset class="sk-fieldset sk-field">
-          <legend class="sk-field__label">{STR.fieldTargets}</legend>
-          <div class="sk-prompt-editor__targets" role="group" aria-label={STR.fieldTargets}>
+          <legend class="sk-field__label">{t('prompts.fieldTargets')}</legend>
+          <div class="sk-prompt-editor__targets" role="group" aria-label={t('prompts.fieldTargets')}>
             {TARGETABLE_PLATFORMS.map((p) => {
               const on = targets.includes(p);
               return (
@@ -225,20 +229,20 @@ export function PromptEditor({
         </fieldset>
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldCategory}</span>
+          <span class="sk-field__label">{t('prompts.fieldCategory')}</span>
           <select
             class="sk-select"
             data-testid="sk-prompt-editor-category"
             value={selectValue}
             onChange={(e) => onCategorySelect((e.target as HTMLSelectElement).value)}
           >
-            <option value="">{STR.uncategorized}</option>
+            <option value="">{t('prompts.uncategorized')}</option>
             {folders.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
               </option>
             ))}
-            <option value={NEW_CATEGORY}>{STR.newCategory}</option>
+            <option value={NEW_CATEGORY}>{t('prompts.newCategory')}</option>
           </select>
         </label>
 
@@ -248,7 +252,7 @@ export function PromptEditor({
               class="sk-input"
               type="text"
               data-testid="sk-prompt-editor-new-category"
-              placeholder={STR.categoryNamePlaceholder}
+              placeholder={t('prompts.categoryNamePlaceholder')}
               value={newCategoryName}
               onInput={(e) => setNewCategoryName((e.target as HTMLInputElement).value)}
               onKeyDown={(e) => {
@@ -264,18 +268,18 @@ export function PromptEditor({
               data-testid="sk-prompt-editor-add-category"
               onClick={() => void addCategory()}
             >
-              {STR.add}
+              {t('prompts.add')}
             </button>
           </div>
         ) : null}
 
         <label class="sk-field">
-          <span class="sk-field__label">{STR.fieldTags}</span>
+          <span class="sk-field__label">{t('prompts.fieldTags')}</span>
           <input
             class="sk-input"
             type="text"
             data-testid="sk-prompt-editor-tags"
-            placeholder={STR.fieldTagsPlaceholder}
+            placeholder={t('prompts.fieldTagsPlaceholder')}
             value={tagsText}
             onInput={(e) => setTagsText((e.target as HTMLInputElement).value)}
           />
@@ -298,10 +302,10 @@ export function PromptEditor({
             data-testid="sk-prompt-editor-cancel"
             onClick={onClose}
           >
-            {STR.cancel}
+            {t('prompts.cancel')}
           </button>
           <button type="submit" class="sk-btn" data-testid="sk-prompt-editor-save">
-            {STR.save}
+            {t('prompts.save')}
             <EnterHint />
           </button>
         </div>

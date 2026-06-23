@@ -30,7 +30,7 @@ import { SlashPopover } from './SlashPopover';
 import { ProfileChip } from './ProfileChip';
 import { mountVariableModal } from './mountVariableModal';
 import { substituteVariables } from './substitute';
-import { STR } from './strings';
+import { useT } from '../../core/i18n';
 
 type QueryFn = (selector: PromptSelector) => Promise<Response<PromptSnapshot>>;
 type MutateFn = (op: PromptMutationOp) => Promise<Response<MutationResult>>;
@@ -90,6 +90,7 @@ export function InputBar({
   queryProfiles,
   containFocus = false,
 }: InputBarProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   // Root ref: the source of the bar's `ownerDocument` for the keyboard accelerator.
@@ -219,7 +220,7 @@ export function InputBar({
       ref={rootRef}
       class="sk-input-bar"
       role="toolbar"
-      aria-label={STR.barLabel}
+      aria-label={t('inputBar.barLabel')}
       data-testid="sk-input-bar"
     >
       {/* Brand mark + wordmark so the bar reads as Skeinos, distinct from the host's
@@ -230,18 +231,18 @@ export function InputBar({
         <button
           type="button"
           class="sk-ib-brand sk-ib-brand--action"
-          aria-label={STR.openSidebar}
-          title={STR.openSidebar}
+          aria-label={t('inputBar.openSidebar')}
+          title={t('inputBar.openSidebar')}
           data-testid="sk-ib-brand"
           onClick={() => onOpenSidebar()}
         >
           <BrandGlyph size={16} />
-          <span class="sk-ib-brand__name">{STR.brand}</span>
+          <span class="sk-ib-brand__name">{t('inputBar.brand')}</span>
         </button>
       ) : (
         <span class="sk-ib-brand" data-testid="sk-ib-brand">
           <BrandGlyph size={16} />
-          <span class="sk-ib-brand__name">{STR.brand}</span>
+          <span class="sk-ib-brand__name">{t('inputBar.brand')}</span>
         </span>
       )}
 
@@ -263,8 +264,8 @@ export function InputBar({
         <button
           type="button"
           class="sk-ib-clear"
-          aria-label={STR.clearComposer}
-          title={STR.clearComposer}
+          aria-label={t('inputBar.clearComposer')}
+          title={t('inputBar.clearComposer')}
           data-testid="sk-ib-clear"
           onClick={() => onClear()}
         >
@@ -277,19 +278,19 @@ export function InputBar({
       <button
         type="button"
         class="sk-ib-trigger"
-        aria-label={STR.slashTrigger}
-        title={STR.slashTrigger}
+        aria-label={t('inputBar.slashTrigger')}
+        title={t('inputBar.slashTrigger')}
         aria-haspopup="dialog"
         aria-expanded={open}
         data-testid="sk-ib-trigger"
         ref={floating.setReference}
         onClick={() => setOpen((v) => !v)}
       >
-        {STR.slashTrigger}
+        {t('inputBar.slashTrigger')}
         {/* OS-aware shortcut hint (⌘/ or Ctrl+/). Decorative: the accessible name is
             the explicit `aria-label`, so the chip never leaks into it. */}
         <kbd class="sk-ib-kbd" aria-hidden="true" data-testid="sk-ib-kbd">
-          {STR.shortcutHint(detectIsMac())}
+          {detectIsMac() ? t('inputBar.shortcutHintMac') : t('inputBar.shortcutHint')}
         </kbd>
       </button>
 

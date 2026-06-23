@@ -9,16 +9,7 @@
 
 import type { JSX } from 'preact';
 import { useIndexProgress, type IndexProgress } from './useIndexProgress';
-
-// i18n-ready strings (no inline literals in markup). Functions interpolate whole
-// phrases so a translator owns word order.
-const STR = {
-  label: (n: number): string =>
-    n === 1 ? 'Indexing 1 conversation…' : `Indexing ${n} conversations…`,
-  percent: (pct: number): string => `${pct}%`,
-  /** Accessible name for the progress bar (the visual % is decorative alongside it). */
-  progressLabel: 'Indexing progress',
-} as const;
+import { useT } from '../../core/i18n';
 
 export interface IndexingIndicatorProps {
   /** Test/override seam: when provided, render this instead of the live hook value
@@ -27,6 +18,7 @@ export interface IndexingIndicatorProps {
 }
 
 export function IndexingIndicator({ progress: override }: IndexingIndicatorProps = {}): JSX.Element | null {
+  const t = useT();
   // Always call the hook (rules of hooks); prefer an explicit override when passed.
   const live = useIndexProgress();
   const progress = override !== undefined ? override : live;
@@ -38,13 +30,13 @@ export function IndexingIndicator({ progress: override }: IndexingIndicatorProps
   return (
     <div class="sk-indexing" data-testid="sk-indexing" role="status" aria-live="polite">
       <div class="sk-indexing__line">
-        <span class="sk-indexing__label">{STR.label(total)}</span>
-        <span class="sk-indexing__pct" data-testid="sk-indexing-pct">{STR.percent(pct)}</span>
+        <span class="sk-indexing__label">{t('indexing.label', { count: total })}</span>
+        <span class="sk-indexing__pct" data-testid="sk-indexing-pct">{t('indexing.percent', { percent: pct })}</span>
       </div>
       <div
         class="sk-indexing__track"
         role="progressbar"
-        aria-label={STR.progressLabel}
+        aria-label={t('indexing.progressLabel')}
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={done}

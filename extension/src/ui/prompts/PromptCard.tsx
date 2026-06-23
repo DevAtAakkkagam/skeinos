@@ -15,7 +15,8 @@ import { MoreIcon } from '../components/Icon';
 import { Dialog } from '../primitives/Dialog';
 import { OverflowMenu } from './OverflowMenu';
 import type { Prompt } from '../../shared/types';
-import { STR, PLATFORM_LABELS } from './strings';
+import { PLATFORM_LABELS } from '../../shared/branding';
+import { useT } from '../../core/i18n';
 
 /** Max characters of body rendered in the excerpt before truncating (variable chips
  *  count as their name length). Keeps cards a stable height in the narrow column. */
@@ -63,6 +64,7 @@ export interface PromptCardProps {
 }
 
 export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.Element {
+  const t = useT();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Only target platforms that actually have a brand mark draw a logo; the rest are
@@ -83,13 +85,13 @@ export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.E
         <span class="sk-prompt-card__menu">
           <OverflowMenu
             trigger={<MoreIcon size={16} />}
-            ariaLabel={STR.cardMenu}
+            ariaLabel={t('prompts.cardMenu')}
             triggerTestId="sk-prompt-card-menu"
             contentTestId="sk-prompt-card-menu-content"
             onSelect={onMenuSelect}
             items={[
-              { value: 'edit', label: STR.edit, testid: 'sk-prompt-edit' },
-              { value: 'delete', label: STR.delete, testid: 'sk-prompt-delete' },
+              { value: 'edit', label: t('prompts.edit'), testid: 'sk-prompt-edit' },
+              { value: 'delete', label: t('prompts.delete'), testid: 'sk-prompt-delete' },
             ]}
           />
         </span>
@@ -99,7 +101,7 @@ export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.E
 
       <div class="sk-prompt-card__foot">
         <span class="sk-prompt-card__vars" data-testid="sk-prompt-card-vars">
-          {STR.varsCount(prompt.variables.length)}
+          {t('prompts.varsCount', { count: prompt.variables.length })}
         </span>
         {logos.length > 0 ? (
           <span class="sk-prompt-card__logos" data-testid="sk-prompt-card-logos">
@@ -115,12 +117,12 @@ export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.E
       <Dialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        ariaLabel={STR.confirmDeletePromptTitle}
+        ariaLabel={t('prompts.confirmDeletePromptTitle')}
         contentTestId="sk-prompt-delete-confirm"
       >
         <div class="sk-dialog__body">
-          <h2 class="sk-dialog__title">{STR.confirmDeletePromptTitle}</h2>
-          <p class="sk-text sk-text--muted">{STR.confirmDeletePromptBody(prompt.title)}</p>
+          <h2 class="sk-dialog__title">{t('prompts.confirmDeletePromptTitle')}</h2>
+          <p class="sk-text sk-text--muted">{t('prompts.confirmDeletePromptBody', { title: prompt.title })}</p>
           <div class="sk-dialog__actions">
             <button
               type="button"
@@ -128,7 +130,7 @@ export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.E
               data-testid="sk-prompt-delete-cancel"
               onClick={() => setConfirmOpen(false)}
             >
-              {STR.cancel}
+              {t('prompts.cancel')}
             </button>
             <button
               type="button"
@@ -139,7 +141,7 @@ export function PromptCard({ prompt, onEdit, onDelete }: PromptCardProps): JSX.E
                 onDelete(prompt);
               }}
             >
-              {STR.confirmDelete}
+              {t('prompts.confirmDelete')}
             </button>
           </div>
         </div>

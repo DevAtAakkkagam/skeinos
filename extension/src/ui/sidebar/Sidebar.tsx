@@ -11,6 +11,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ConversationIndex, Folder, FolderTreeNode, PlatformId } from '../../shared/types';
 import { conversationId, type MutationOp } from '../../shared/workspace';
 import { countByFolder } from '../../core/folders';
+import { filterByTags } from '../../core/tags';
+import type { Tag } from '../../shared/types';
 import { Dialog, useMenu, mergeProps, getNodeRoot } from '../primitives';
 import {
   CheckIcon,
@@ -33,6 +35,7 @@ import { DEFAULT_FOLDER_COLOR, makeFolderId } from './folderDefaults';
 import { FOLDER_COLORS } from './palette';
 import { DRAG_MIME, type DragPayload } from './drag';
 import { useWorkspace, type MutateResult, type WorkspaceView } from './useWorkspace';
+import { useT } from '../../core/i18n';
 
 // Re-exported for the existing import site (`tests`/other UI) that reaches for the
 // drag contract via this module; the definition now lives in `./drag`.
@@ -42,65 +45,6 @@ export type { DragPayload } from './drag';
 /** How many placeholder rows the loading skeleton shows — a small fixed set that
  *  fills the list region without claiming to predict the real folder count (D-2). */
 const SKELETON_ROWS = 6;
-
-// User-facing strings in one place (i18n-ready; no inline literals in markup).
-const STR = {
-  folders: 'Folders',
-  pinned: 'Pinned',
-  archive: 'Archive',
-  newFolder: 'New folder',
-  expandAll: 'Expand all',
-  collapseAll: 'Collapse all',
-  noFolders: 'No folders yet',
-  emptyBody: 'Create a folder to start organising conversations across every platform.',
-  loading: 'Loading your workspace…',
-  loadError: 'Couldn’t load your folders',
-  loadErrorBody: 'The workspace didn’t respond. Check your connection and try again.',
-  retry: 'Retry',
-  createError: 'Couldn’t save the folder. Your changes are kept — try again.',
-  name: 'Name',
-  namePlaceholder: 'Folder name',
-  icon: 'Icon',
-  color: 'Colour',
-  parentFolder: 'Parent folder',
-  topLevel: 'No parent (top level)',
-  clearColor: 'No colour',
-  clearIcon: 'No icon',
-  folderIcon: 'Folder icon',
-  create: 'Create folder',
-  save: 'Save changes',
-  close: 'Close',
-  cancel: 'Cancel',
-  rename: 'Edit',
-  pin: 'Pin',
-  unpin: 'Unpin',
-  archiveAction: 'Archive',
-  unarchive: 'Unarchive',
-  moveTop: 'Move to top level',
-  delete: 'Delete',
-  createTitle: 'New folder',
-  editTitle: 'Edit folder',
-  confirmDeleteTitle: 'Delete folder?',
-  confirmDeleteBody: (name: string) => `Delete “${name}”?`,
-  // The disposition line: what happens to a folder's contents on delete. Built from
-  // the live counts so the user knows nothing is lost — conversations re-home to
-  // Uncategorized, subfolders rise to the top level, and only the folder is removed.
-  confirmDeleteDisposition: (convs: number, subs: number): string => {
-    const parts: string[] = [];
-    if (convs > 0)
-      parts.push(`its ${convs} ${convs === 1 ? 'conversation moves' : 'conversations move'} to Uncategorized`);
-    if (subs > 0)
-      parts.push(subs === 1 ? 'its subfolder moves to the top level' : `its ${subs} subfolders move to the top level`);
-    if (parts.length === 0) return 'This folder is empty.';
-    const joined = parts.join(', and ');
-    return `${joined.charAt(0).toUpperCase()}${joined.slice(1)}. Only the folder is removed.`;
-  },
-  confirmDelete: 'Delete folder',
-  unfiled: 'Uncategorized',
-  expand: 'Expand',
-  collapse: 'Collapse',
-  menuTrigger: 'Folder actions',
-} as const;
 
 /** Sentinel expansion key for the (non-folder) "Unfiled" pseudo-node. */
 const UNFILED = 'unfiled';
@@ -161,25 +105,31 @@ export interface SidebarProps {
   platform: PlatformId;
   /** Injectable for tests; defaults to the live worker-backed view. */
   view?: WorkspaceView;
+  /** The tag library, for the per-row tag-assignment affordance. Optional (defaults
+   *  to none) so the sidebar still renders standalone in tests without a tag lib. */
+  tags?: Tag[];
   /** Open a conversation in the active tab; forwarded to the inline lists.
    *  Defaults (in ConversationList) to the live tab-navigation helper. */
   onOpenConversation?: (conv: ConversationIndex) => void;
 }
 
-export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
+export function Sidebar({ platform, view, tags = [], onOpenConversation }: SidebarProps) {
+  const t = useT();
   const live = useWorkspace(platform);
   const ws = view ?? live;
-  const { tree, conversations, active, platformFilter, status, mutate, retry } = ws;
+  const { tree, conversations, active, platformFilter, tagFilter, status, mutate, retry } = ws;
 
   // Apply the platform view-filter (D28): "All" shows the unified library across
-  // every platform; selecting a platform narrows to its conversations. Per-folder
-  // counts AND the rendered contents derive from this single filtered set, so a
-  // folder's badge always equals the rows it renders — the "5 vs empty" mismatch
-  // (a global count over a platform-scoped body) is unrepresentable by construction.
-  const visibleConvs =
+  // every platform; selecting a platform narrows to its conversations. Then narrow by
+  // the selected tag set (design D-4, AND semantics). Per-folder counts AND the
+  // rendered contents derive from this single filtered set, so a folder's badge always
+  // equals the rows it renders — the "5 vs empty" mismatch (a global count over a
+  // platform-scoped body) is unrepresentable by construction.
+  const platformConvs =
     platformFilter === 'all'
       ? conversations
       : conversations.filter((c) => c.platform === platformFilter);
+  const visibleConvs = filterByTags(platformConvs, tagFilter);
   // Archived conversations are hidden from the folder tree, the Unfiled node, AND
   // the per-folder counts — so a badge always equals the rows the folder renders
   // (archiving a chat drops the count, never leaves a phantom). They live only in
@@ -399,8 +349,8 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
       class={`sk-icon-btn sk-row-menu${menu.open && menuTargetId === id ? ' sk-row-menu--open' : ''}`}
       type="button"
       data-testid="sk-folder-menu"
-      aria-label={STR.menuTrigger}
-      title={STR.menuTrigger}
+      aria-label={t('sidebar.menuTrigger')}
+      title={t('sidebar.menuTrigger')}
       {...triggerProps(id)}
     >
       <MoreIcon size={16} />
@@ -456,7 +406,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
             type="button"
             data-testid="sk-folder-caret"
             aria-expanded={isOpen}
-            aria-label={isOpen ? STR.collapse : STR.expand}
+            aria-label={isOpen ? t('sidebar.collapse') : t('sidebar.expand')}
             onClick={(e) => {
               (e as MouseEvent).stopPropagation();
               toggleExpanded(f.id);
@@ -477,6 +427,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
               active={active}
               tree={tree}
               mutate={mutate}
+              tags={tags}
               context={{ kind: 'folder', name: f.name }}
               activePlatform={platform}
               onOpen={onOpenConversation}
@@ -540,7 +491,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
       {...{ [attr]: f.id }}
       role="button"
       tabIndex={0}
-      aria-label={`${STR.pinned}: ${f.name}`}
+      aria-label={`${t('sidebar.pinned')}: ${f.name}`}
       onClick={() => jumpToFolder(f.id)}
       onKeyDown={(e) => {
         const key = (e as KeyboardEvent).key;
@@ -574,7 +525,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
             type="button"
             data-testid="sk-archived-caret"
             aria-expanded={isOpen}
-            aria-label={isOpen ? STR.collapse : STR.expand}
+            aria-label={isOpen ? t('sidebar.collapse') : t('sidebar.expand')}
             onClick={(e) => {
               (e as MouseEvent).stopPropagation();
               toggleExpanded(f.id);
@@ -594,6 +545,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
               active={active}
               tree={tree}
               mutate={mutate}
+              tags={tags}
               context={{ kind: 'folder', name: f.name }}
               activePlatform={platform}
               onOpen={onOpenConversation}
@@ -626,20 +578,20 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
       <div class="sk-sidebar__scroll" data-testid="sk-sidebar-scroll">
         {tree.pinned.length > 0 && (
           <div class="sk-sidebar__section" data-testid="sk-pinned">
-            <p class="sk-sidebar__heading sk-sidebar__heading--block">{STR.pinned}</p>
+            <p class="sk-sidebar__heading sk-sidebar__heading--block">{t('sidebar.pinned')}</p>
             {tree.pinned.map((f) => renderLeaf(f, 'data-pinned-id'))}
           </div>
         )}
 
         <div class="sk-sidebar__section">
           <div class="sk-row sk-sidebar__section-head">
-            <span class="sk-sidebar__heading">{STR.folders}</span>
+            <span class="sk-sidebar__heading">{t('sidebar.folders')}</span>
             <button
               class="sk-icon-btn"
               type="button"
               data-testid="sk-expand-all"
-              aria-label={STR.expandAll}
-              title={STR.expandAll}
+              aria-label={t('sidebar.expandAll')}
+              title={t('sidebar.expandAll')}
               onClick={(e) => {
                 (e as MouseEvent).stopPropagation();
                 expandAll();
@@ -651,8 +603,8 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
               class="sk-icon-btn"
               type="button"
               data-testid="sk-collapse-all"
-              aria-label={STR.collapseAll}
-              title={STR.collapseAll}
+              aria-label={t('sidebar.collapseAll')}
+              title={t('sidebar.collapseAll')}
               onClick={(e) => {
                 (e as MouseEvent).stopPropagation();
                 collapseAll();
@@ -664,8 +616,8 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
               class="sk-icon-btn sk-icon-btn--accent"
               type="button"
               data-testid="sk-new-folder"
-              aria-label={STR.newFolder}
-              title={STR.newFolder}
+              aria-label={t('sidebar.newFolder')}
+              title={t('sidebar.newFolder')}
               onClick={(e) => {
                 (e as MouseEvent).stopPropagation();
                 setDialog({ mode: 'create', parentId: null });
@@ -684,8 +636,8 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                     <span class="sk-empty__icon" aria-hidden="true">
                       <FolderIcon size={40} />
                     </span>
-                    <p class="sk-empty__title">{STR.loadError}</p>
-                    <p class="sk-empty__body">{STR.loadErrorBody}</p>
+                    <p class="sk-empty__title">{t('sidebar.loadError')}</p>
+                    <p class="sk-empty__body">{t('sidebar.loadErrorBody')}</p>
                     <button
                       class="sk-btn sk-btn--icon"
                       type="button"
@@ -695,7 +647,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                         retry();
                       }}
                     >
-                      {STR.retry}
+                      {t('sidebar.retry')}
                     </button>
                   </div>
                 )
@@ -718,7 +670,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                         }}
                       >
                         <PlusIcon size={16} />
-                        <span>{STR.newFolder}</span>
+                        <span>{t('sidebar.newFolder')}</span>
                       </button>
                     )
                   : (
@@ -726,8 +678,8 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                         <span class="sk-empty__icon" aria-hidden="true">
                           <FolderIcon size={40} />
                         </span>
-                        <p class="sk-empty__title">{STR.noFolders}</p>
-                        <p class="sk-empty__body">{STR.emptyBody}</p>
+                        <p class="sk-empty__title">{t('sidebar.noFolders')}</p>
+                        <p class="sk-empty__body">{t('sidebar.emptyBody')}</p>
                         <button
                           class="sk-btn sk-btn--icon"
                           type="button"
@@ -738,7 +690,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                           }}
                         >
                           <PlusIcon size={16} />
-                          {STR.newFolder}
+                          {t('sidebar.newFolder')}
                         </button>
                       </div>
                     )
@@ -751,7 +703,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                       class="sk-skeleton-rows"
                       data-testid="sk-folders-skeleton"
                       role="status"
-                      aria-label={STR.loading}
+                      aria-label={t('sidebar.loading')}
                     >
                       {Array.from({ length: SKELETON_ROWS }, (_, i) => (
                         <div class="sk-row sk-skeleton-row" key={i} aria-hidden="true">
@@ -772,7 +724,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                 type="button"
                 data-testid="sk-unfiled-caret"
                 aria-expanded={expanded.has(UNFILED)}
-                aria-label={expanded.has(UNFILED) ? STR.collapse : STR.expand}
+                aria-label={expanded.has(UNFILED) ? t('sidebar.collapse') : t('sidebar.expand')}
                 onClick={(e) => {
                   (e as MouseEvent).stopPropagation();
                   toggleExpanded(UNFILED);
@@ -780,7 +732,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
               >
                 <ChevronIcon size={14} />
               </button>
-              <span class="sk-row__label">{STR.unfiled}</span>
+              <span class="sk-row__label">{t('sidebar.unfiled')}</span>
               <span class="sk-row__count" data-testid="sk-unfiled-count">{unfiledConvs.length}</span>
             </div>
             {expanded.has(UNFILED) && (
@@ -790,6 +742,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                   active={active}
                   tree={tree}
                   mutate={mutate}
+                  tags={tags}
                   context={{ kind: 'unfiled' }}
                   activePlatform={platform}
                   onOpen={onOpenConversation}
@@ -806,7 +759,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
           <details class="sk-sidebar__section" data-testid="sk-archive">
             <summary class="sk-row sk-sidebar__section-head sk-sidebar__section-summary">
               <span class="sk-caret sk-section-caret" aria-hidden="true"><ChevronIcon size={14} /></span>
-              <span class="sk-sidebar__heading">{STR.archive}</span>
+              <span class="sk-sidebar__heading">{t('sidebar.archive')}</span>
               <span class="sk-row__count" data-testid="sk-archive-count">{archiveCount}</span>
             </summary>
             <div class="sk-node__children">
@@ -817,6 +770,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                   active={active}
                   tree={tree}
                   mutate={mutate}
+                  tags={tags}
                   context={{ kind: 'archived' }}
                   activePlatform={platform}
                   onOpen={onOpenConversation}
@@ -830,12 +784,12 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
       {menu.open && menuTarget && (
         <div class="sk-menu__positioner" {...menu.getPositionerProps()}>
           <div class="sk-menu" data-testid="sk-context-menu" {...menu.getContentProps()}>
-            <button class="sk-menu__item" data-testid="sk-menu-rename" {...itemProps('rename')}>{STR.rename}</button>
-            <button class="sk-menu__item" data-testid="sk-menu-pin" {...itemProps('pin')}>{menuTarget.pinned ? STR.unpin : STR.pin}</button>
-            <button class="sk-menu__item" data-testid="sk-menu-archive" {...itemProps('archive')}>{menuTarget.archived ? STR.unarchive : STR.archiveAction}</button>
-            <button class="sk-menu__item" data-testid="sk-menu-move-top" {...itemProps('move-top')}>{STR.moveTop}</button>
+            <button class="sk-menu__item" data-testid="sk-menu-rename" {...itemProps('rename')}>{t('sidebar.rename')}</button>
+            <button class="sk-menu__item" data-testid="sk-menu-pin" {...itemProps('pin')}>{menuTarget.pinned ? t('sidebar.unpin') : t('sidebar.pin')}</button>
+            <button class="sk-menu__item" data-testid="sk-menu-archive" {...itemProps('archive')}>{menuTarget.archived ? t('sidebar.unarchive') : t('sidebar.archiveAction')}</button>
+            <button class="sk-menu__item" data-testid="sk-menu-move-top" {...itemProps('move-top')}>{t('sidebar.moveTop')}</button>
             <div class="sk-menu__divider" role="separator" aria-orientation="horizontal" />
-            <button class="sk-menu__item" data-testid="sk-menu-delete" {...itemProps('delete')}>{STR.delete}</button>
+            <button class="sk-menu__item" data-testid="sk-menu-delete" {...itemProps('delete')}>{t('sidebar.delete')}</button>
           </div>
         </div>
       )}
@@ -853,17 +807,27 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
         <Dialog
           open
           onClose={() => setPendingDelete(null)}
-          ariaLabel={STR.confirmDeleteTitle}
+          ariaLabel={t('sidebar.confirmDeleteTitle')}
           contentTestId="sk-folder-delete-confirm"
         >
           <div class="sk-dialog__body">
-            <h2 class="sk-dialog__title">{STR.confirmDeleteTitle}</h2>
-            <p class="sk-text sk-text--muted">{STR.confirmDeleteBody(pendingDelete.name)}</p>
+            <h2 class="sk-dialog__title">{t('sidebar.confirmDeleteTitle')}</h2>
+            <p class="sk-text sk-text--muted">{t('sidebar.confirmDeleteBody', { name: pendingDelete.name })}</p>
             <p class="sk-text sk-text--muted" data-testid="sk-folder-delete-disposition">
-              {STR.confirmDeleteDisposition(
-                conversations.filter((c) => c.folderId === pendingDelete.id).length,
-                countSubfolders(tree.active, tree.archived, pendingDelete.id),
-              )}
+              {(() => {
+                const convs = conversations.filter((c) => c.folderId === pendingDelete.id).length;
+                const subs = countSubfolders(tree.active, tree.archived, pendingDelete.id);
+                // build from catalog pieces
+                const parts: string[] = [];
+                if (convs > 0) parts.push(t('sidebar.dispositionConvs', { count: convs }));
+                if (subs > 0) parts.push(t('sidebar.dispositionSubs', { count: subs }));
+                return parts.length === 0
+                  ? t('sidebar.dispositionEmpty')
+                  : (() => {
+                      const joined = parts.join(t('sidebar.dispositionJoin'));
+                      return `${joined.charAt(0).toUpperCase()}${joined.slice(1)}${t('sidebar.dispositionSuffix')}`;
+                    })();
+              })()}
             </p>
             <div class="sk-dialog__actions">
               <button
@@ -872,7 +836,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                 data-testid="sk-folder-delete-cancel"
                 onClick={() => setPendingDelete(null)}
               >
-                {STR.cancel}
+                {t('sidebar.cancel')}
               </button>
               <button
                 type="button"
@@ -884,7 +848,7 @@ export function Sidebar({ platform, view, onOpenConversation }: SidebarProps) {
                   void mutate({ op: 'folder.delete', id });
                 }}
               >
-                {STR.confirmDelete}
+                {t('sidebar.confirmDelete')}
               </button>
             </div>
           </div>
@@ -955,6 +919,7 @@ interface FolderDialogProps {
 }
 
 function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
+  const t = useT();
   const editing = state.mode === 'edit';
   const [name, setName] = useState(state.folder?.name ?? '');
   // Create mode preselects the folder icon + blue (a branded default); edit mode
@@ -1041,19 +1006,19 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
     <Dialog
       open
       onClose={onClose}
-      ariaLabel={editing ? STR.editTitle : STR.createTitle}
+      ariaLabel={editing ? t('sidebar.editTitle') : t('sidebar.createTitle')}
       contentTestId="sk-folder-dialog"
     >
       <form class="sk-dialog__body sk-folder-form" onSubmit={submit}>
         <div class="sk-dialog__header">
-          <h2 class="sk-dialog__title">{editing ? STR.editTitle : STR.createTitle}</h2>
-          <button class="sk-icon-btn" type="button" data-testid="sk-folder-close" aria-label={STR.close} onClick={onClose}>
+          <h2 class="sk-dialog__title">{editing ? t('sidebar.editTitle') : t('sidebar.createTitle')}</h2>
+          <button class="sk-icon-btn" type="button" data-testid="sk-folder-close" aria-label={t('sidebar.close')} onClick={onClose}>
             <CloseIcon size={16} />
           </button>
         </div>
 
         <label class="sk-field">
-          <span class="sk-sidebar__heading">{STR.name}</span>
+          <span class="sk-sidebar__heading">{t('sidebar.name')}</span>
           <span class="sk-name-field">
             <span class="sk-name-field__icon" aria-hidden="true">
               {icon && icon !== FOLDER_ICON_SENTINEL ? (
@@ -1067,8 +1032,8 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
             <input
               class="sk-name-field__input"
               data-testid="sk-folder-name"
-              aria-label={STR.name}
-              placeholder={STR.namePlaceholder}
+              aria-label={t('sidebar.name')}
+              placeholder={t('sidebar.namePlaceholder')}
               value={name}
               autoFocus
               onInput={(e) => setName((e.currentTarget as HTMLInputElement).value)}
@@ -1077,12 +1042,12 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
         </label>
 
         <fieldset class="sk-field sk-fieldset">
-          <legend class="sk-sidebar__heading">{STR.color}</legend>
+          <legend class="sk-sidebar__heading">{t('sidebar.color')}</legend>
           <div class="sk-swatches" data-testid="sk-folder-colors">
             <button
               type="button"
               class={`sk-swatch sk-swatch--clear${color ? '' : ' sk-swatch--selected'}`}
-              aria-label={STR.clearColor}
+              aria-label={t('sidebar.clearColor')}
               aria-pressed={!color}
               onClick={() => setColor('')}
             />
@@ -1101,12 +1066,12 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
         </fieldset>
 
         <fieldset class="sk-field sk-fieldset">
-          <legend class="sk-sidebar__heading">{STR.icon}</legend>
+          <legend class="sk-sidebar__heading">{t('sidebar.icon')}</legend>
           <div class="sk-icon-grid" data-testid="sk-folder-icons">
             <button
               type="button"
               class={`sk-icon-option sk-icon-option--clear${icon ? '' : ' sk-icon-option--selected'}`}
-              aria-label={STR.clearIcon}
+              aria-label={t('sidebar.clearIcon')}
               aria-pressed={!icon}
               onClick={() => setIcon('')}
             >
@@ -1116,7 +1081,7 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
               type="button"
               class={`sk-icon-option${icon === FOLDER_ICON_SENTINEL ? ' sk-icon-option--selected' : ''}`}
               data-testid="sk-folder-icon-default"
-              aria-label={STR.folderIcon}
+              aria-label={t('sidebar.folderIcon')}
               aria-pressed={icon === FOLDER_ICON_SENTINEL}
               style={{ color: color || undefined }}
               onClick={() => setIcon(FOLDER_ICON_SENTINEL)}
@@ -1139,15 +1104,15 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
         </fieldset>
 
         <label class="sk-field">
-          <span class="sk-sidebar__heading">{STR.parentFolder}</span>
+          <span class="sk-sidebar__heading">{t('sidebar.parentFolder')}</span>
           <select
             class="sk-select"
             data-testid="sk-folder-parent"
-            aria-label={STR.parentFolder}
+            aria-label={t('sidebar.parentFolder')}
             value={parentId ?? ''}
             onChange={(e) => setParentId((e.currentTarget as HTMLSelectElement).value || null)}
           >
-            <option value="">{STR.topLevel}</option>
+            <option value="">{t('sidebar.topLevel')}</option>
             {options.map((o) => (
               <option key={o.id} value={o.id}>
                 {`${'  '.repeat(o.depth)}${o.name}`}
@@ -1157,14 +1122,14 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
         </label>
 
         {failed && (
-          <p class="sk-dialog__error" data-testid="sk-folder-error" role="alert">{STR.createError}</p>
+          <p class="sk-dialog__error" data-testid="sk-folder-error" role="alert">{t('sidebar.createError')}</p>
         )}
         {quota && <UpgradeNudge resource="folders" limit={quota.limit} testId="sk-folder-quota-nudge" />}
         <div class="sk-dialog__actions">
-          <button class="sk-menu__item" type="button" onClick={onClose}>{STR.cancel}</button>
+          <button class="sk-menu__item" type="button" onClick={onClose}>{t('sidebar.cancel')}</button>
           <button class="sk-btn sk-btn--icon" type="submit" data-testid="sk-folder-submit" disabled={busy} aria-busy={busy}>
             <CheckIcon size={16} />
-            {editing ? STR.save : STR.create}
+            {editing ? t('sidebar.save') : t('sidebar.create')}
             <EnterHint />
           </button>
         </div>

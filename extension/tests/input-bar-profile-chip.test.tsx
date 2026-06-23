@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
 import { ProfileChip } from '../src/ui/input-bar/ProfileChip';
 import { composeProfileText } from '../src/ui/profiles/compose';
-import { STR } from '../src/ui/input-bar/strings';
+import { t } from '../src/core/i18n';
 import type { InstructionProfile, PlatformId } from '../src/shared/types';
 import type { ProfileSnapshot } from '../src/shared/profiles';
 import type { Settings, SettingsHandler } from '../src/core/settings';
@@ -64,7 +64,13 @@ function makeQueryProfiles(profiles: InstructionProfile[]) {
 // the chip (so activating a profile updates `activeId` without a manual `fire`).
 function makeSettings(activeProfileId?: string) {
   const handlers = new Set<SettingsHandler>();
-  let current: Settings = { theme: 'system', telemetry: false, onboardingCompleted: false, activeProfileId };
+  let current: Settings = {
+    theme: 'system',
+    telemetry: false,
+    diagnosticsOptIn: true,
+    onboardingCompleted: false,
+    activeProfileId,
+  };
   const setSettings = vi.fn(async (partial: Partial<Settings>) => {
     current = { ...current, ...partial };
     for (const h of handlers) h(current);
@@ -267,7 +273,7 @@ describe('ProfileChip cross-tab + dangling id (4.5)', () => {
       activeProfileId: 'ghost',
     });
     // Chip falls back to the default label, no active mark.
-    expect($('[data-testid="sk-ib-profile-name"]')!.textContent).toBe(STR.profileChip);
+    expect($('[data-testid="sk-ib-profile-name"]')!.textContent).toBe(t('inputBar.profileChip'));
     await openMenu();
     expect(items().some((el) => el.getAttribute('aria-checked') === 'true')).toBe(false);
     // A dangling id reports as "no active profile" — never a composed string.

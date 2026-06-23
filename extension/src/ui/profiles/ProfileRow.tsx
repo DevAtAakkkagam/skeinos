@@ -15,7 +15,7 @@ import { PlatformLogo } from '../components/PlatformLogo';
 import { SUPPORTED_PLATFORMS as TARGETABLE_PLATFORMS } from '../../shared/branding';
 import { Dialog } from '../primitives/Dialog';
 import { OverflowMenu } from '../prompts/OverflowMenu';
-import { STR } from './strings';
+import { useT } from '../../core/i18n';
 
 export interface ProfileRowProps {
   profile: InstructionProfile;
@@ -24,8 +24,9 @@ export interface ProfileRowProps {
 }
 
 export function ProfileRow({ profile: p, onEdit, onDelete }: ProfileRowProps): JSX.Element {
+  const t = useT();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const name = p.name || STR.defaultName;
+  const name = p.name || t('profiles.defaultName');
   // Only the targetable platforms this profile applies to draw a logo (stable order).
   const logos = TARGETABLE_PLATFORMS.filter((pl) => p.appliesTo.includes(pl));
 
@@ -57,13 +58,13 @@ export function ProfileRow({ profile: p, onEdit, onDelete }: ProfileRowProps): J
         <OverflowMenu
           trigger={<MoreIcon size={16} />}
           triggerClass="sk-icon-btn sk-row-menu"
-          ariaLabel={STR.rowMenu}
+          ariaLabel={t('profiles.rowMenu')}
           triggerTestId="sk-profile-row-menu"
           contentTestId="sk-profile-row-menu-content"
           onSelect={onMenuSelect}
           items={[
-            { value: 'edit', label: STR.edit, testid: 'sk-profile-menu-edit' },
-            { value: 'delete', label: STR.delete, testid: 'sk-profile-menu-delete' },
+            { value: 'edit', label: t('profiles.edit'), testid: 'sk-profile-menu-edit' },
+            { value: 'delete', label: t('profiles.delete'), testid: 'sk-profile-menu-delete' },
           ]}
         />
       </span>
@@ -71,12 +72,12 @@ export function ProfileRow({ profile: p, onEdit, onDelete }: ProfileRowProps): J
       <Dialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        ariaLabel={STR.confirmDeleteTitle}
+        ariaLabel={t('profiles.confirmDeleteTitle')}
         contentTestId="sk-profile-row-delete-confirm"
       >
         <div class="sk-dialog__body">
-          <h2 class="sk-dialog__title">{STR.confirmDeleteTitle}</h2>
-          <p class="sk-text sk-text--muted">{STR.confirmDeleteBody(name)}</p>
+          <h2 class="sk-dialog__title">{t('profiles.confirmDeleteTitle')}</h2>
+          <p class="sk-text sk-text--muted">{t('profiles.confirmDeleteBody', { name })}</p>
           <div class="sk-dialog__actions">
             <button
               type="button"
@@ -84,7 +85,7 @@ export function ProfileRow({ profile: p, onEdit, onDelete }: ProfileRowProps): J
               data-testid="sk-profile-row-delete-cancel"
               onClick={() => setConfirmOpen(false)}
             >
-              {STR.cancel}
+              {t('profiles.cancel')}
             </button>
             <button
               type="button"
@@ -95,7 +96,7 @@ export function ProfileRow({ profile: p, onEdit, onDelete }: ProfileRowProps): J
                 onDelete(p);
               }}
             >
-              {STR.confirmDelete}
+              {t('profiles.confirmDelete')}
             </button>
           </div>
         </div>

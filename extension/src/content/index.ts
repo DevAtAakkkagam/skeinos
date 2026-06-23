@@ -22,9 +22,11 @@ import { indexConversationFromMessagesRemote } from '../core/conversation-index/
 // Leaf import (not the messaging barrel) so the content bundle never pulls the
 // worker-only hub/registry — same reason as the conversation-index client above.
 import { isContextValid, runtime } from '../core/messaging/chrome';
+import { installExceptionCapture, track } from '../core/observability/client';
 import { conversationId } from '../shared/workspace';
 import { OPEN_SIDE_PANEL } from '../shared/sidepanel';
 import { mountInputBar } from '../ui/input-bar/mountInputBar';
+import { ensureLocale } from '../core/i18n';
 import type { MountHandle } from '../ui/mount';
 
 // SPA hosts mutate the chat list in bursts (lazy render, infinite scroll, nav).
@@ -45,6 +47,15 @@ export async function runContent(): Promise<void> {
   const platformId = matchPlatform(url);
   if (!platformId) return; // not a platform we drive
 
+  // Capture content-script crashes for diagnostics (task 6.6). Gated/scrubbed
+  // worker-side; host-page stack frames are dropped before anything is sent.
+  installExceptionCapture('content');
+
+  // Load the active locale's catalog before any in-tab UI (the input bar) mounts, so
+  // it renders translated from the first paint. English/pseudo resolve immediately;
+  // a non-English catalog is a code-split fetch awaited once here.
+  await ensureLocale();
+
   // A previously-degraded platform carries a hot-fix flag, which nudges the loader
   // to attempt a remote selector refresh on this load (design D-R4).
   const health = await getPlatformHealth(platformId);
@@ -57,12 +68,19 @@ export async function runContent(): Promise<void> {
   // mutations) until the check passes or a bounded timeout elapses. A genuinely
   // stale selector still fails after the timeout and raises the banner below.
   const check = await waitForSelfCheck(adapter);
-  await reportHealth(platformId, check);
+  await reportHealth(platformId, check, adapter.configVersion);
   if (!check.ok) {
     console.warn('[Skeinos] adapter self-check failed', platformId, check.missing);
     // Surface the breakage to the user (isolated to this tab) instead of staying
     // silent; Retry re-probes and clears the notice once the platform recovers.
     mountBanner(adapter, platformId);
+    // Fallback-banner diagnostics (task 6.5): the user-visible degraded signal,
+    // gated/dropped worker-side when diagnostics consent is off.
+    track('adapter_fallback_shown', {
+      platform: platformId,
+      configVer: /^\d+(?:\.\d+)*$/.test(adapter.configVersion) ? adapter.configVersion : '0',
+      reason: 'selfcheck_failed',
+    });
     return;
   }
 

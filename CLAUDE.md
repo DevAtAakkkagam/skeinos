@@ -108,8 +108,9 @@ siblings (settings does not depend on the store, per D4).
   envelope (`rev/updatedAt/deviceId/hash`), `delete()` writes a tombstone; schema changes add a
   migration (never mutate one). `searchPostings` exists in the M0 schema (D6).
 - **[PREACT] Shadow DOM + tokens.** All UI mounts in a shadow root; style only from `--sk-*` tokens
-  (no host classes, no hard-coded colors); no hard-coded user-facing strings (i18n-ready);
-  everything keyboard-operable + ARIA-labelled. UI is a pure view over worker state.
+  (no host classes, no hard-coded colors); no hard-coded user-facing strings — add a key to
+  `src/locales/en.ts` and read it via `t()`/`useT()` from `core/i18n` (a lint rule + completeness
+  test enforce this); everything keyboard-operable + ARIA-labelled. UI is a pure view over worker state.
 - **[ADAPT] Config-driven + isolated.** One generic adapter + per-platform JSON config; `PlatformAdapter`
   is the only contract outside `adapters/`; `selfCheck` failure disables only that platform; every
   adapter passes the shared contract suite against its fixture.
@@ -125,7 +126,8 @@ siblings (settings does not depend on the store, per D4).
 The directory layout mirrors the architecture spine — `core/` is the inward dependency target:
 
 - `core/` — the worker's domain logic: `store/` (`Repo<T>` + IndexedDB + migrations), `messaging/`
-  (typed Request/Response hub + client), `folders/`, `settings/`. Imports nothing from `adapters/` or `ui/`.
+  (typed Request/Response hub + client), `folders/`, `settings/`, `i18n/` (locale resolution +
+  `t()`/`useT()`; catalogs live in `src/locales/`). Imports nothing from `adapters/` or `ui/`.
 - `adapters/` — generic platform adapter + per-platform `configs/`, `resilience/` (fallback banners),
   `runtime/` (readiness gating). `PlatformAdapter` is the only contract exposed outward.
 - `background/` — service-worker entry (the single writer); `content/` — per-tab content script.

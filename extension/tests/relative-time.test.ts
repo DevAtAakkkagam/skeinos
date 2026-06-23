@@ -1,14 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatRelativeTime, type RelativeTimeStrings } from '../src/ui/sidebar/relativeTime';
-
-const STR: RelativeTimeStrings = {
-  justNow: 'just now',
-  minute: 'm',
-  hour: 'h',
-  day: 'd',
-  week: 'w',
-  ago: 'ago',
-};
+import { formatRelativeTime } from '../src/ui/sidebar/relativeTime';
 
 const NOW = 1_000_000_000_000;
 const SEC = 1000;
@@ -17,7 +8,7 @@ const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 
-const at = (delta: number) => formatRelativeTime(NOW - delta, NOW, STR);
+const at = (delta: number) => formatRelativeTime(NOW - delta, NOW, 'en', 'just now');
 
 describe('formatRelativeTime', () => {
   it('renders sub-minute and future gaps as "just now"', () => {
@@ -26,7 +17,7 @@ describe('formatRelativeTime', () => {
     expect(at(-5 * MIN)).toBe('just now'); // clock skew / future timestamp
   });
 
-  it('buckets minutes, hours, days, and weeks with terse units', () => {
+  it('buckets minutes, hours, days, and weeks with terse, locale-formatted units', () => {
     expect(at(5 * MIN)).toBe('5m ago');
     expect(at(3 * HOUR)).toBe('3h ago');
     expect(at(2 * DAY)).toBe('2d ago');
@@ -38,5 +29,10 @@ describe('formatRelativeTime', () => {
     expect(at(HOUR - 1)).toBe('59m ago');
     expect(at(DAY - 1)).toBe('23h ago');
     expect(at(WEEK - 1)).toBe('6d ago');
+  });
+
+  it('formats units in the active locale', () => {
+    // German uses its own narrow units and ordering ("vor 2 Tagen").
+    expect(formatRelativeTime(NOW - 2 * DAY, NOW, 'de', 'gerade eben')).toContain('Tag');
   });
 });

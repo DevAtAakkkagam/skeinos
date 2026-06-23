@@ -1,8 +1,7 @@
-// StarterSeed: the seeding recovery path in the Prompts empty state for users who
-// skipped onboarding's domain pick. It appears ONLY while no domain is chosen, picks
-// a domain, installs that domain's seeds via the controller, and persists the domain.
-// Driven through the `domainChosen` / `persistDomain` test seams so it runs without a
-// chrome settings shim. Mirrors tests/prompts-panel-no-starter.test.tsx's harness.
+// StarterSeed: the starter-pack pre-load in the Prompts empty state. It is always
+// shown on the empty state, picks a professional domain, installs that domain's seeds
+// via the controller, and records the chosen domain. Driven through the `persistDomain`
+// test seam so it runs without a chrome settings shim.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'preact';
@@ -31,14 +30,9 @@ afterEach(() => {
   container = null;
 });
 
-describe('StarterSeed (empty-state seeding when no domain is chosen)', () => {
-  it('renders nothing once a domain has been chosen', () => {
-    mount(<StarterSeed controller={makeController()} domainChosen={true} />);
-    expect($('[data-testid=sk-prompts-seed]')).toBeNull();
-  });
-
-  it('offers the domain picker + seed button when no domain is chosen', () => {
-    mount(<StarterSeed controller={makeController()} domainChosen={false} />);
+describe('StarterSeed (always-shown empty-state starter-pack pre-load)', () => {
+  it('always offers the domain picker + seed button on the empty state', () => {
+    mount(<StarterSeed controller={makeController()} />);
     expect($('[data-testid=sk-prompts-seed]')).toBeTruthy();
     expect($('[data-testid=sk-prompts-seed-domain]')).toBeTruthy();
     expect($('[data-testid=sk-prompts-seed-add]')).toBeTruthy();
@@ -50,7 +44,6 @@ describe('StarterSeed (empty-state seeding when no domain is chosen)', () => {
     mount(
       <StarterSeed
         controller={makeController(installSeeds)}
-        domainChosen={false}
         persistDomain={persistDomain}
       />,
     );
@@ -69,7 +62,6 @@ describe('StarterSeed (empty-state seeding when no domain is chosen)', () => {
     mount(
       <StarterSeed
         controller={makeController(installSeeds)}
-        domainChosen={false}
         persistDomain={persistDomain}
       />,
     );

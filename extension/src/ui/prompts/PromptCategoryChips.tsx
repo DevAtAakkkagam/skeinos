@@ -11,7 +11,7 @@ import { MoreIcon } from '../components/Icon';
 import { EnterHint } from '../components/EnterHint';
 import { Dialog } from '../primitives/Dialog';
 import { OverflowMenu } from './OverflowMenu';
-import { STR } from './strings';
+import { useT } from '../../core/i18n';
 import type { PromptsController } from './usePromptsController';
 
 export interface PromptCategoryChipsProps {
@@ -19,6 +19,7 @@ export interface PromptCategoryChipsProps {
 }
 
 export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps): JSX.Element {
+  const t = useT();
   return (
     <div class="sk-filters" data-testid="sk-prompt-filters">
       {/* One wrapping filter row (uniform with the Folders platform row): the All
@@ -28,7 +29,7 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
       <div
         class="sk-filter-row__chips"
         role="group"
-        aria-label={STR.filterLabel}
+        aria-label={t('prompts.filterLabel')}
         data-testid="sk-prompt-categories"
       >
         <button
@@ -38,7 +39,7 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
           aria-pressed={c.category === 'all'}
           onClick={() => c.setCategory('all')}
         >
-          {STR.all}
+          {t('prompts.all')}
           <span class="sk-chip__count">{c.prompts.length}</span>
         </button>
         {c.folders.map((f) => (
@@ -64,8 +65,8 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
                   else if (v === 'delete') c.requestDeleteCategory(f);
                 }}
                 items={[
-                  { value: 'rename', label: STR.renameCategory, testid: `sk-prompt-cat-rename-${f.id}` },
-                  { value: 'delete', label: STR.deleteCategory, testid: `sk-prompt-cat-delete-${f.id}` },
+                  { value: 'rename', label: t('prompts.renameCategory'), testid: `sk-prompt-cat-rename-${f.id}` },
+                  { value: 'delete', label: t('prompts.deleteCategory'), testid: `sk-prompt-cat-delete-${f.id}` },
                 ]}
               />
             </span>
@@ -77,7 +78,7 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
           data-testid="sk-prompt-new-category"
           onClick={c.openCreateCategory}
         >
-          {STR.newCategory}
+          {t('prompts.newCategory')}
         </button>
         {c.tagChips.map((t) => (
           <button
@@ -98,7 +99,7 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
       <Dialog
         open={c.categoryDialog !== null}
         onClose={c.closeCategoryDialog}
-        ariaLabel={c.categoryDialog?.mode === 'rename' ? STR.renameCategoryTitle : STR.createCategoryTitle}
+        ariaLabel={c.categoryDialog?.mode === 'rename' ? t('prompts.renameCategoryTitle') : t('prompts.createCategoryTitle')}
         contentTestId="sk-prompt-category-dialog"
       >
         <form
@@ -109,13 +110,13 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
           }}
         >
           <h2 class="sk-dialog__title">
-            {c.categoryDialog?.mode === 'rename' ? STR.renameCategoryTitle : STR.createCategoryTitle}
+            {c.categoryDialog?.mode === 'rename' ? t('prompts.renameCategoryTitle') : t('prompts.createCategoryTitle')}
           </h2>
           <input
             class="sk-input"
             type="text"
             data-testid="sk-prompt-category-name"
-            placeholder={STR.categoryNamePlaceholder}
+            placeholder={t('prompts.categoryNamePlaceholder')}
             value={c.categoryName}
             onInput={(e) => c.setCategoryName((e.target as HTMLInputElement).value)}
           />
@@ -126,10 +127,10 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
               data-testid="sk-prompt-category-cancel"
               onClick={c.closeCategoryDialog}
             >
-              {STR.cancel}
+              {t('prompts.cancel')}
             </button>
             <button type="submit" class="sk-btn" data-testid="sk-prompt-category-save">
-              {STR.save}
+              {t('prompts.save')}
               <EnterHint />
             </button>
           </div>
@@ -140,13 +141,13 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
       <Dialog
         open={c.deleteCategoryTarget !== null}
         onClose={c.cancelDeleteCategory}
-        ariaLabel={STR.confirmDeleteCategoryTitle}
+        ariaLabel={t('prompts.confirmDeleteCategoryTitle')}
         contentTestId="sk-prompt-category-delete-confirm"
       >
         <div class="sk-dialog__body">
-          <h2 class="sk-dialog__title">{STR.confirmDeleteCategoryTitle}</h2>
+          <h2 class="sk-dialog__title">{t('prompts.confirmDeleteCategoryTitle')}</h2>
           <p class="sk-text sk-text--muted">
-            {c.deleteCategoryTarget ? STR.confirmDeleteCategoryBody(c.deleteCategoryTarget.name) : ''}
+            {c.deleteCategoryTarget ? t('prompts.confirmDeleteCategoryBody', { name: c.deleteCategoryTarget.name }) : ''}
           </p>
           <div class="sk-dialog__actions">
             <button
@@ -155,7 +156,7 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
               data-testid="sk-prompt-category-delete-cancel"
               onClick={c.cancelDeleteCategory}
             >
-              {STR.cancel}
+              {t('prompts.cancel')}
             </button>
             <button
               type="button"
@@ -163,7 +164,7 @@ export function PromptCategoryChips({ controller: c }: PromptCategoryChipsProps)
               data-testid="sk-prompt-category-delete-confirm-btn"
               onClick={c.confirmDeleteCategory}
             >
-              {STR.confirmDelete}
+              {t('prompts.confirmDelete')}
             </button>
           </div>
         </div>

@@ -21,13 +21,19 @@ import type { PromptLibraryView } from '../prompts/usePromptLibrary';
 import { ProfilesPanel } from '../profiles/ProfilesPanel';
 import { useProfilesController } from '../profiles/useProfilesController';
 import type { ProfileLibraryView } from '../profiles/useProfileLibrary';
+import { TagFilterChips } from '../tags/TagFilterChips';
+import { useTagLibrary, type TagLibraryView } from '../tags/useTagLibrary';
+import { countByTag } from '../../core/tags';
 import { Sidebar } from './Sidebar';
 import { IndexingIndicator } from './IndexingIndicator';
 import { useWorkspace, type WorkspaceView } from './useWorkspace';
 import type { FolderTreeSnapshot } from '../../shared/workspace';
+import { useT } from '../../core/i18n';
 
 /** The interactive shell tabs. All three (Folders / Prompts / Profiles) switch the
- *  body region; the Profiles tab became interactive in the profiles-library slice. */
+ *  body region; the Profiles tab became interactive in the profiles-library slice.
+ *  Tags are a cross-cutting facet (not a section), so they have no tab — they live in
+ *  the Folders filter row + the per-conversation picker. */
 type ActiveTab = 'folders' | 'prompts' | 'profiles';
 
 // The header omits the app name/glyph on purpose: the browser's native side-panel
@@ -36,34 +42,6 @@ type ActiveTab = 'folders' | 'prompts' | 'profiles';
 // the why (the skein — one thread from many strands, the chats + prompts scattered
 // across every AI woven into one) and leaves the what to the tabs below. Privacy
 // is shown by behaviour, not asserted here; the mint presence dot carries "live".
-const STR = {
-  workspace: 'Chats and prompts, one thread',
-  searchPlaceholder: 'Search everything…',
-  search: 'Search',
-  tabFolders: 'Folders',
-  tabPrompts: 'Prompts',
-  tabProfiles: 'Profiles',
-  tagAdd: '+ Tag',
-  platformAll: 'All',
-  filterLabel: 'Filter conversations',
-  sections: 'Sidebar sections',
-  // The footer status states the honest resting state — data is local to this
-  // device (privacy-first, local-first). No tier badge (Pro isn't purchasable yet)
-  // and no "Synced" stub (sync ships M5). i18n-ready.
-  localOnly: 'Local-only',
-  localOnlyTitle: 'Your data stays on this device — nothing is synced or sent.',
-  settings: 'Settings',
-  comingSoon: 'Coming soon',
-} as const;
-
-/** The collapsed-list nudge copy (i18n-ready: the platform name is interpolated,
- *  not concatenated from fragments). Shown whenever the active tab's platform hides
- *  its conversation list because its side drawer is collapsed (Gemini) — driven by
- *  the per-platform `listCollapsed` signal, so it fires on a new-chat/home page too,
- *  not only while a conversation is open. */
-const collapsedListNudge = (label: string): string =>
-  `${label}'s chat list is hidden while its sidebar is collapsed. Open it once to sync all your conversations here.`;
-
 /** True on macOS, where the accelerator is ⌘K rather than Ctrl+K. Reads the modern
  *  `userAgentData.platform` first, falling back to the legacy `platform`/UA string.
  *  Mirrors the input bar's detection so both shortcuts stay OS-consistent. */
@@ -88,6 +66,8 @@ export interface SidebarShellProps {
   promptView?: PromptLibraryView;
   /** Injectable profile-library view for tests; forwarded to the profiles controller. */
   profileView?: ProfileLibraryView;
+  /** Injectable tag-library view for tests; defaults to the live worker-backed hook. */
+  tagView?: TagLibraryView;
   /** Receives the imperative `openPrompt(id)` seam (D-F): selects the Prompts tab
    *  and opens that prompt's editor. Slice 4's search → prompt navigation binds it. */
   bindOpenPrompt?: (openPrompt: (id: string) => void) => void;
@@ -116,12 +96,19 @@ function flattenFolders(tree: FolderTreeSnapshot): Folder[] {
   return out;
 }
 
-export function SidebarShell({ platform, view, promptView, profileView, bindOpenPrompt }: SidebarShellProps) {
+export function SidebarShell({ platform, view, promptView, profileView, tagView, bindOpenPrompt }: SidebarShellProps) {
+  const t = useT();
   // One workspace view feeds the Folders tab's tree (folders + inline
   // conversations + the Unfiled node), so nothing opens competing subscriptions or
   // diverges. Tests inject `view`; production uses the live worker-backed view.
   const live = useWorkspace(platform);
   const ws = view ?? live;
+
+  // The tag library is held ONCE here (the tags analog of `useWorkspace`): the
+  // Folders-tab filter control, the per-row assignment picker, and the Tags tab all
+  // read/mutate this single view, so they can never diverge. Tests inject `tagView`.
+  const liveTags = useTagLibrary();
+  const tagLib = tagView ?? liveTags;
 
   // The prompt library is held ONCE here (the prompts analog of `useWorkspace`): the
   // category/tag chip row in the filter slot and the prompt body below both read and
@@ -206,7 +193,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
         <div class="sk-brand">
           <span class="sk-brand__sub">
             <span class="sk-brand__status" aria-hidden="true" />
-            {STR.workspace}
+            {t('shell.workspace')}
           </span>
         </div>
       </header>
@@ -217,15 +204,15 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
         data-testid="sk-search"
         aria-haspopup="dialog"
         aria-expanded={searchOpen}
-        title={STR.search}
+        title={t('shell.search')}
         onClick={() => setSearchOpen(true)}
       >
         <span class="sk-search__icon" aria-hidden="true"><SearchIcon size={16} /></span>
-        <span class="sk-search__placeholder">{STR.searchPlaceholder}</span>
+        <span class="sk-search__placeholder">{t('shell.searchPlaceholder')}</span>
         <kbd class="sk-search__kbd">{searchKbd}</kbd>
       </button>
 
-      <nav class="sk-tabs" role="tablist" aria-label={STR.sections}>
+      <nav class="sk-tabs" role="tablist" aria-label={t('shell.sections')}>
         <button
           class={`sk-tab${activeTab === 'folders' ? ' sk-tab--active' : ''}`}
           type="button"
@@ -234,7 +221,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
           data-testid="sk-tab-folders"
           onClick={() => setActiveTab('folders')}
         >
-          {STR.tabFolders}
+          {t('shell.tabFolders')}
         </button>
         <button
           class={`sk-tab${activeTab === 'prompts' ? ' sk-tab--active' : ''}`}
@@ -244,7 +231,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
           data-testid="sk-tab-prompts"
           onClick={() => setActiveTab('prompts')}
         >
-          {STR.tabPrompts}
+          {t('shell.tabPrompts')}
         </button>
         <button
           class={`sk-tab${activeTab === 'profiles' ? ' sk-tab--active' : ''}`}
@@ -254,7 +241,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
           data-testid="sk-tab-profiles"
           onClick={() => setActiveTab('profiles')}
         >
-          {STR.tabProfiles}
+          {t('shell.tabProfiles')}
         </button>
       </nav>
 
@@ -262,11 +249,11 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
           strip, removes itself when nothing is indexing, and blocks no interaction. */}
       <IndexingIndicator />
 
-      {/* The platform filter row + collapsed-list nudge are folder-specific chrome
-          (D-A): rendered only under the Folders tab so they never leak into Prompts.
-          One unified filter row (no Platform/Tags split): the "All" reset chip, one
-          live chip per platform present in the workspace (D28), then the inert "+ Tag"
-          ghost marking where tag chips will join the same flow when C7/M2 lands. */}
+      {/* The platform filter row, the tag filter row, and the collapsed-list nudge are
+          folder-specific chrome (D-A): rendered only under the Folders tab so they never
+          leak into Prompts. The platform filter is the "All" reset chip + one live chip
+          per platform present (D28); the tag filter (C7/M2) is a sibling chip group with
+          a live "+ Tag" picker over the existing tags. */}
       {activeTab === 'folders' && (
         <>
           <div class="sk-filters" data-testid="sk-filters">
@@ -274,7 +261,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
               class="sk-filter-row__chips"
               data-testid="sk-platforms"
               role="group"
-              aria-label={STR.filterLabel}
+              aria-label={t('shell.filterLabel')}
             >
               <button
                 class={`sk-chip${ws.platformFilter === 'all' ? ' sk-chip--active' : ''}`}
@@ -283,7 +270,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
                 aria-pressed={ws.platformFilter === 'all'}
                 onClick={() => ws.setPlatformFilter('all')}
               >
-                {STR.platformAll}
+                {t('shell.platformAll')}
               </button>
               {presentPlatforms.map((p) => (
                 <button
@@ -298,7 +285,15 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
                   {PLATFORM_LABELS[p]}
                 </button>
               ))}
-              <button class="sk-chip sk-chip--add" type="button" data-testid="sk-tag-add" disabled aria-disabled="true" title={STR.comingSoon}>{STR.tagAdd}</button>
+              {/* Tag filter shares the one filter row (no second row): selected tags as
+                  removable chips + a tag affordance opening the shared picker. */}
+              <TagFilterChips
+                tags={tagLib.tags}
+                selected={ws.tagFilter}
+                onChange={ws.setTagFilter}
+                mutate={tagLib.mutate}
+                counts={countByTag(ws.conversations)}
+              />
             </div>
           </div>
 
@@ -308,7 +303,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
                 <PlatformLogo platform={platform} size={16} />
               </span>
               <span class="sk-nudge__text">
-                {collapsedListNudge(PLATFORM_LABELS[platform])}
+                {t('shell.collapsedListNudge', { label: PLATFORM_LABELS[platform] })}
               </span>
             </div>
           )}
@@ -321,7 +316,7 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
 
       <div class="sk-shell__body" role="tabpanel">
         {activeTab === 'folders' ? (
-          <Sidebar platform={platform} view={ws} />
+          <Sidebar platform={platform} view={ws} tags={tagLib.tags} />
         ) : activeTab === 'prompts' ? (
           <PromptsPanel controller={prompts} />
         ) : (
@@ -333,16 +328,16 @@ export function SidebarShell({ platform, view, promptView, profileView, bindOpen
         {/* Honest resting status: data is local to this device. No tier badge and no
             "Synced" stub — both over-promised (Pro isn't purchasable, sync ships M5).
             This slot upgrades to real Syncing…/Synced/Offline states when sync lands. */}
-        <span class="sk-status" data-testid="sk-status" role="status" title={STR.localOnlyTitle}>
+        <span class="sk-status" data-testid="sk-status" role="status" title={t('shell.localOnlyTitle')}>
           <LockIcon size={14} />
-          {STR.localOnly}
+          {t('shell.localOnly')}
         </span>
         <button
           class="sk-icon-btn"
           type="button"
           data-testid="sk-settings"
-          aria-label={STR.settings}
-          title={STR.settings}
+          aria-label={t('shell.settings')}
+          title={t('shell.settings')}
           onClick={openOptions}
         >
           <SettingsIcon size={16} />

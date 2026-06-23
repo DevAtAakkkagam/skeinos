@@ -14,7 +14,7 @@ import { usePromptSearch, useRecentPrompts, type PromptSearchView } from '../sea
 import type { PromptSearchResult, PromptSnapshot } from '../../shared/prompts';
 import type { Response } from '../../shared/messages';
 import { useAutoFocus, useFocusContainment, useShadowDismiss } from './hooks';
-import { STR } from './strings';
+import { useT } from '../../core/i18n';
 
 type QueryFn = (selector: {
   kind: 'prompt.search';
@@ -74,6 +74,7 @@ export function SlashPopover({
   recents,
   containFocus = false,
 }: SlashPopoverProps) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const live = usePromptSearch(query, search);
   const { results: searchResults, status } = view ?? live;
@@ -148,7 +149,7 @@ export function SlashPopover({
       class="sk-ib-popover"
       style={floatingStyles}
       role="dialog"
-      aria-label={STR.popoverLabel}
+      aria-label={t('inputBar.popoverLabel')}
       data-testid="sk-ib-popover"
       // Keep keystrokes inside the popover. Shadow-DOM events are composed and bubble
       // onto the host page, where editors like Claude's run a document-level
@@ -170,8 +171,8 @@ export function SlashPopover({
           aria-expanded={total > 0}
           aria-controls="sk-ib-results"
           aria-activedescendant={activeId}
-          aria-label={STR.searchLabel}
-          placeholder={STR.searchPlaceholder}
+          aria-label={t('inputBar.searchLabel')}
+          placeholder={t('inputBar.searchPlaceholder')}
           value={query}
           data-testid="sk-ib-search"
           onInput={(e) => onInput((e.target as HTMLInputElement).value)}
@@ -183,19 +184,19 @@ export function SlashPopover({
         {!hasQuery && !showRecents ? (
           // Empty field, nothing used yet → the original hint (D-4).
           <p class="sk-ib-popover__status" data-testid="sk-ib-idle">
-            {STR.idle}
+            {t('inputBar.idle')}
           </p>
         ) : hasQuery && searching ? (
           <p class="sk-ib-popover__status" data-testid="sk-ib-searching">
-            {STR.searching}
+            {t('inputBar.searching')}
           </p>
         ) : hasQuery && errored ? (
           <p class="sk-ib-popover__status" data-testid="sk-ib-error">
-            {STR.error}
+            {t('inputBar.error')}
           </p>
         ) : hasQuery && total === 0 ? (
           <p class="sk-ib-popover__status" data-testid="sk-ib-empty">
-            {STR.empty}
+            {t('inputBar.empty')}
           </p>
         ) : (
           <>
@@ -205,14 +206,14 @@ export function SlashPopover({
                 id="sk-ib-recents-head"
                 data-testid="sk-ib-recents-head"
               >
-                {STR.lastUsed}
+                {t('inputBar.lastUsed')}
               </p>
             ) : null}
             <ul
               class="sk-ib-results"
               id="sk-ib-results"
               role="listbox"
-              aria-label={showRecents ? STR.lastUsed : STR.results}
+              aria-label={showRecents ? t('inputBar.lastUsed') : t('inputBar.results')}
             >
               {results.map((r, i) => (
               <li

@@ -16,47 +16,26 @@
 // Tokens only, no hard-coded strings.
 
 import { useRef, useState } from 'preact/hooks';
-import type { ActiveConversation, ConversationIndex, PlatformId } from '../../shared/types';
+import type { ActiveConversation, ConversationIndex, PlatformId, Tag } from '../../shared/types';
 import { conversationId, type FolderTreeSnapshot, type MutationOp } from '../../shared/workspace';
 import { MoreIcon, PinIcon } from '../components/Icon';
 import { PlatformLogo } from '../components/PlatformLogo';
 import { useMenu, mergeProps, getNodeRoot } from '../primitives';
+import { TagPicker } from '../tags/TagPicker';
 import { MoveToFolderPicker } from './MoveToFolderPicker';
 import { openConversation } from './openConversation';
 import { DRAG_MIME, type DragPayload } from './drag';
 import { formatRelativeTime } from './relativeTime';
 import type { MutateResult } from './useWorkspace';
+import { useT, activeLocale } from '../../core/i18n';
 
 // Cap the rendered rows so a folder with hundreds of ingested conversations does
 // not render them all at once; the cap is surfaced (never a silent truncation).
 // Virtualization is a marked follow-up (with the deferred detail view).
 const RENDER_CAP = 50;
 
-const STR = {
-  emptyFolder: 'Nothing here yet',
-  emptyUnfiled: 'No uncategorized conversations',
-  open: 'Open conversation',
-  menuTrigger: 'Conversation actions',
-  move: 'Move to folder',
-  pin: 'Pin to top',
-  unpin: 'Unpin',
-  pinnedBadge: 'Pinned',
-  archiveAction: 'Archive',
-  unarchive: 'Unarchive',
-  emptyArchived: 'No archived conversations',
-  capNote: 'Showing the most recent',
-  of: 'of',
-  // Relative-time units for the row's timestamp (kept terse to fit the meta line).
-  justNow: 'just now',
-  minute: 'm',
-  hour: 'h',
-  day: 'd',
-  week: 'w',
-  ago: 'ago',
-} as const;
-
 // Context-menu action values (the menu item `value`s the Zag menu reports back).
-type ConvMenuAction = 'move' | 'pin' | 'archive';
+type ConvMenuAction = 'move' | 'tags' | 'pin' | 'archive';
 
 /** Hide archived conversations from the main list (they remain in the store). */
 export function nonArchivedConversations(convs: ConversationIndex[]): ConversationIndex[] {
@@ -90,6 +69,8 @@ export interface ConversationListProps {
   active: ActiveConversation | null;
   tree: FolderTreeSnapshot;
   mutate: (op: MutationOp) => Promise<MutateResult>;
+  /** The tag library, for the per-row tag-assignment picker. Defaults to none. */
+  tags?: Tag[];
   context: ConversationListContext;
   /** The panel's active-tab platform — drives open routing (same tab vs side by
    *  side) in the default `onOpen`. */
@@ -104,12 +85,19 @@ export function ConversationList({
   active,
   tree,
   mutate,
+  tags = [],
   context,
   activePlatform,
   onOpen = (c) => void openConversation(c, activePlatform),
 }: ConversationListProps) {
+  const t = useT();
+  const locale = activeLocale();
   const rootRef = useRef<HTMLDivElement>(null);
   const [pickingId, setPickingId] = useState<string | null>(null);
+  // Which conversation the tag-assignment picker is open for, plus the row element it
+  // anchors to (the `⋯` → Tags… target). Anchored popover, not a centered modal.
+  const [tagging, setTagging] = useState<{ id: string; anchor: HTMLElement | null } | null>(null);
+  const byTagId = new Map(tags.map((t) => [t.id, t]));
   // Which conversation the open context menu acts on (the row last triggered).
   const [menuTargetId, setMenuTargetId] = useState<string | null>(null);
 
@@ -122,6 +110,7 @@ export function ConversationList({
   const rows = ordered.slice(0, RENDER_CAP);
   const activeId = active ? conversationId(active.platform, active.nativeId) : null;
   const picking = pickingId ? conversations.find((c) => c.id === pickingId) : undefined;
+  const taggingConv = tagging ? conversations.find((c) => c.id === tagging.id) : undefined;
   const menuTarget = menuTargetId ? conversations.find((c) => c.id === menuTargetId) : undefined;
 
   // Mouse selection routes through each item's own `onClick`; keyboard ENTER routes
@@ -139,6 +128,12 @@ export function ConversationList({
     if (!conv) return;
     if (value === 'move') {
       setPickingId(conv.id);
+    } else if (value === 'tags') {
+      // Anchor the picker to this row's ⋯ trigger (the menu that just closed).
+      const anchor = rootRef.current?.querySelector<HTMLElement>(
+        `[data-conversation-id="${conv.id}"] [data-testid=sk-conv-menu]`,
+      );
+      setTagging({ id: conv.id, anchor: anchor ?? null });
     } else if (value === 'pin') {
       void mutate({ op: 'conversation.pin', conversationId: conv.id, pinned: !conv.pinned });
     } else if (value === 'archive') {
@@ -161,9 +156,31 @@ export function ConversationList({
   // A single render-time clock so every row's relative timestamp is consistent.
   const now = Date.now();
 
+  // Mini tag chips on a row (full labels), resolving ids → live tags and capping the
+  // count so a heavily-tagged row never overruns the narrow panel (overflow as "+k").
+  // Two is the most that fits one line beside the time + ⋯ in a ~360px panel.
+  const ROW_TAG_CAP = 2;
+  const renderRowTags = (c: ConversationIndex) => {
+    const resolved = c.tags.map((id) => byTagId.get(id)).filter((t): t is Tag => !!t);
+    if (resolved.length === 0) return null;
+    const head = resolved.slice(0, ROW_TAG_CAP);
+    const extra = resolved.length - head.length;
+    return (
+      <span class="sk-conv-row__tags" data-testid="sk-conv-row-tags" aria-label={t('conv.tagsLabel')}>
+        {head.map((t) => (
+          <span key={t.id} class="sk-conv-tag" data-testid={`sk-conv-tag-${t.id}`} title={t.label}>
+            <span class="sk-tag-dot" aria-hidden="true" style={t.color ? { background: t.color } : undefined} />
+            {t.label}
+          </span>
+        ))}
+        {extra > 0 && <span class="sk-conv-tag sk-conv-tag--more">{t('conv.moreTags', { count: extra })}</span>}
+      </span>
+    );
+  };
+
   const renderRow = (c: ConversationIndex) => {
     const isActive = c.id === activeId;
-    const when = formatRelativeTime(c.updatedAt, now, STR);
+    const when = formatRelativeTime(c.updatedAt, now, locale, t('time.justNow'));
     return (
       <li
         key={c.id}
@@ -183,7 +200,7 @@ export function ConversationList({
           class="sk-conv-row__main"
           type="button"
           data-testid="sk-conv-open"
-          aria-label={STR.open}
+          aria-label={t('conv.open')}
           title={c.title}
           onClick={() => onOpen(c)}
         >
@@ -200,6 +217,7 @@ export function ConversationList({
               >
                 {when}
               </time>
+              {renderRowTags(c)}
             </span>
           </span>
         </button>
@@ -207,8 +225,8 @@ export function ConversationList({
           <span
             class="sk-conv-row__pin"
             data-testid="sk-conv-pinned"
-            aria-label={STR.pinnedBadge}
-            title={STR.pinnedBadge}
+            aria-label={t('conv.pinnedBadge')}
+            title={t('conv.pinnedBadge')}
           >
             <PinIcon size={12} />
           </span>
@@ -216,8 +234,8 @@ export function ConversationList({
         <button
           class={`sk-icon-btn sk-row-menu${menu.open && menuTargetId === c.id ? ' sk-row-menu--open' : ''}`}
           data-testid="sk-conv-menu"
-          aria-label={STR.menuTrigger}
-          title={STR.menuTrigger}
+          aria-label={t('conv.menuTrigger')}
+          title={t('conv.menuTrigger')}
           {...mergeProps(menu.getTriggerProps({ value: c.id }), {
             onClick: () => setMenuTargetId(c.id),
           })}
@@ -235,16 +253,16 @@ export function ConversationList({
       ) : (
         <p class="sk-empty__body sk-conv-list__empty" data-testid="sk-conv-empty">
           {context.kind === 'unfiled'
-            ? STR.emptyUnfiled
+            ? t('conv.emptyUnfiled')
             : context.kind === 'archived'
-              ? STR.emptyArchived
-              : STR.emptyFolder}
+              ? t('conv.emptyArchived')
+              : t('conv.emptyFolder')}
         </p>
       )}
 
       {ordered.length > RENDER_CAP && (
         <p class="sk-conv-list__cap" data-testid="sk-conv-cap">
-          {`${STR.capNote} ${RENDER_CAP} ${STR.of} ${ordered.length}`}
+          {`${t('conv.capNote')} ${RENDER_CAP} ${t('conv.of')} ${ordered.length}`}
         </p>
       )}
 
@@ -252,13 +270,16 @@ export function ConversationList({
         <div class="sk-menu__positioner" {...menu.getPositionerProps()}>
           <div class="sk-menu" data-testid="sk-conv-context-menu" {...menu.getContentProps()}>
             <button class="sk-menu__item" data-testid="sk-conv-menu-move" {...itemProps('move')}>
-              {STR.move}
+              {t('conv.move')}
             </button>
             <button class="sk-menu__item" data-testid="sk-conv-menu-pin" {...itemProps('pin')}>
-              {menuTarget.pinned ? STR.unpin : STR.pin}
+              {menuTarget.pinned ? t('conv.unpin') : t('conv.pin')}
             </button>
             <button class="sk-menu__item" data-testid="sk-conv-menu-archive" {...itemProps('archive')}>
-              {menuTarget.archived ? STR.unarchive : STR.archiveAction}
+              {menuTarget.archived ? t('conv.unarchive') : t('conv.archiveAction')}
+            </button>
+            <button class="sk-menu__item" data-testid="sk-conv-menu-tags" {...itemProps('tags')}>
+              {t('conv.tags')}
             </button>
           </div>
         </div>
@@ -270,6 +291,20 @@ export function ConversationList({
           tree={tree}
           onSubmit={mutate}
           onClose={() => setPickingId(null)}
+        />
+      )}
+
+      {tagging && taggingConv && (
+        <TagPicker
+          anchor={tagging.anchor}
+          label={t('conv.tagsLabel')}
+          tags={tags}
+          selected={taggingConv.tags}
+          mutate={mutate}
+          onToggle={(tagId, next) =>
+            void mutate({ op: 'conversation.tag', id: taggingConv.id, tagId, assigned: next })
+          }
+          onClose={() => setTagging(null)}
         />
       )}
     </div>

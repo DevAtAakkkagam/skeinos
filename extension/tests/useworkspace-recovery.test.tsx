@@ -212,7 +212,7 @@ describe('useWorkspace re-scopes the active card on a platform switch', () => {
       if (sel.kind === 'folder.tree') return Promise.resolve(treeSnap(['a']));
       if (sel.kind === 'conversation.list') return Promise.resolve(convSnap);
       // conversation.active, keyed by the requested platform.
-      if (sel.platform === 'gemini') {
+      if ('platform' in sel && sel.platform === 'gemini') {
         geminiActiveCalls += 1;
         // Park only the FIRST gemini active read (the one running when the user
         // switches tabs); any later call resolves immediately.
@@ -250,7 +250,7 @@ describe('useWorkspace re-scopes the active card on a platform switch', () => {
     mockQuery.mockImplementation((sel: WorkspaceSelector) => {
       if (sel.kind === 'folder.tree') return Promise.resolve(treeSnap(['a']));
       if (sel.kind === 'conversation.list') return Promise.resolve(convSnap);
-      if (sel.platform === 'gemini') {
+      if ('platform' in sel && sel.platform === 'gemini') {
         geminiCalls += 1;
         return geminiCalls === 1 ? geminiGate.promise.then(() => activeResp('gemini')) : Promise.resolve(activeResp('gemini'));
       }

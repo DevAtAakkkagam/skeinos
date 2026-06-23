@@ -10,6 +10,7 @@ import { PRIMITIVES_CSS } from '../primitives/styles';
 import { SEARCH_CSS } from '../search/styles';
 import { PROMPTS_CSS } from '../prompts/styles';
 import { PROFILES_CSS } from '../profiles/styles';
+import { TAGS_CSS } from '../tags/styles';
 
 // The visible gap above "Personal workspace" is the browser's native side-panel
 // title bar (which shows the Skeinos name + icon) plus our header's own top
@@ -229,7 +230,7 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-conv-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .sk-conv-row__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 .sk-conv-row__meta { display: flex; align-items: center; gap: var(--sk-space-1); min-width: 0; }
-.sk-conv-row__time { color: var(--sk-color-muted); font-size: var(--sk-text-sm); line-height: 1; white-space: nowrap; }
+.sk-conv-row__time { flex: none; color: var(--sk-color-muted); font-size: var(--sk-text-sm); line-height: 1; white-space: nowrap; }
 /* Platform brand logo: the row's leading mark (always present), keyed by the
    conversation's platform. Fixed box so titles align regardless of glyph. */
 .sk-conv-row__logo { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-top: 2px; }
@@ -308,4 +309,4 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-search[disabled], .sk-tab[disabled], .sk-chip[disabled] { opacity: 0.55; cursor: not-allowed; }
 `;
 
-export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}\n${PROMPTS_CSS}\n${PROFILES_CSS}`;
+export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}\n${PROMPTS_CSS}\n${PROFILES_CSS}\n${TAGS_CSS}`;

@@ -11,7 +11,9 @@
 
 import { useState } from 'preact/hooks';
 import { BrandGlyph } from '../components/BrandGlyph';
+import { ConsentToggle } from '../components/ConsentToggle';
 import { CheckIcon, ChevronIcon, FolderIcon, ShieldIcon } from '../components/Icon';
+import { setSettings } from '../../core/settings';
 import { DOMAIN_REGISTRY, type DomainId } from '../../shared/domains';
 import { seedsForDomain } from '../../core/prompts/catalog';
 import { installPromptSeedsRemote } from '../../core/prompts/client';
@@ -20,77 +22,25 @@ import { mutateWorkspaceRemote } from '../../core/folders/client';
 import { DEFAULT_FOLDER_COLOR, makeFolderId } from '../sidebar/folderDefaults';
 import type { PlatformId } from '../../shared/types';
 import { completeOnboarding, setOnboardingDomain } from './gate';
-
-// i18n-ready strings (PREACT: no hard-coded user-facing literals in markup).
-const STR = {
-  // Welcome
-  eyebrow: 'Welcome to Skeinos',
-  title: 'One workspace across every AI chat',
-  body: 'Folders, search, prompts and instruction profiles that follow you across Claude, Gemini, Perplexity and more, laid over the sites you already use.',
-  privacy:
-    'Local-first by design. Your chats are read and indexed on this device; nothing is uploaded, and no account is needed.',
-  haveAccount: 'Skip for now',
-  getStarted: 'Get started',
-
-  // Permissions priming
-  permEyebrow: 'Step 2 · Permissions',
-  permTitle: 'Why Skeinos asks for access',
-  permBody:
-    'Your browser will request permission for each site next. Here’s exactly what each one is for — and what it isn’t.',
-  permBadge: 'Read & type',
-  permAssurance:
-    'Permissions are per-site and revocable any time in Settings. We never read credentials or send content anywhere.',
-
-  // Starter library
-  starterEyebrow: 'Step 3 · Starter library',
-  starterTitle: 'Pick a starting point',
-  starterBody:
-    'Choose your field and we’ll seed your library with a curated starter pack. Everything is editable — rename, retag, or delete any of them.',
-  starterInstalling: 'Adding starter prompts…',
-  starterErrorTitle: 'Couldn’t add starter prompts',
-  starterErrorBody: 'Something went wrong. Your library is unchanged — try again.',
-  starterRetry: 'Try again',
-  confirmTitle: (n: number): string =>
-    n === 1 ? '1 starter prompt added' : `${n} starter prompts added`,
-  confirmTitleNone: 'Starter prompts already in your library',
-  confirmBody:
-    'We seeded your library with a curated starter pack so you have something useful from minute one. Everything is editable — rename, retag, or delete any of them.',
-  browseLibrary: 'Browse library',
-  moreCount: (n: number): string => `+${n} more`,
-
-  // Get started
-  doneEyebrow: 'You’re all set',
-  doneTitle: 'Where would you like to start?',
-  doneBody:
-    'Create a home for your conversations — Skeinos is already running on this platform.',
-  createFolderTitle: 'Create your first folder',
-  createFolderBody: 'Group chats by project, topic or client',
-  createFolderName: 'My first folder',
-  finishSetup: 'Finish setup',
-
-  // Shared
-  back: 'Back',
-  continue: 'Continue',
-  stepLabel: (i: number, n: number): string => `Step ${i + 1} of ${n}`,
-} as const;
+import { useT, type MessageKey } from '../../core/i18n';
 
 // Per-site priming copy (informational only — Option A, D-3). No `chrome.permissions`
 // call and no prompt: the hosts are already granted via the static `host_permissions`.
-const PERM_SITES: readonly { id: string; host: string; for: string }[] = [
+const PERM_SITES: readonly { id: string; host: string; forKey: MessageKey }[] = [
   {
     id: 'claude',
     host: 'claude.ai',
-    for: 'Read the page to index & organise your chats; type prompts when you ask.',
+    forKey: 'onboarding.permForClaude',
   },
   {
     id: 'gemini',
     host: 'gemini.google.com',
-    for: 'Same — read to index, type to insert. No background access.',
+    forKey: 'onboarding.permForGemini',
   },
   {
     id: 'perplexity',
     host: 'perplexity.ai',
-    for: 'Read to index; type to insert. We never read while the tab is in the background.',
+    forKey: 'onboarding.permForPerplexity',
   },
 ];
 
@@ -111,6 +61,8 @@ export interface OnboardingSurfaceProps {
   persistDomain?: (domain: DomainId) => void | Promise<void>;
   /** Override the folder-create writer (tests). Defaults to the real worker client. */
   createFolder?: (name: string, platform: PlatformId) => void | Promise<void>;
+  /** Override the consent persister (tests). Defaults to the real settings writer. */
+  persistConsent?: (partial: { diagnosticsOptIn?: boolean }) => void | Promise<void>;
 }
 
 /** Default seed installer: through the worker, seeding BOTH the prompt library and the
@@ -144,9 +96,23 @@ export function OnboardingSurface({
   installSeeds = defaultInstallSeeds,
   persistDomain = setOnboardingDomain,
   createFolder = defaultCreateFolder,
+  persistConsent = (partial) => setSettings(partial),
 }: OnboardingSurfaceProps) {
+  const t = useT();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  // Diagnostics consent, surfaced on the FINAL step as an explicit opt-IN: the box
+  // starts unchecked and diagnostics stay off unless the user ticks it before
+  // finishing. Loaded from durable settings so a returning user sees their choice
+  // (default off, so unchecked on a fresh install).
+  const [consent, setConsent] = useState({ diagnosticsOptIn: false });
+  // The onboarding toggle is pure local opt-in state — it always starts unchecked and
+  // is NOT pre-loaded from settings (a returning/leftover value must not pre-check an
+  // opt-in). The chosen value is committed to durable settings on finish (below).
+  const toggleConsent = (key: 'diagnosticsOptIn', value: boolean) => {
+    setConsent((c) => ({ ...c, [key]: value }));
+  };
 
   // Starter-library sub-state: which domain was picked, the install reply count,
   // and any non-blocking install error (retryable — the gate is not yet complete).
@@ -158,13 +124,16 @@ export function OnboardingSurface({
   const next = () => setStep((s) => Math.min(s + 1, STEP_COUNT - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
-  // Terminal completion: write the gate once, guarding re-entry. The settings write
-  // broadcasts via storage.onChanged, so the subscribed panel re-scopes out of
-  // onboarding — no reload (D-2).
+  // Terminal completion: commit the diagnostics opt-in to durable settings (so the
+  // stored value matches the box the user saw — unticked stays off, ticked turns on),
+  // then write the gate once, guarding re-entry. The settings write broadcasts via
+  // storage.onChanged, so the subscribed panel re-scopes out of onboarding — no
+  // reload (D-2).
   const finish = (before?: () => Promise<void> | void) => {
     if (busy) return;
     setBusy(true);
-    void Promise.resolve(before?.())
+    void Promise.resolve(persistConsent({ diagnosticsOptIn: consent.diagnosticsOptIn }))
+      .then(() => before?.())
       .then(() => onComplete())
       .catch(() => setBusy(false));
   };
@@ -205,7 +174,7 @@ export function OnboardingSurface({
         ) : null}
         {step === 3 ? <GetStartedStep /> : null}
 
-        <div class="sk-onb__dots" role="img" aria-label={STR.stepLabel(step, STEP_COUNT)}>
+        <div class="sk-onb__dots" role="img" aria-label={t('onboarding.stepLabel', { current: step + 1, total: STEP_COUNT })}>
           {Array.from({ length: STEP_COUNT }, (_, i) => (
             <span class={`sk-onb__dot${i === step ? ' sk-onb__dot--active' : ''}`} />
           ))}
@@ -227,7 +196,7 @@ export function OnboardingSurface({
             onClick={() => finish()}
             disabled={busy}
           >
-            {STR.haveAccount}
+            {t('onboarding.haveAccount')}
           </button>
           <button
             type="button"
@@ -235,7 +204,7 @@ export function OnboardingSurface({
             data-testid="sk-onboarding-start"
             onClick={next}
           >
-            {STR.getStarted}
+            {t('onboarding.getStarted')}
             <ChevronIcon size={16} />
           </button>
         </>
@@ -246,7 +215,7 @@ export function OnboardingSurface({
       return (
         <>
           <button type="button" class="sk-btn--link" data-testid="sk-onboarding-back" onClick={back}>
-            {STR.back}
+            {t('onboarding.back')}
           </button>
           <button
             type="button"
@@ -254,7 +223,7 @@ export function OnboardingSurface({
             data-testid="sk-onboarding-continue"
             onClick={next}
           >
-            {STR.continue}
+            {t('onboarding.continue')}
             <ChevronIcon size={16} />
           </button>
         </>
@@ -272,7 +241,7 @@ export function OnboardingSurface({
             data-testid="sk-onboarding-browse"
             onClick={next}
           >
-            {STR.browseLibrary}
+            {t('onboarding.browseLibrary')}
           </button>
           <button
             type="button"
@@ -280,7 +249,7 @@ export function OnboardingSurface({
             data-testid="sk-onboarding-continue"
             onClick={next}
           >
-            {STR.continue}
+            {t('onboarding.continue')}
             <ChevronIcon size={16} />
           </button>
         </>
@@ -291,7 +260,7 @@ export function OnboardingSurface({
     // keeps only Back so the user can step back through the flow.
     return (
       <button type="button" class="sk-btn--link" data-testid="sk-onboarding-back" onClick={back}>
-        {STR.back}
+        {t('onboarding.back')}
       </button>
     );
   }
@@ -301,9 +270,9 @@ export function OnboardingSurface({
     return (
       <div class="sk-onb__step" data-testid="sk-onboarding-step-getstarted">
         <div class="sk-onb__hero">
-          <p class="sk-onb__eyebrow">{STR.doneEyebrow}</p>
-          <h1 class="sk-onb__title">{STR.doneTitle}</h1>
-          <p class="sk-onb__body">{STR.doneBody}</p>
+          <p class="sk-onb__eyebrow">{t('onboarding.doneEyebrow')}</p>
+          <h1 class="sk-onb__title">{t('onboarding.doneTitle')}</h1>
+          <p class="sk-onb__body">{t('onboarding.doneBody')}</p>
         </div>
 
         <div class="sk-onb__actions">
@@ -313,18 +282,31 @@ export function OnboardingSurface({
               class="sk-onb__action"
               data-testid="sk-onboarding-create-folder"
               disabled={busy}
-              onClick={() => finish(() => createFolder(STR.createFolderName, platform!))}
+              onClick={() => finish(() => createFolder(t('onboarding.createFolderName'), platform!))}
             >
               <span class="sk-onb__action-icon" aria-hidden="true">
                 <FolderIcon size={18} />
               </span>
               <span class="sk-onb__action-text">
-                <span class="sk-onb__action-title">{STR.createFolderTitle}</span>
-                <span class="sk-onb__action-body">{STR.createFolderBody}</span>
+                <span class="sk-onb__action-title">{t('onboarding.createFolderTitle')}</span>
+                <span class="sk-onb__action-body">{t('onboarding.createFolderBody')}</span>
               </span>
               <ChevronIcon size={16} />
             </button>
           ) : null}
+        </div>
+
+        {/* Diagnostics consent — the final, explicit trust moment (onboarding spec).
+            Shown unchecked: an opt-IN the user actively makes before finishing. */}
+        <div class="sk-onb__consent" data-testid="sk-onboarding-consent">
+          <p class="sk-onb__eyebrow">{t('onboarding.consentHeading')}</p>
+          <ConsentToggle
+            testId="sk-onboarding-consent-diagnostics"
+            label={t('onboarding.consentDiagnosticsLabel')}
+            body={t('onboarding.consentDiagnosticsBody')}
+            checked={consent.diagnosticsOptIn}
+            onChange={(v) => toggleConsent('diagnosticsOptIn', v)}
+          />
         </div>
 
         <button
@@ -335,7 +317,7 @@ export function OnboardingSurface({
           onClick={() => finish()}
         >
           <CheckIcon size={16} />
-          {STR.finishSetup}
+          {t('onboarding.finishSetup')}
         </button>
       </div>
     );
@@ -343,15 +325,16 @@ export function OnboardingSurface({
 }
 
 function WelcomeStep() {
+  const t = useT();
   return (
     <div class="sk-onb__step" data-testid="sk-onboarding-step-welcome">
       <div class="sk-onb__hero">
         <span class="sk-onb__glyph" aria-hidden="true">
           <BrandGlyph size={22} />
         </span>
-        <p class="sk-onb__eyebrow">{STR.eyebrow}</p>
-        <h1 class="sk-onb__title">{STR.title}</h1>
-        <p class="sk-onb__body">{STR.body}</p>
+        <p class="sk-onb__eyebrow">{t('onboarding.eyebrow')}</p>
+        <h1 class="sk-onb__title">{t('onboarding.title')}</h1>
+        <p class="sk-onb__body">{t('onboarding.body')}</p>
       </div>
 
       <p
@@ -361,19 +344,20 @@ function WelcomeStep() {
         <span class="sk-onb__assurance-icon" aria-hidden="true">
           <ShieldIcon size={14} />
         </span>
-        {STR.privacy}
+        {t('onboarding.privacy')}
       </p>
     </div>
   );
 }
 
 function PermissionsStep() {
+  const t = useT();
   return (
     <div class="sk-onb__step" data-testid="sk-onboarding-step-permissions">
       <div class="sk-onb__hero">
-        <p class="sk-onb__eyebrow">{STR.permEyebrow}</p>
-        <h1 class="sk-onb__title">{STR.permTitle}</h1>
-        <p class="sk-onb__body">{STR.permBody}</p>
+        <p class="sk-onb__eyebrow">{t('onboarding.permEyebrow')}</p>
+        <h1 class="sk-onb__title">{t('onboarding.permTitle')}</h1>
+        <p class="sk-onb__body">{t('onboarding.permBody')}</p>
       </div>
 
       <ul class="sk-onb__sites" data-testid="sk-onboarding-perm-sites">
@@ -384,9 +368,9 @@ function PermissionsStep() {
             </span>
             <div class="sk-onb__site-text">
               <p class="sk-onb__site-host">{site.host}</p>
-              <p class="sk-onb__site-for">{site.for}</p>
+              <p class="sk-onb__site-for">{t(site.forKey)}</p>
             </div>
-            <span class="sk-onb__site-badge">{STR.permBadge}</span>
+            <span class="sk-onb__site-badge">{t('onboarding.permBadge')}</span>
           </li>
         ))}
       </ul>
@@ -395,7 +379,7 @@ function PermissionsStep() {
         <span class="sk-onb__assurance-icon" aria-hidden="true">
           <ShieldIcon size={14} />
         </span>
-        {STR.permAssurance}
+        {t('onboarding.permAssurance')}
       </p>
     </div>
   );
@@ -410,6 +394,7 @@ interface StarterStepProps {
 }
 
 function StarterStep({ picked, installed, installing, installError, onPick }: StarterStepProps) {
+  const t = useT();
   // Confirmation sub-state: a domain has been picked and its seeds installed (the
   // count is from the install reply, never hard-coded — D-4). Sample titles are read
   // from the bundled catalog (pure data, no store), mirroring what was seeded.
@@ -424,15 +409,15 @@ function StarterStep({ picked, installed, installing, installError, onPick }: St
             <CheckIcon size={20} />
           </span>
           <h1 class="sk-onb__title" data-testid="sk-onboarding-confirm-title">
-            {installed === 0 ? STR.confirmTitleNone : STR.confirmTitle(installed)}
+            {installed === 0 ? t('onboarding.confirmTitleNone') : t('onboarding.confirmTitle', { count: installed })}
           </h1>
-          <p class="sk-onb__body">{STR.confirmBody}</p>
+          <p class="sk-onb__body">{t('onboarding.confirmBody')}</p>
         </div>
         <ul class="sk-onb__chips" data-testid="sk-onboarding-confirm-chips">
           {sample.map((t) => (
             <li class="sk-onb__chip">{t}</li>
           ))}
-          {rest > 0 ? <li class="sk-onb__chip sk-onb__chip--more">{STR.moreCount(rest)}</li> : null}
+          {rest > 0 ? <li class="sk-onb__chip sk-onb__chip--more">{t('onboarding.moreCount', { count: rest })}</li> : null}
         </ul>
       </div>
     );
@@ -442,22 +427,22 @@ function StarterStep({ picked, installed, installing, installError, onPick }: St
   return (
     <div class="sk-onb__step" data-testid="sk-onboarding-step-starter">
       <div class="sk-onb__hero">
-        <p class="sk-onb__eyebrow">{STR.starterEyebrow}</p>
-        <h1 class="sk-onb__title">{STR.starterTitle}</h1>
-        <p class="sk-onb__body">{STR.starterBody}</p>
+        <p class="sk-onb__eyebrow">{t('onboarding.starterEyebrow')}</p>
+        <h1 class="sk-onb__title">{t('onboarding.starterTitle')}</h1>
+        <p class="sk-onb__body">{t('onboarding.starterBody')}</p>
       </div>
 
       {installError ? (
         <div class="sk-onb__error" role="alert" data-testid="sk-onboarding-starter-error">
-          <p class="sk-onb__error-title">{STR.starterErrorTitle}</p>
-          <p class="sk-onb__error-body">{STR.starterErrorBody}</p>
+          <p class="sk-onb__error-title">{t('onboarding.starterErrorTitle')}</p>
+          <p class="sk-onb__error-body">{t('onboarding.starterErrorBody')}</p>
           <button
             type="button"
             class="sk-btn sk-btn--ghost"
             data-testid="sk-onboarding-starter-retry"
             onClick={() => picked && onPick(picked)}
           >
-            {STR.starterRetry}
+            {t('onboarding.starterRetry')}
           </button>
         </div>
       ) : null}
@@ -476,7 +461,7 @@ function StarterStep({ picked, installed, installing, installError, onPick }: St
             >
               <span class="sk-onb__domain-label">{d.label}</span>
               {installing && picked === d.id ? (
-                <span class="sk-spinner" aria-label={STR.starterInstalling} />
+                <span class="sk-spinner" aria-label={t('onboarding.starterInstalling')} />
               ) : (
                 <ChevronIcon size={16} />
               )}

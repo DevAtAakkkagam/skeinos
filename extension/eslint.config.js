@@ -74,6 +74,26 @@ export default tseslint.config(
     },
   },
 
+  // i18n guard ([PREACT-7] / D-i18n-7): no hard-coded user-facing text in the shadow
+  // DOM UI. Every visible string must come from a catalog via `t()`/`useT()`, so the
+  // German pass and the ~40% pseudo-locale expansion are catalog work, not component
+  // surgery. Scoped to `src/ui/**`; non-letter literals (punctuation, symbols,
+  // separators) are allow-listed since they carry no translatable content, and props/
+  // attributes are left to review (`noAttributeStrings` off) to avoid flagging the
+  // structural `class`/`data-testid`/`role` plumbing.
+  {
+    files: ['src/ui/**/*.{ts,tsx}'],
+    plugins: { react },
+    rules: {
+      'react/jsx-no-literals': [
+        'error',
+        {
+          allowedStrings: ['·', '•', '—', '–', '/', '✓', '⌘/', ':', '%', '+', '…', '↵', '↑', '↓'],
+        },
+      ],
+    },
+  },
+
   // Flag stale `eslint-disable` directives so they don't rot silently.
   {
     linterOptions: { reportUnusedDisableDirectives: 'warn' },

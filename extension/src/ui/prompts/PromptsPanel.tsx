@@ -14,7 +14,7 @@ import { PlusIcon, PromptIcon } from '../components/Icon';
 import { PromptCard } from './PromptCard';
 import { PromptEditor } from './PromptEditor';
 import { StarterSeed } from './StarterSeed';
-import { STR } from './strings';
+import { useT } from '../../core/i18n';
 import type { PromptsController } from './usePromptsController';
 
 export interface PromptsPanelProps {
@@ -22,18 +22,19 @@ export interface PromptsPanelProps {
 }
 
 export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element {
+  const t = useT();
   return (
-    <div class="sk-prompts" data-testid="sk-prompts-panel" role="tabpanel" aria-label={STR.panelLabel}>
+    <div class="sk-prompts" data-testid="sk-prompts-panel" role="tabpanel" aria-label={t('prompts.panelLabel')}>
       <div class="sk-prompts__scroll" data-testid="sk-prompts-scroll">
         <div class="sk-sidebar__section">
           <div class="sk-row sk-sidebar__section-head">
-            <span class="sk-sidebar__heading">{STR.sectionTitle}</span>
+            <span class="sk-sidebar__heading">{t('prompts.sectionTitle')}</span>
             <button
               class="sk-icon-btn sk-icon-btn--accent"
               type="button"
               data-testid="sk-prompt-new"
-              aria-label={STR.newPromptShort}
-              title={STR.newPromptShort}
+              aria-label={t('prompts.newPromptShort')}
+              title={t('prompts.newPromptShort')}
               onClick={c.openCreate}
             >
               <PlusIcon size={16} />
@@ -43,17 +44,17 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
           {c.status === 'loading' ? (
             <div class="sk-empty" data-testid="sk-prompts-loading" role="status" aria-live="polite">
               <span class="sk-spinner" aria-hidden="true" />
-              <p class="sk-empty__body">{STR.loading}</p>
+              <p class="sk-empty__body">{t('prompts.loading')}</p>
             </div>
           ) : c.status === 'error' ? (
             <div class="sk-empty" data-testid="sk-prompts-error" role="alert">
               <span class="sk-empty__icon" aria-hidden="true">
                 <PromptIcon size={40} />
               </span>
-              <p class="sk-empty__title">{STR.errorTitle}</p>
-              <p class="sk-empty__body">{STR.errorBody}</p>
+              <p class="sk-empty__title">{t('prompts.errorTitle')}</p>
+              <p class="sk-empty__body">{t('prompts.errorBody')}</p>
               <button type="button" class="sk-btn sk-btn--icon" data-testid="sk-prompts-retry" onClick={c.retry}>
-                {STR.retry}
+                {t('prompts.retry')}
               </button>
             </div>
           ) : c.prompts.length === 0 ? (
@@ -61,14 +62,14 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
               <span class="sk-empty__icon" aria-hidden="true">
                 <PromptIcon size={40} />
               </span>
-              <p class="sk-empty__title">{STR.firstRunTitle}</p>
-              <p class="sk-empty__body">{STR.firstRunBody}</p>
+              <p class="sk-empty__title">{t('prompts.firstRunTitle')}</p>
+              <p class="sk-empty__body">{t('prompts.firstRunBody')}</p>
               <button type="button" class="sk-btn sk-btn--icon" data-testid="sk-prompts-create-first" onClick={c.openCreate}>
                 <PlusIcon size={16} />
-                {STR.newPromptShort}
+                {t('prompts.newPromptShort')}
               </button>
-              {/* Seeding recovery for users who skipped onboarding's domain pick —
-                  self-hides once a domain has been chosen (StarterSeed). */}
+              {/* One-click starter-pack pre-load: pick a domain and seed its bundled
+                  prompts. Always shown on the empty state (StarterSeed). */}
               <StarterSeed controller={c} />
             </div>
           ) : c.filtered.length === 0 ? (
@@ -76,10 +77,10 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
               <span class="sk-empty__icon" aria-hidden="true">
                 <PromptIcon size={40} />
               </span>
-              <p class="sk-empty__title">{STR.noMatchTitle}</p>
-              <p class="sk-empty__body">{STR.noMatchBody}</p>
+              <p class="sk-empty__title">{t('prompts.noMatchTitle')}</p>
+              <p class="sk-empty__body">{t('prompts.noMatchBody')}</p>
               <button type="button" class="sk-btn sk-btn--ghost" data-testid="sk-prompts-clear-filter" onClick={c.clearFilter}>
-                {STR.clearFilter}
+                {t('prompts.clearFilter')}
               </button>
             </div>
           ) : (

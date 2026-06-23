@@ -7,22 +7,15 @@
 
 import type { JSX } from 'preact';
 import { TIER_LIMITS, type Resource } from '../../core/tier';
+import { useT } from '../../core/i18n';
 
-/** Centralized, i18n-ready nudge copy (task 3.5). Numbers are NOT hard-coded — the
- *  body interpolates the limit derived from {@link TIER_LIMITS}, so worker
- *  enforcement and this copy can never disagree. Per-resource noun keeps the
- *  sentence natural without fragment concatenation. */
-const STR = {
-  /** The user-facing noun for each quota-governed resource. */
-  resourceNoun: {
-    folders: 'folders',
-    prompts: 'prompts',
-    profiles: 'profiles',
-    tags: 'tags',
-  } as Record<Resource, string>,
-  /** The informational sentence; `limit`/`noun` are interpolated (no checkout). */
-  body: (noun: string, limit: number): string =>
-    `You've reached the free plan's limit of ${limit} ${noun}. Your existing ${noun} are untouched — remove one to make room, or upgrade to Skeinos Pro (coming soon) for unlimited ${noun}.`,
+/** Maps each quota-governed resource to its catalog noun key, keeping the sentence
+ *  natural without fragment concatenation. */
+const NOUN_KEY = {
+  folders: 'nudge.nounFolders',
+  prompts: 'nudge.nounPrompts',
+  profiles: 'nudge.nounProfiles',
+  tags: 'nudge.nounTags',
 } as const;
 
 export interface UpgradeNudgeProps {
@@ -36,8 +29,10 @@ export interface UpgradeNudgeProps {
 }
 
 export function UpgradeNudge({ resource, limit, testId }: UpgradeNudgeProps): JSX.Element {
-  const noun = STR.resourceNoun[resource];
+  const t = useT();
+  const noun = t(NOUN_KEY[resource]);
   const shown = limit ?? TIER_LIMITS.FREE[resource];
+
   return (
     <div
       class="sk-nudge sk-nudge--upgrade"
@@ -45,7 +40,7 @@ export function UpgradeNudge({ resource, limit, testId }: UpgradeNudgeProps): JS
       data-testid={testId ?? `sk-upgrade-nudge-${resource}`}
       data-resource={resource}
     >
-      <span class="sk-nudge__text">{STR.body(noun, shown)}</span>
+      <span class="sk-nudge__text">{t('nudge.body', { limit: shown, noun })}</span>
     </div>
   );
 }

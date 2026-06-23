@@ -20,7 +20,7 @@ vi.mock('../src/core/settings', () => ({
   subscribeSettings: vi.fn(() => () => {}),
 }));
 import { InputBar } from '../src/ui/input-bar/InputBar';
-import { STR } from '../src/ui/input-bar/strings';
+import { t } from '../src/core/i18n';
 import type { PromptSearchResult } from '../src/shared/prompts';
 
 let container: HTMLElement;
@@ -69,7 +69,7 @@ describe('input-bar-shortcut: trigger label', () => {
   it('renders the visible "Insert prompt" label and a matching accessible name', () => {
     mount(<InputBar platform="claude" onInsert={vi.fn()} query={makeQuery() as never} />);
     const trigger = $('[data-testid="sk-ib-trigger"]')!;
-    expect(STR.slashTrigger).toBe('Insert prompt');
+    expect(t('inputBar.slashTrigger')).toBe('Insert prompt');
     expect(trigger.textContent).toContain('Insert prompt');
     // Accessible name is the explicit aria-label; the decorative kbd chip (aria-hidden)
     // never leaks into it.

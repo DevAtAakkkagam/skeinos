@@ -11,7 +11,9 @@ export function Panel({ children }: PanelProps) {
 }
 
 // Sample panel composing the base components. Used as the mount target in tests
-// and as a smoke surface for the harness; not a real feature.
+// and as a smoke surface for the harness; not a real feature — so its copy is
+// intentionally NOT routed through the i18n catalog (it never ships to a user).
+/* eslint-disable react/jsx-no-literals -- non-shipping smoke surface, see above */
 export function SamplePanel() {
   return (
     <Panel>
@@ -23,3 +25,4 @@ export function SamplePanel() {
     </Panel>
   );
 }
+/* eslint-enable react/jsx-no-literals */
