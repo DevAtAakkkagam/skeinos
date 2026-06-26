@@ -1,9 +1,9 @@
 {
   "platformId": "claude",
-  "configVersion": "1.0.1",
+  "configVersion": "1.2.0",
   "hostMatch": ["*://claude.ai/*"],
   "selectors": {
-    "conversationList": "nav[aria-label=\"Sidebar\"]",
+    "conversationList": "nav:has([data-testid=\"pin-sidebar-toggle\"])",
     "conversationItem": "a[href^=\"/chat/\"]",
     "conversationTitle": ".sr-only",
     "conversationIdAttr": "href",
@@ -12,8 +12,9 @@
     "messageAssistant": ".font-claude-message",
     "composer": "[data-testid=\"chat-input\"]",
     "sendButton": "button[aria-label=\"Send message\"]",
-    "sidebarAnchor": "nav[aria-label=\"Sidebar\"]",
-    "inputBarAnchor": "fieldset"
+    "sidebarAnchor": "nav:has([data-testid=\"pin-sidebar-toggle\"])",
+    "inputBarAnchor": "fieldset",
+    "authedMarker": "[data-testid=\"user-menu-button\"]"
   },
   "behaviors": {
     "insertMode": "react-set",

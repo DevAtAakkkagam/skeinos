@@ -61,6 +61,9 @@ export type MutationOp =
   | { op: 'folder.reorder'; orderedIds: string[] }
   | { op: 'folder.delete'; id: string }
   | { op: 'conversation.ingest'; platform: PlatformId; refs: ConversationRefLite[] }
+  // Prune index records for conversations the user deleted on the host (the adapter
+  // detects the row removal). Local-only cleanup — never the result of a sync op.
+  | { op: 'conversation.remove'; platform: PlatformId; nativeIds: string[] }
   | { op: 'conversation.assign'; conversationId: string; folderId: string | null }
   | { op: 'conversation.pin'; conversationId: string; pinned: boolean }
   | { op: 'conversation.archive'; conversationId: string; archived: boolean }

@@ -16,6 +16,9 @@ export type { MenuApi, MenuProps, MenuItemSpec, UseMenuOptions } from './Menu';
 export { Dialog, useDialog } from './Dialog';
 export type { DialogApi, DialogProps, UseDialogOptions } from './Dialog';
 
+export { PopoverScrim } from './PopoverScrim';
+export type { PopoverScrimProps, PopoverScrimVariant } from './PopoverScrim';
+
 // Re-exported for consumers that wire a machine's prop-getters by hand (e.g. the
 // sidebar's per-row context triggers).
 export { mergeProps } from './machine';

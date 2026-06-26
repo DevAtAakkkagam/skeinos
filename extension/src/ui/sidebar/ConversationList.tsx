@@ -15,12 +15,13 @@
 // from the caller (scoped by folder) and every action dispatches a worker mutation.
 // Tokens only, no hard-coded strings.
 
+import { Fragment } from 'preact';
 import { useRef, useState } from 'preact/hooks';
 import type { ActiveConversation, ConversationIndex, PlatformId, Tag } from '../../shared/types';
 import { conversationId, type FolderTreeSnapshot, type MutationOp } from '../../shared/workspace';
 import { MoreIcon, PinIcon } from '../components/Icon';
 import { PlatformLogo } from '../components/PlatformLogo';
-import { useMenu, mergeProps, getNodeRoot } from '../primitives';
+import { useMenu, mergeProps, getNodeRoot, PopoverScrim } from '../primitives';
 import { TagPicker } from '../tags/TagPicker';
 import { MoveToFolderPicker } from './MoveToFolderPicker';
 import { openConversation } from './openConversation';
@@ -28,11 +29,60 @@ import { DRAG_MIME, type DragPayload } from './drag';
 import { formatRelativeTime } from './relativeTime';
 import type { MutateResult } from './useWorkspace';
 import { useT, activeLocale } from '../../core/i18n';
+import type { MessageKey } from '../../core/i18n/catalog';
 
-// Cap the rendered rows so a folder with hundreds of ingested conversations does
-// not render them all at once; the cap is surfaced (never a silent truncation).
-// Virtualization is a marked follow-up (with the deferred detail view).
-const RENDER_CAP = 50;
+// Render rows a page at a time so a folder with hundreds of ingested conversations
+// does not mount them all at once. The first page shows `PAGE_SIZE`; a "Show more"
+// control reveals the next page on demand (never a silent truncation, and never a
+// dead-end caption). Full virtualization remains a marked follow-up.
+const PAGE_SIZE = 50;
+
+// Below this many live rows the list stays flat: date overlines would be noise on a
+// short folder. Above it, rows group under relative-date headers so a long list is
+// scannable at a glance instead of an undifferentiated wall.
+const GROUP_MIN = 12;
+
+const DAY_MS = 86_400_000;
+
+/** Relative-date bucket for one conversation, by local calendar day. Pinned rows are
+ *  bucketed by the caller (they lead, regardless of age). Pure + `now`-injectable. */
+export type ConvGroupKey = 'pinned' | 'today' | 'yesterday' | 'week' | 'older';
+const GROUP_ORDER: ConvGroupKey[] = ['pinned', 'today', 'yesterday', 'week', 'older'];
+const GROUP_LABEL_KEY: Record<ConvGroupKey, MessageKey> = {
+  pinned: 'conv.groupPinned',
+  today: 'conv.groupToday',
+  yesterday: 'conv.groupYesterday',
+  week: 'conv.groupThisWeek',
+  older: 'conv.groupOlder',
+};
+
+export function dateBucket(updatedAt: number, now: number): Exclude<ConvGroupKey, 'pinned'> {
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const today = startOfToday.getTime();
+  if (updatedAt >= today) return 'today';
+  if (updatedAt >= today - DAY_MS) return 'yesterday';
+  if (updatedAt >= today - 7 * DAY_MS) return 'week';
+  return 'older';
+}
+
+export interface ConvGroup {
+  key: ConvGroupKey;
+  items: ConversationIndex[];
+}
+
+/** Partition already-sorted rows (pinned-first, recent-within) into ordered relative-
+ *  date groups. Order is fixed (pinned → today → … → older); empty groups are dropped,
+ *  and within each group the caller's order is preserved. Pure + stable to test. */
+export function groupConversations(rows: ConversationIndex[], now: number): ConvGroup[] {
+  const buckets = new Map<ConvGroupKey, ConversationIndex[]>();
+  for (const c of rows) {
+    const key: ConvGroupKey = c.pinned ? 'pinned' : dateBucket(c.updatedAt, now);
+    const bucket = buckets.get(key) ?? buckets.set(key, []).get(key)!;
+    bucket.push(c);
+  }
+  return GROUP_ORDER.filter((k) => buckets.has(k)).map((k) => ({ key: k, items: buckets.get(k)! }));
+}
 
 // Context-menu action values (the menu item `value`s the Zag menu reports back).
 type ConvMenuAction = 'move' | 'tags' | 'pin' | 'archive';
@@ -93,6 +143,8 @@ export function ConversationList({
   const t = useT();
   const locale = activeLocale();
   const rootRef = useRef<HTMLDivElement>(null);
+  // How many rows are currently revealed; grows a page at a time via "Show more".
+  const [limit, setLimit] = useState(PAGE_SIZE);
   const [pickingId, setPickingId] = useState<string | null>(null);
   // Which conversation the tag-assignment picker is open for, plus the row element it
   // anchors to (the `⋯` → Tags… target). Anchored popover, not a centered modal.
@@ -107,7 +159,8 @@ export function ConversationList({
     context.kind === 'archived'
       ? sortConversations(archivedConversations(conversations))
       : sortConversations(nonArchivedConversations(conversations));
-  const rows = ordered.slice(0, RENDER_CAP);
+  const rows = ordered.slice(0, limit);
+  const hidden = ordered.length - rows.length;
   const activeId = active ? conversationId(active.platform, active.nativeId) : null;
   const picking = pickingId ? conversations.find((c) => c.id === pickingId) : undefined;
   const taggingConv = tagging ? conversations.find((c) => c.id === tagging.id) : undefined;
@@ -155,6 +208,11 @@ export function ConversationList({
 
   // A single render-time clock so every row's relative timestamp is consistent.
   const now = Date.now();
+
+  // Group rows under relative-date overlines once a list is long enough to warrant the
+  // structure (short folders stay flat). Archived stays flat — the dock is its own band.
+  const grouped =
+    context.kind !== 'archived' && ordered.length > GROUP_MIN ? groupConversations(rows, now) : null;
 
   // Mini tag chips on a row (full labels), resolving ids → live tags and capping the
   // count so a heavily-tagged row never overruns the narrow panel (overflow as "+k").
@@ -249,7 +307,22 @@ export function ConversationList({
   return (
     <div ref={rootRef} class="sk-conv-list" data-testid="sk-conversation-list">
       {rows.length > 0 ? (
-        <ul class="sk-conv-list__items">{rows.map(renderRow)}</ul>
+        <ul class="sk-conv-list__items">
+          {grouped
+            ? grouped.map((g) => (
+                <Fragment key={g.key}>
+                  <li
+                    class="sk-conv-group-label"
+                    role="presentation"
+                    data-testid={`sk-conv-group-${g.key}`}
+                  >
+                    {t(GROUP_LABEL_KEY[g.key])}
+                  </li>
+                  {g.items.map(renderRow)}
+                </Fragment>
+              ))
+            : rows.map(renderRow)}
+        </ul>
       ) : (
         <p class="sk-empty__body sk-conv-list__empty" data-testid="sk-conv-empty">
           {context.kind === 'unfiled'
@@ -260,10 +333,19 @@ export function ConversationList({
         </p>
       )}
 
-      {ordered.length > RENDER_CAP && (
-        <p class="sk-conv-list__cap" data-testid="sk-conv-cap">
-          {`${t('conv.capNote')} ${RENDER_CAP} ${t('conv.of')} ${ordered.length}`}
-        </p>
+      {hidden > 0 && (
+        <button
+          type="button"
+          class="sk-conv-more"
+          data-testid="sk-conv-more"
+          onClick={() => setLimit((n) => n + PAGE_SIZE)}
+        >
+          {t('conv.showMore', { count: hidden })}
+        </button>
+      )}
+
+      {menu.open && menuTarget && (
+        <PopoverScrim variant="menu" onDismiss={() => menu.setOpen(false)} testid="sk-conv-menu-scrim" />
       )}
 
       {menu.open && menuTarget && (

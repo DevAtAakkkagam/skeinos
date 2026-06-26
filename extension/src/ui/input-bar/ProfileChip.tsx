@@ -25,6 +25,7 @@ import {
   type SettingsHandler,
 } from '../../core/settings';
 import { queryProfilesRemote } from '../../core/profiles';
+import { subscribe as subscribeBroadcastLive, type BroadcastHandler } from '../../core/messaging';
 import { useFloating } from '../primitives/useFloating';
 import { composeProfileText } from '../profiles/compose';
 import { useShadowDismiss } from './hooks';
@@ -48,6 +49,9 @@ export interface ProfileChipProps {
   setSettings?: (partial: Partial<Settings>) => Promise<void>;
   /** Live settings subscription. Injectable for tests; drives cross-tab updates. */
   subscribeSettings?: (handler: SettingsHandler) => () => void;
+  /** Worker broadcast subscription. Injectable for tests; drives library refresh
+   *  when a profile is created/deleted elsewhere (the Profiles tab, another tab). */
+  subscribeBroadcast?: (handler: BroadcastHandler) => () => void;
 }
 
 export function ProfileChip({
@@ -57,6 +61,7 @@ export function ProfileChip({
   getSettings = getSettingsLive,
   setSettings = setSettingsLive,
   subscribeSettings = subscribeSettingsLive,
+  subscribeBroadcast = subscribeBroadcastLive,
 }: ProfileChipProps) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -85,6 +90,16 @@ export function ProfileChip({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Re-read the library whenever the worker fans `state.changed` (a profile created or
+  // deleted in the Profiles tab or another tab). Without this the picker keeps the
+  // stale mount-time snapshot and shows "No profiles yet" after a profile is added.
+  useEffect(() => {
+    const dispose = subscribeBroadcast((msg) => {
+      if (msg.kind === 'state.changed') void load();
+    });
+    return dispose;
+  }, [subscribeBroadcast, load]);
 
   // Read the active id once, then track it live so a change in another tab (or the
   // options page) re-marks the chip without a reload (D-1, the settings subscription).

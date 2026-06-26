@@ -9,8 +9,11 @@
 import {
   createAdapter,
   getPlatformHealth,
+  installDebugGlobal,
   loadConfig,
   matchPlatform,
+  type AdapterConfig,
+  type PlatformId,
   mountBanner,
   reportHealth,
   waitForSelfCheck,
@@ -44,8 +47,11 @@ export async function runContent(): Promise<void> {
   g.__skeinosContentStarted = true;
 
   const url = location.href;
-  const platformId = matchPlatform(url);
-  if (!platformId) return; // not a platform we drive
+  const matched = matchPlatform(url);
+  if (!matched) return; // not a platform we drive
+  // Re-typed as non-null so the hoisted `activate()` below (which loses the guard's
+  // control-flow narrowing) still sees a `PlatformId`, not `PlatformId | null`.
+  const platformId: PlatformId = matched;
 
   // Capture content-script crashes for diagnostics (task 6.6). Gated/scrubbed
   // worker-side; host-page stack frames are dropped before anything is sent.
@@ -59,35 +65,71 @@ export async function runContent(): Promise<void> {
   // A previously-degraded platform carries a hot-fix flag, which nudges the loader
   // to attempt a remote selector refresh on this load (design D-R4).
   const health = await getPlatformHealth(platformId);
-  const config = await loadConfig(platformId, { hotfixWanted: health.hotfixWanted });
-  if (!config) return; // no bundled config shipped for this platform yet
+  const loaded = await loadConfig(platformId, { hotfixWanted: health.hotfixWanted });
+  if (!loaded) return; // no bundled config shipped for this platform yet
+  // Non-null alias for the same reason as `platformId` above (hoisted `activate`).
+  const config: AdapterConfig = loaded;
 
   const adapter = createAdapter(config);
+  // Expose `window.__skeinos.diagnose()` for live, console-callable adapter
+  // diagnostics (read-only). Attached BEFORE the readiness branch so it is
+  // available on every outcome — including the breakage path that raises the
+  // banner and returns, which is exactly when a user needs to ask "why?".
+  installDebugGlobal(config, adapter);
+  // A diagnostics-safe version string (the audit requires a dotted version).
+  const configVer = /^\d+(?:\.\d+)*$/.test(adapter.configVersion) ? adapter.configVersion : '0';
   // Don't judge the adapter broken on the first synchronous probe: the host SPA
   // hydrates its anchors after `document_idle`, so wait (re-probing on DOM
   // mutations) until the check passes or a bounded timeout elapses. A genuinely
-  // stale selector still fails after the timeout and raises the banner below.
+  // stale selector still fails after the timeout and is classified below.
   const check = await waitForSelfCheck(adapter);
-  await reportHealth(platformId, check, adapter.configVersion);
-  if (!check.ok) {
+  // Classify the failure instead of always bannering (design D2): only a provably
+  // signed-in page with a missing anchor is a breakage; a signed-out page is quiet
+  // (no banner, no degraded report, no fallback telemetry). Fall back to the legacy
+  // ok→ready / fail→breakage split when the adapter predates `classify` (test stubs).
+  const readiness =
+    typeof adapter.classify === 'function' ? adapter.classify() : check.ok ? 'ready' : 'breakage';
+
+  if (readiness === 'breakage') {
+    // Signed-in but an anchor is genuinely missing: report degraded and surface the
+    // breakage (isolated to this tab). Retry re-probes and, on recovery, runs the
+    // SAME full ready path as a fresh load so the overlay actually mounts — closing
+    // the banner alone would leave the page bare (the "Retry does nothing" bug).
+    await reportHealth(platformId, check, adapter.configVersion);
     console.warn('[Skeinos] adapter self-check failed', platformId, check.missing);
-    // Surface the breakage to the user (isolated to this tab) instead of staying
-    // silent; Retry re-probes and clears the notice once the platform recovers.
-    mountBanner(adapter, platformId);
+    mountBanner(adapter, platformId, { onRecover: () => activate('full') });
     // Fallback-banner diagnostics (task 6.5): the user-visible degraded signal,
     // gated/dropped worker-side when diagnostics consent is off.
-    track('adapter_fallback_shown', {
-      platform: platformId,
-      configVer: /^\d+(?:\.\d+)*$/.test(adapter.configVersion) ? adapter.configVersion : '0',
-      reason: 'selfcheck_failed',
-    });
+    track('adapter_fallback_shown', { platform: platformId, configVer, reason: 'selfcheck_failed' });
     return;
   }
 
-  // Self-check passed: the adapter is ready. Ingest the host's current
-  // conversation list through the worker so folder counts and the unfiled section
-  // reflect them. The adapter is the only DOM reader; `core/` never touches the
-  // page. No workspace UI is mounted here — the side panel owns that surface now.
+  if (readiness !== 'ready') {
+    // Signed-out (compose-only or dormant): never raise the banner and never report
+    // degraded (so the canary/hot-fix signal stays clean). Emit a distinct, id-less
+    // diagnostic instead so the heuristic's field accuracy is observable.
+    track('adapter_signed_out', { platform: platformId, configVer });
+    if (readiness === 'signed-out-compose') {
+      console.log('[Skeinos] signed-out compose-only', platformId);
+      activate('compose');
+    } else {
+      console.log('[Skeinos] signed-out dormant', platformId);
+    }
+    return;
+  }
+
+  // Self-check passed: report healthy (clearing any prior degraded) and activate.
+  await reportHealth(platformId, check, adapter.configVersion);
+  activate('full');
+
+  // The ready path, wrapped so Retry/recovery can re-run it without a page reload.
+  // In `full` mode it ingests the host's conversation list through the worker and
+  // tracks the active conversation; in `compose` mode (a signed-out page that still
+  // exposes a composer) it mounts ONLY the input bar and skips the workspace seams.
+  // The adapter is the only DOM reader; `core/` never touches the page. No workspace
+  // UI is mounted here — the side panel owns that surface now.
+  function activate(mode: 'full' | 'compose'): void {
+  const workspace = mode === 'full';
   console.log('[Skeinos] adapter ready', platformId, adapter.configVersion);
 
   // Ingestion must be RESILIENT on SPA hosts (Claude/Gemini): the chat list is
@@ -133,9 +175,15 @@ export async function runContent(): Promise<void> {
     if (!isContextValid()) return void teardown();
     handles.inputBar?.dispose();
     handles.inputBar = undefined;
-    const points = adapter.mountPoints();
-    if (!points) return;
-    handles.inputBar = mountInputBar(points.inputBar, {
+    // Prefer the standalone input-bar anchor so the bar mounts on a signed-out
+    // compose-only page where the sidebar anchor is absent (and `mountPoints()`,
+    // which requires both, returns null). Fall back to `mountPoints()` for adapters
+    // that predate `inputBarMount` (older test stubs).
+    const point = adapter.inputBarMount
+      ? adapter.inputBarMount()
+      : (adapter.mountPoints()?.inputBar ?? null);
+    if (!point) return;
+    handles.inputBar = mountInputBar(point, {
       platform: platformId,
       onInsert: (text) => adapter.insertText(text),
       // Wipe the host composer entirely (replace-with-empty, never submits) — the
@@ -229,7 +277,9 @@ export async function runContent(): Promise<void> {
     }, INGEST_DEBOUNCE_MS);
   };
 
-  ingestList();
+  // Workspace seam: the conversation list only exists when signed in, so a
+  // compose-only page skips ingest entirely.
+  if (workspace) ingestList();
 
   // Active-conversation seam (conversation-filing): tell the worker which
   // conversation this tab currently has open so the side panel's
@@ -285,18 +335,31 @@ export async function runContent(): Promise<void> {
     reportActive(ref);
     void indexActive(ref);
   };
-  onActive(adapter.detectConversation());
-  // Dock the input bar now that the adapter is ready (design D-2). If the composer
-  // anchor is not hydrated yet, this no-ops; the `composer-ready` signal below mounts
-  // it once the composer arrives.
+  if (workspace) onActive(adapter.detectConversation());
+  // Dock the input bar now that the adapter is ready (design D-2) — this is the one
+  // overlay shared by both modes. If the composer anchor is not hydrated yet, this
+  // no-ops; the `composer-ready` signal below mounts it once the composer arrives.
   remountInputBar();
   handles.disposeObserver = adapter.observe((e) => {
     if (!isContextValid()) return void teardown();
-    if (e.type === 'conversation-changed') onActive(e.ref);
+    // The workspace seams (active conversation, list ingest) only run in full mode;
+    // compose-only listens for `composer-ready` alone so the bar re-anchors on SPA
+    // navigation but no history/filing traffic is sent.
+    if (workspace && e.type === 'conversation-changed') onActive(e.ref);
     // The host added/removed chats in its list (new chat, lazy render, infinite
     // scroll): re-ingest so the unfiled section and folder counts catch up
     // without a page reload. Debounced to collapse mutation bursts.
-    else if (e.type === 'list-changed') scheduleIngest();
+    else if (workspace && e.type === 'list-changed') scheduleIngest();
+    // The user deleted one or more conversations on the host (the adapter has already
+    // ruled out virtualization/collapse/re-render). Prune their index records so they
+    // stop showing in the list and search — ingest is additive and never would.
+    else if (workspace && e.type === 'list-removed') {
+      void mutateWorkspaceRemote({
+        op: 'conversation.remove',
+        platform: platformId,
+        nativeIds: e.nativeIds,
+      });
+    }
     // The composer first appeared, or an SPA navigation replaced it (adapter
     // re-emits on element-identity change, design D-3): (re-)anchor the bar into
     // the fresh `inputBar` mount point so it never orphans. Idempotent.
@@ -308,13 +371,17 @@ export async function runContent(): Promise<void> {
   // side panel keeps highlighting whichever same-platform tab reported last. The
   // worker dedupes a no-op report, so re-asserting the unchanged conversation costs
   // no broadcast. (PRIV-1: still id/title only, never content.)
-  handles.onVisibility = (): void => {
-    if (!isContextValid()) return void teardown();
-    if (doc?.visibilityState !== 'visible') return;
-    reportActive(adapter.detectConversation());
-    // The user was away on another tab where they may have started/renamed chats;
-    // re-ingest on return so this platform's list is current. (Idempotent + debounced.)
-    scheduleIngest();
-  };
-  doc?.addEventListener('visibilitychange', handles.onVisibility);
+  // Workspace-only: a compose-only page has no active record or list to re-assert.
+  if (workspace) {
+    handles.onVisibility = (): void => {
+      if (!isContextValid()) return void teardown();
+      if (doc?.visibilityState !== 'visible') return;
+      reportActive(adapter.detectConversation());
+      // The user was away on another tab where they may have started/renamed chats;
+      // re-ingest on return so this platform's list is current. (Idempotent + debounced.)
+      scheduleIngest();
+    };
+    doc?.addEventListener('visibilitychange', handles.onVisibility);
+  }
+  }
 }

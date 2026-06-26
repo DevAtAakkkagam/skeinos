@@ -240,3 +240,25 @@ export function countByFolder(conversations: ConversationIndex[]): Record<string
   }
   return counts;
 }
+
+/**
+ * Roll the per-folder `direct` counts up the tree so each node's total includes
+ * every conversation in its descendant subfolders — a parent's badge then equals
+ * everything reachable by expanding it, not just its direct children. Returns a
+ * total for every node in `nodes`; ids absent from the tree (e.g. archived
+ * folders, which render flat) keep their direct count via the caller's merge.
+ */
+export function rollupCounts(
+  nodes: FolderTreeNode[],
+  direct: Record<string, number>,
+): Record<string, number> {
+  const totals: Record<string, number> = {};
+  const visit = (node: FolderTreeNode): number => {
+    let total = direct[node.folder.id] ?? 0;
+    for (const child of node.children) total += visit(child);
+    totals[node.folder.id] = total;
+    return total;
+  };
+  for (const node of nodes) visit(node);
+  return totals;
+}

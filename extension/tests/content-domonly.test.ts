@@ -19,12 +19,19 @@ const m = vi.hoisted(() => ({
   observe: vi.fn((_cb: (e: unknown) => void) => () => {}),
   insertText: vi.fn((_t: string) => true),
   selfCheck: vi.fn((): { ok: boolean; missing: string[] } => ({ ok: true, missing: [] })),
+  // Default classify mirrors the legacy ok→ready / fail→breakage split, so existing
+  // tests stay unchanged; the signed-out tests override it explicitly.
+  classify: vi.fn(
+    (): string => (m.selfCheck().ok ? 'ready' : 'breakage'),
+  ),
+  inputBarMount: vi.fn((): HTMLElement | null => null),
   mountBanner: vi.fn(),
   reportHealth: vi.fn(async () => {}),
+  track: vi.fn(),
   mutateWorkspaceRemote: vi.fn(async () => ({ ok: true, data: {} })),
   loadConfig: vi.fn(async (): Promise<Record<string, unknown>> => ({ platformId: 'claude' })),
 }));
-const { selfCheck, mountBanner, reportHealth, mutateWorkspaceRemote } = m;
+const { selfCheck, classify, mountBanner, reportHealth, track, mutateWorkspaceRemote } = m;
 
 vi.mock('../src/adapters', () => ({
   matchPlatform: () => 'claude',
@@ -32,17 +39,21 @@ vi.mock('../src/adapters', () => ({
   loadConfig: m.loadConfig,
   createAdapter: () => ({
     selfCheck: m.selfCheck,
+    classify: m.classify,
     listConversations: m.listConversations,
     detectConversation: m.detectConversation,
     observe: m.observe,
-    // The input bar mounts at `mountPoints().inputBar`; returning null keeps these
+    // The input bar mounts at `inputBarMount()`; returning null keeps these
     // ingest/nudge tests focused (the bar no-ops until an anchor exists).
     mountPoints: () => null,
+    inputBarMount: m.inputBarMount,
     insertText: m.insertText,
     configVersion: '1.0.0',
   }),
   reportHealth: m.reportHealth,
   mountBanner: m.mountBanner,
+  // Read-only console debug global; a no-op disposer keeps the pipeline tests focused.
+  installDebugGlobal: () => () => {},
   // Delegate the readiness gate straight to the adapter's selfCheck so the
   // pipeline's success/failure paths stay driven by the `selfCheck` spy.
   waitForSelfCheck: async (a: { selfCheck: () => { ok: boolean; missing: string[] } }) =>
@@ -50,12 +61,20 @@ vi.mock('../src/adapters', () => ({
 }));
 
 vi.mock('../src/core/folders', () => ({ mutateWorkspaceRemote: m.mutateWorkspaceRemote }));
+vi.mock('../src/core/observability/client', () => ({
+  installExceptionCapture: () => {},
+  track: m.track,
+}));
 
 import { runContent } from '../src/content';
 
 beforeEach(() => {
   vi.clearAllMocks();
   selfCheck.mockReturnValue({ ok: true, missing: [] });
+  // Default classify mirrors the legacy ok→ready / fail→breakage split (the config
+  // reset above wipes the factory impl); signed-out tests override it explicitly.
+  classify.mockImplementation(() => (selfCheck().ok ? 'ready' : 'breakage'));
+  m.inputBarMount.mockReturnValue(null);
   document.body.innerHTML = '';
   // The content script now self-terminates once its extension context is
   // invalidated (uninstall/reload) — gated on `chrome.runtime.id`. Stub a live
@@ -144,6 +163,56 @@ describe('content script is DOM-only (7.4)', () => {
     expect(mountBanner).toHaveBeenCalled();
     expect(mutateWorkspaceRemote).not.toHaveBeenCalled();
     expect(document.querySelector('[data-skeinos-dock]')).toBeNull();
+  });
+
+  // Signed-out classification (design D2): a failing self-check on a signed-out page
+  // must NOT raise the banner, report degraded, or ingest — it is not a breakage.
+  describe('signed-out pages stay quiet (no false banner)', () => {
+    it('compose-only: no banner, no health report, no ingest; emits adapter_signed_out', async () => {
+      selfCheck.mockReturnValue({ ok: false, missing: ['conversationList', 'sidebarAnchor'] });
+      classify.mockReturnValue('signed-out-compose');
+      await runContent();
+
+      expect(mountBanner).not.toHaveBeenCalled();
+      expect(reportHealth).not.toHaveBeenCalled();
+      expect(mutateWorkspaceRemote).not.toHaveBeenCalled();
+      expect(track).toHaveBeenCalledWith(
+        'adapter_signed_out',
+        expect.objectContaining({ platform: 'claude' }),
+      );
+      expect(track).not.toHaveBeenCalledWith('adapter_fallback_shown', expect.anything());
+    });
+
+    it('dormant: fully quiet (no banner, no health, no ingest); emits adapter_signed_out', async () => {
+      selfCheck.mockReturnValue({
+        ok: false,
+        missing: ['composer', 'conversationList', 'sidebarAnchor'],
+      });
+      classify.mockReturnValue('signed-out-dormant');
+      await runContent();
+
+      expect(mountBanner).not.toHaveBeenCalled();
+      expect(reportHealth).not.toHaveBeenCalled();
+      expect(mutateWorkspaceRemote).not.toHaveBeenCalled();
+      expect(track).toHaveBeenCalledWith(
+        'adapter_signed_out',
+        expect.objectContaining({ platform: 'claude' }),
+      );
+    });
+
+    it('breakage still reports health and emits the fallback metric, not adapter_signed_out', async () => {
+      selfCheck.mockReturnValue({ ok: false, missing: ['composer'] });
+      classify.mockReturnValue('breakage');
+      await runContent();
+
+      expect(mountBanner).toHaveBeenCalled();
+      expect(reportHealth).toHaveBeenCalled();
+      expect(track).toHaveBeenCalledWith(
+        'adapter_fallback_shown',
+        expect.objectContaining({ reason: 'selfcheck_failed' }),
+      );
+      expect(track).not.toHaveBeenCalledWith('adapter_signed_out', expect.anything());
+    });
   });
 
   // Indexing-trigger resilience: on SPA hosts the chat list often isn't rendered

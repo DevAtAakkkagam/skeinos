@@ -33,6 +33,16 @@ export const PRIMITIVES_CSS = `
    the routine ones above it. One weight (1px), token-tinted like every other rule. */
 .sk-menu__divider { height: 1px; margin: var(--sk-space-1) 0; background: var(--sk-color-border); }
 
+/* Non-modal popover dismissal scrim (decision: popover-backdrop-dismiss). A real,
+   transparent full-surface element under an open menu/popover that absorbs the
+   outside pointer interaction so the control behind never receives it — no dimming
+   (unlike the modal dialog backdrop). Stacking is per-variant so the scrim sits one
+   level below the popover it guards: the Zag menu lives on the top layer (positioner
+   2147483647), the tag popover in a low local regime (.sk-tag-popover z-index 30). */
+.sk-popover-scrim { position: fixed; inset: 0; background: transparent; }
+.sk-popover-scrim--menu { z-index: 2147483646; }
+.sk-popover-scrim--tag { z-index: 29; }
+
 /* Dialog — backdrop overlays the overlay; positioner centers the content. */
 /* Tinted-dark scrim (indigo-tinted, never pure black) that darkens in both themes. */
 .sk-dialog__backdrop { position: fixed; inset: 0; z-index: 2147483646; background: rgba(22, 21, 31, 0.4); }

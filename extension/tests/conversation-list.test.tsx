@@ -97,13 +97,55 @@ describe('ConversationList rendering (4.1)', () => {
     expect($('[data-testid=sk-conv-empty]')!.textContent).toContain('No uncategorized conversations');
   });
 
-  it('caps the rendered rows and surfaces the cap (no silent truncation)', () => {
-    const many = Array.from({ length: 55 }, (_, i) => conv(`c${i}`, { title: `Chat ${i}`, updatedAt: i }));
+  it('pages the rendered rows and reveals more on demand (no silent truncation)', async () => {
+    const many = Array.from({ length: 120 }, (_, i) => conv(`c${i}`, { title: `Chat ${i}`, updatedAt: i }));
     renderList(many);
+    // First page only, and the hidden remainder is offered (never silently dropped).
     expect($$('[data-testid=sk-conv-row]')).toHaveLength(50);
-    const cap = $('[data-testid=sk-conv-cap]');
-    expect(cap).toBeTruthy();
-    expect(cap!.textContent).toContain('55');
+    const more = $('[data-testid=sk-conv-more]');
+    expect(more).toBeTruthy();
+    expect(more!.textContent).toContain('70'); // 120 - 50 still hidden
+
+    // Revealing pages in the next batch and updates the remaining count.
+    more!.click();
+    await flush();
+    expect($$('[data-testid=sk-conv-row]')).toHaveLength(100);
+    expect($('[data-testid=sk-conv-more]')!.textContent).toContain('20');
+
+    // A final reveal exhausts the list and retires the control.
+    $('[data-testid=sk-conv-more]')!.click();
+    await flush();
+    expect($$('[data-testid=sk-conv-row]')).toHaveLength(120);
+    expect($('[data-testid=sk-conv-more]')).toBeNull();
+  });
+
+  it('groups a long list under relative-date overlines, but leaves short lists flat', () => {
+    const now = Date.now();
+    const recent = Array.from({ length: 14 }, (_, i) =>
+      conv(`r${i}`, { title: `Recent ${i}`, updatedAt: now - i * 1000 }),
+    );
+    renderList(recent);
+    // 14 rows (> GROUP_MIN) all from today → a single TODAY overline, no OLDER bucket.
+    expect($('[data-testid=sk-conv-group-today]')).toBeTruthy();
+    expect($('[data-testid=sk-conv-group-older]')).toBeNull();
+
+    // A short list stays flat — no overlines.
+    renderList(recent.slice(0, 4));
+    expect($('[data-testid=sk-conv-group-today]')).toBeNull();
+  });
+
+  it('leads a grouped list with a Pinned overline above the date buckets', () => {
+    const now = Date.now();
+    const rows = [
+      conv('p', { title: 'Pinned one', pinned: true, updatedAt: now - 30 * 86_400_000 }),
+      ...Array.from({ length: 13 }, (_, i) => conv(`c${i}`, { updatedAt: now - i * 1000 })),
+    ];
+    renderList(rows);
+    const pinnedLabel = $('[data-testid=sk-conv-group-pinned]');
+    expect(pinnedLabel).toBeTruthy();
+    // The pinned row sorts under the Pinned overline, not its 30-day-old date bucket.
+    const labels = $$('.sk-conv-group-label').map((l) => l.dataset.testid);
+    expect(labels[0]).toBe('sk-conv-group-pinned');
   });
 });
 

@@ -5,9 +5,10 @@
 // the client and the view reconciles via the `profiles` broadcast (observe-don't-
 // replay), so the list and editor can never disagree with the worker's truth.
 
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import type { InstructionProfile } from '../../shared/types';
 import type { DomainId } from '../../shared/domains';
+import type { StarterKitInfo } from '../starter/StarterKitBand';
 import { installProfileSeedsRemote } from '../../core/profiles';
 import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import type { ProfileEditorSubmit } from './ProfileEditor';
@@ -23,6 +24,12 @@ export interface ProfilesController {
   profiles: InstructionProfile[];
   status: ProfileLibraryStatus;
   retry: () => void;
+
+  // --- starter-kit provenance (starter-kit-provenance) -------------------------
+  /** The active starter kit (domain + count of untouched seeds still present), or
+   *  `null` once every seed has been edited away or deleted. Mirrors the prompts
+   *  controller; drives the Profiles tab's provenance band. */
+  kit: StarterKitInfo | null;
 
   // --- editor (modal, mirrors the prompt editor) ------------------------------
   editorOpen: boolean;
@@ -71,6 +78,15 @@ export function useProfilesController(view?: ProfileLibraryView): ProfilesContro
       setPendingOpenId(null);
     }
   }, [pendingOpenId, profiles]);
+
+  // The active starter kit, derived from the profiles still carrying a `domain` (an
+  // edited seed sheds its `domain`, so the band self-empties). Single-kit-at-a-time
+  // (swap model), so the domain is homogeneous; the first seed's domain names the kit.
+  const kit = useMemo<StarterKitInfo | null>(() => {
+    const seeded = profiles.filter((p) => p.domain);
+    if (seeded.length === 0) return null;
+    return { domain: seeded[0].domain!, count: seeded.length };
+  }, [profiles]);
 
   const openCreate = useCallback((): void => {
     setEditing(undefined);
@@ -141,6 +157,7 @@ export function useProfilesController(view?: ProfileLibraryView): ProfilesContro
     profiles,
     status,
     retry: lib.retry,
+    kit,
     editorOpen,
     editing,
     openCreate,

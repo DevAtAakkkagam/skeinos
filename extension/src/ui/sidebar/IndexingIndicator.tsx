@@ -41,7 +41,7 @@ export function IndexingIndicator({ progress: override }: IndexingIndicatorProps
         aria-valuemax={total}
         aria-valuenow={done}
       >
-        <div class="sk-indexing__bar" style={{ width: `${pct}%` }} />
+        <div class="sk-indexing__bar" style={{ transform: `scaleX(${pct / 100})` }} />
       </div>
     </div>
   );

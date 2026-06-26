@@ -200,6 +200,22 @@ describe('Sidebar pinned & archive rows (folders delta)', () => {
     expect(row.querySelector('[data-testid=sk-folder-count]')!.textContent).toBe('3');
   });
 
+  it("a parent folder's count includes conversations in its subfolders", () => {
+    const child = node(folder('child', { name: 'Child', parentId: 'parent' }));
+    child.depth = 2;
+    renderSidebar(
+      makeView({ active: [node(folder('parent', { name: 'Parent' }), [child])], pinned: [], archived: [] }, {}, {
+        conversations: [
+          conv('a', { folderId: 'parent' }),
+          conv('b', { folderId: 'child' }),
+          conv('c', { folderId: 'child' }),
+        ],
+      }),
+    );
+    // Parent: 1 direct + 2 in the (collapsed) subfolder = 3.
+    expect($('[data-folder-id=parent] [data-testid=sk-folder-count]')!.textContent).toBe('3');
+  });
+
   it('does not render a standalone flat conversation list (folders-only tree)', () => {
     renderSidebar(
       makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {

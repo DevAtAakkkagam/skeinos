@@ -28,4 +28,4 @@ export const POSTHOG_BATCH_URL = `${POSTHOG_EU_HOST}${POSTHOG_BATCH_PATH}`;
  * keeps dev/test builds inert (PostHog drops unknown keys server-side, and the
  * consent gate means nothing is sent at all by default).
  */
-export const POSTHOG_PROJECT_KEY = 'phc_SKEINOS_PLACEHOLDER';
+export const POSTHOG_PROJECT_KEY = 'phc_CqeztCMcqishXc7QpJKCqeAeiTKpdxjjtjKXRFp6jr2r';

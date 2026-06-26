@@ -13,10 +13,11 @@ export type {
   Message,
   PlatformAdapter,
   PlatformId,
+  Readiness,
   SelfCheckResult,
   SubmitMode,
 } from './types';
-export { REQUIRED_ANCHORS } from './types';
+export { REQUIRED_ANCHORS, COMPOSE_ANCHORS, WORKSPACE_ANCHORS } from './types';
 
 export { createAdapter, type AdapterContext } from './runtime/adapter';
 export {
@@ -25,6 +26,13 @@ export {
   type WaitForSelfCheckOptions,
 } from './runtime/ready';
 export { loadConfig, type ConfigCache, type LoaderOptions } from './runtime/loader';
+export {
+  buildDiagnostics,
+  installDebugGlobal,
+  type AdapterDiagnostics,
+  type SelectorProbe,
+  type SkeinosDebugApi,
+} from './runtime/diagnose';
 export {
   validateAdapterConfig,
   isValidationErrors,

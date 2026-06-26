@@ -78,6 +78,26 @@ export const en = {
     '“{name}” will be removed and its prompts become uncategorized.',
   'prompts.confirmDelete': 'Delete',
 
+  // ── Starter-kit provenance band (shared by Prompts + Profiles) ─────────────
+  'starterKit.label': '{name} starter kit',
+  'starterKit.captionPrompts': {
+    one: '1 starter prompt — edit or delete any',
+    other: '{count} starter prompts — edit or delete any',
+  },
+  'starterKit.captionProfiles': {
+    one: '1 starter profile — edit or delete any',
+    other: '{count} starter profiles — edit or delete any',
+  },
+  'starterKit.change': 'Change',
+  'starterKit.changeAria': 'Change starter kit',
+  'starterKit.dialogTitle': 'Switch starter kit',
+  'starterKit.dialogBody':
+    'Pick a new kit. Items you’ve edited or created are kept — only the current kit’s untouched starter items are replaced.',
+  'starterKit.dialogPick': 'Starter kit',
+  'starterKit.cancel': 'Cancel',
+  'starterKit.replace': 'Replace',
+  'starterKit.replacing': 'Replacing…',
+
   // ── Profiles tab ─────────────────────────────────────────────────────────
   'profiles.panelLabel': 'Instruction profiles',
   'profiles.sectionTitle': 'Profiles',
@@ -226,8 +246,12 @@ export const en = {
   'conv.archiveAction': 'Archive',
   'conv.unarchive': 'Unarchive',
   'conv.emptyArchived': 'No archived conversations',
-  'conv.capNote': 'Showing the most recent',
-  'conv.of': 'of',
+  'conv.showMore': 'Show {count} more',
+  'conv.groupPinned': 'Pinned',
+  'conv.groupToday': 'Today',
+  'conv.groupYesterday': 'Yesterday',
+  'conv.groupThisWeek': 'This week',
+  'conv.groupOlder': 'Older',
 
   // ── Sidebar: shell (tabs, search box, footer) ────────────────────────────
   'shell.workspace': 'Chats and prompts, one thread',

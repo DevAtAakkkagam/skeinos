@@ -100,6 +100,17 @@ export function validateAdapterConfig(raw: unknown): AdapterConfig | ValidationE
       });
     }
 
+    // Optional: a signed-in marker selector (design D2), when present, must be a
+    // non-empty string. Its content rule (no text/aria-label/auth-URL) is enforced
+    // separately by the selector guard test, not by schema validation.
+    const authedMarker = raw.selectors.authedMarker;
+    if (authedMarker !== undefined && (typeof authedMarker !== 'string' || authedMarker.length === 0)) {
+      errors.push({
+        path: 'selectors.authedMarker',
+        message: 'must be a non-empty string when present',
+      });
+    }
+
     // Optional: a URL pattern for active-conversation detection, when present, must
     // be a non-empty string and a valid regex.
     const urlPattern = raw.selectors.conversationUrlPattern;

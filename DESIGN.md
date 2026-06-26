@@ -124,7 +124,7 @@ with a single mint signal and a single danger red.
 ### Primary
 - **Loom Indigo** (`#4f46e5` light / `#818cf8` dark): the sole accent. Almost never used as
   a flat fill; instead it is mixed into surfaces at low percentages (8% hover, 12% resting
-  tint, 16% icon-button hover, 18% active chip, 24% active conversation row) so the
+  tint, 16% icon-button hover, 24% active chip + active conversation row) so the
   interface reads as neutral with indigo *weather*, not indigo paint. Full-strength fill is
   reserved for the one primary button and focus rings.
 
@@ -236,7 +236,9 @@ radius, decisive focus states.
 ### Chips
 - **Filter chip:** pill (`999px`), `fg 8%` tinted background, Muted text, 12px. A filter
   control, never an action.
-- **Active filter chip:** accent-18% tint, accent text, holds its tint through hover.
+- **Active filter chip:** accent-24% tint with a 1px accent hairline ring (a full ring,
+  never a side-stripe) and accent text; holds its tint through hover, so the selected
+  filter is unmistakable across a wrapping chip row.
 - **Add seam (`+ Tag` / `+ New category`):** a 1px *dashed* ghost, transparent fill. This
   dashed language is the system's signal for "a future or creating action," distinct from the
   solid selectable chips. Keep create-affordances dashed and selection-chips solid so the two

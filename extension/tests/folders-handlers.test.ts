@@ -180,6 +180,45 @@ describe('mutate → persist → re-query round-trips', () => {
     if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
     expect(snap.conversations.find((c) => c.id === 'claude::c1')?.folderId).toBe('a'); // still filed
   });
+
+  it('conversation.remove prunes the deleted conversation, leaving the rest', async () => {
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'claude',
+      refs: [{ nativeId: 'c1', title: 'One' }, { nativeId: 'c2', title: 'Two' }],
+    });
+
+    const res = await mutateWorkspace(store, {
+      op: 'conversation.remove',
+      platform: 'claude',
+      nativeIds: ['c2'],
+    });
+    // Touches both stores so the panel re-reads and search drops the postings.
+    expect(res.stores).toEqual(['conversations', 'searchPostings']);
+
+    const snap = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    expect(snap.conversations.map((c) => c.id)).toEqual(['claude::c1']);
+  });
+
+  it('conversation.remove is idempotent for an unknown / already-removed id', async () => {
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'claude',
+      refs: [{ nativeId: 'c1', title: 'One' }],
+    });
+
+    // An id we never indexed must not throw and must leave the real one intact.
+    await mutateWorkspace(store, {
+      op: 'conversation.remove',
+      platform: 'claude',
+      nativeIds: ['ghost'],
+    });
+
+    const snap = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    expect(snap.conversations.map((c) => c.id)).toEqual(['claude::c1']);
+  });
 });
 
 describe('conversation pin / archive / colour ops (2.4)', () => {

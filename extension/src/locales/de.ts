@@ -67,6 +67,26 @@ export const de = {
     '„{name}“ wird entfernt und seine Prompts erhalten keine Kategorie mehr.',
   'prompts.confirmDelete': 'Löschen',
 
+  // ── Starter-Kit-Herkunftsleiste (geteilt: Prompts + Profile) ───────────────
+  'starterKit.label': 'Starter-Kit „{name}“',
+  'starterKit.captionPrompts': {
+    one: '1 Starter-Prompt — beliebig bearbeiten oder löschen',
+    other: '{count} Starter-Prompts — beliebig bearbeiten oder löschen',
+  },
+  'starterKit.captionProfiles': {
+    one: '1 Starter-Profil — beliebig bearbeiten oder löschen',
+    other: '{count} Starter-Profile — beliebig bearbeiten oder löschen',
+  },
+  'starterKit.change': 'Ändern',
+  'starterKit.changeAria': 'Starter-Kit ändern',
+  'starterKit.dialogTitle': 'Starter-Kit wechseln',
+  'starterKit.dialogBody':
+    'Wähle ein neues Kit. Von dir bearbeitete oder erstellte Einträge bleiben erhalten — nur die unveränderten Starter-Einträge des aktuellen Kits werden ersetzt.',
+  'starterKit.dialogPick': 'Starter-Kit',
+  'starterKit.cancel': 'Abbrechen',
+  'starterKit.replace': 'Ersetzen',
+  'starterKit.replacing': 'Wird ersetzt …',
+
   // ── Profiles tab ─────────────────────────────────────────────────────────
   'profiles.panelLabel': 'Anweisungsprofile',
   'profiles.sectionTitle': 'Profile',
@@ -215,8 +235,12 @@ export const de = {
   'conv.archiveAction': 'Archivieren',
   'conv.unarchive': 'Aus Archiv holen',
   'conv.emptyArchived': 'Keine archivierten Unterhaltungen',
-  'conv.capNote': 'Die neuesten werden angezeigt',
-  'conv.of': 'von',
+  'conv.showMore': '{count} weitere anzeigen',
+  'conv.groupPinned': 'Angeheftet',
+  'conv.groupToday': 'Heute',
+  'conv.groupYesterday': 'Gestern',
+  'conv.groupThisWeek': 'Diese Woche',
+  'conv.groupOlder': 'Älter',
 
   // ── Sidebar: shell (tabs, search box, footer) ────────────────────────────
   'shell.workspace': 'Chats und Prompts, ein Faden',

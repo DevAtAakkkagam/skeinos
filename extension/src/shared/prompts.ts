@@ -86,6 +86,13 @@ export type PromptMutationOp =
     }
   | { op: 'prompt.delete'; id: string }
   | { op: 'prompt.recordUse'; id: string }
+  | {
+      /** Remove every prompt still tagged with `domain` — the untouched starter
+       *  prompts of a kit (an edit strips `domain`, so edited/created prompts are
+       *  never matched). Drives the starter-kit swap's "replace" step. */
+      op: 'prompt.clearDomain';
+      domain: DomainId;
+    }
   | { op: 'promptFolder.create'; id: string; name: string; order: number; parentId: null }
   | { op: 'promptFolder.rename'; id: string; name: string }
   | { op: 'promptFolder.delete'; id: string };

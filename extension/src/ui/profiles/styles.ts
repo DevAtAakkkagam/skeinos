@@ -15,7 +15,7 @@ export const PROFILES_CSS = `
    only on keyboard focus-within, never on hover. */
 .sk-profiles__item {
   display: flex; align-items: flex-start; gap: var(--sk-space-2);
-  border-radius: var(--sk-radius); background: var(--sk-color-bg);
+  border: 1px solid var(--sk-color-border); border-radius: var(--sk-radius); background: var(--sk-color-bg);
   padding: var(--sk-space-2) var(--sk-space-2) var(--sk-space-3) var(--sk-space-3);
 }
 .sk-profiles__row {

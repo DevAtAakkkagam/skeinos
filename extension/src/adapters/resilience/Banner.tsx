@@ -12,6 +12,7 @@ import { Button } from '../../ui/components/Button';
 import { Text } from '../../ui/components/Text';
 import { CloseIcon } from '../../ui/components/Icon';
 import type { PlatformAdapter, PlatformId } from '../types';
+import { waitForSelfCheck } from '../runtime/ready';
 import { reportHealth } from './report';
 
 /** User-facing strings kept in one place so they are i18n-ready (no inline copy). */
@@ -60,13 +61,26 @@ export interface MountBannerOptions {
   theme?: Theme;
   /** Where to anchor the banner host (defaults to the page `body`). */
   target?: HTMLElement;
+  /**
+   * Run the platform's full ready path once a retry passes the self-check. The
+   * banner only re-probes the DOM and reports health; mounting the overlay
+   * (input bar) and wiring the host observers is the content script's job, so it
+   * supplies this. Without it, a passing Retry would merely close the banner and
+   * leave the page bare — the user would have to reload to actually get the
+   * overlay (the observed "Retry does nothing, reload works"). Optional so the
+   * contract tests can mount the banner standalone.
+   */
+  onRecover?: () => void;
 }
 
 /**
  * Mount the breakage banner on the current tab and return a disposer. Retry
- * re-runs the adapter's `selfCheck()`: on a pass it disposes the banner and reports
- * the platform healthy (clearing degraded state); a still-failing retry leaves the
- * banner up. Dismiss disposes it for this session.
+ * re-runs the adapter's check — and, like the initial load, gives the host SPA a
+ * grace period to (re-)hydrate its anchors via `waitForSelfCheck` rather than a
+ * single synchronous probe (a click landing mid-render would otherwise fail
+ * spuriously). On a pass it activates the overlay (`onRecover`), disposes the
+ * banner, and reports the platform healthy (clearing degraded state); a
+ * still-failing retry leaves the banner up. Dismiss disposes it for this session.
  */
 export function mountBanner(
   adapter: PlatformAdapter,
@@ -75,6 +89,9 @@ export function mountBanner(
 ): () => void {
   const target = opts.target ?? document.body;
   let handle: MountHandle | null = null;
+  // Each Retry click starts an async re-probe; without this a rapid double-click
+  // could resolve twice and run `activate()` twice (double-wiring host observers).
+  let recovering = false;
 
   const dispose = (): void => {
     handle?.dispose();
@@ -82,11 +99,19 @@ export function mountBanner(
   };
 
   const onRetry = (): void => {
-    const check = adapter.selfCheck();
-    if (check.ok) {
+    if (recovering) return;
+    recovering = true;
+    void waitForSelfCheck(adapter).then((check) => {
+      if (!check.ok) {
+        recovering = false; // still broken — allow another retry, leave the banner up
+        return;
+      }
+      // Mount the overlay BEFORE disposing the banner so a throw in activation
+      // doesn't leave the user with neither the overlay nor the notice.
+      opts.onRecover?.();
       dispose();
       void reportHealth(platform, check);
-    }
+    });
   };
 
   handle = mount(target, h(Banner, { platform, onRetry, onDismiss: dispose }), {

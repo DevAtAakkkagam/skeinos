@@ -68,6 +68,26 @@ export const es = {
     '«{name}» se eliminará y sus prompts pasarán a estar sin categoría.',
   'prompts.confirmDelete': 'Eliminar',
 
+  // ── Barra de procedencia del paquete inicial (Prompts + Perfiles) ──────────
+  'starterKit.label': 'Paquete inicial «{name}»',
+  'starterKit.captionPrompts': {
+    one: '1 prompt inicial — edita o elimina cualquiera',
+    other: '{count} prompts iniciales — edita o elimina cualquiera',
+  },
+  'starterKit.captionProfiles': {
+    one: '1 perfil inicial — edita o elimina cualquiera',
+    other: '{count} perfiles iniciales — edita o elimina cualquiera',
+  },
+  'starterKit.change': 'Cambiar',
+  'starterKit.changeAria': 'Cambiar paquete inicial',
+  'starterKit.dialogTitle': 'Cambiar paquete inicial',
+  'starterKit.dialogBody':
+    'Elige un paquete nuevo. Los elementos que hayas editado o creado se conservan; solo se reemplazan los elementos iniciales intactos del paquete actual.',
+  'starterKit.dialogPick': 'Paquete inicial',
+  'starterKit.cancel': 'Cancelar',
+  'starterKit.replace': 'Reemplazar',
+  'starterKit.replacing': 'Reemplazando…',
+
   // ── Profiles tab ─────────────────────────────────────────────────────────
   'profiles.panelLabel': 'Perfiles de instrucciones',
   'profiles.sectionTitle': 'Perfiles',
@@ -216,8 +236,12 @@ export const es = {
   'conv.archiveAction': 'Archivar',
   'conv.unarchive': 'Desarchivar',
   'conv.emptyArchived': 'No hay conversaciones archivadas',
-  'conv.capNote': 'Mostrando las más recientes',
-  'conv.of': 'de',
+  'conv.showMore': 'Mostrar {count} más',
+  'conv.groupPinned': 'Fijadas',
+  'conv.groupToday': 'Hoy',
+  'conv.groupYesterday': 'Ayer',
+  'conv.groupThisWeek': 'Esta semana',
+  'conv.groupOlder': 'Anteriores',
 
   // ── Sidebar: shell (tabs, search box, footer) ────────────────────────────
   'shell.workspace': 'Chats y prompts, un solo hilo',

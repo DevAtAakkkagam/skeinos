@@ -11,17 +11,18 @@ import type { AdapterConfig, PlatformAdapter, PlatformId } from '../src/adapters
 
 const claudeConfig = getBundledConfig('claude') as AdapterConfig;
 
-// Minimal host markup matching the Claude config's required anchors
-// (nav[aria-label="Sidebar"], a fieldset input bar, and the chat-input composer).
+// Minimal host markup matching the Claude config's required anchors (the sidebar
+// <nav> keyed by its stable `pin-sidebar-toggle` testid, a fieldset input bar, and
+// the chat-input composer).
 const HEALTHY_HTML = `
-  <nav aria-label="Sidebar"><a href="/chat/c1">Chat</a></nav>
+  <nav><button data-testid="pin-sidebar-toggle"></button><a href="/chat/c1">Chat</a></nav>
   <fieldset>
     <div data-testid="chat-input" contenteditable="true" class="tiptap ProseMirror"></div>
   </fieldset>
 `;
 // A "broken config": the composer anchor the selectors target is gone.
 const BROKEN_HTML = `
-  <nav aria-label="Sidebar"><a href="/chat/c1">Chat</a></nav>
+  <nav><button data-testid="pin-sidebar-toggle"></button><a href="/chat/c1">Chat</a></nav>
   <fieldset></fieldset>
 `;
 
@@ -43,6 +44,9 @@ function banners(): Element[] {
     .map((host) => (host as HTMLElement).shadowRoot?.querySelector('[data-testid="sk-breakage-banner"]'))
     .filter((el): el is Element => el != null);
 }
+
+/** Let the async Retry handler's `waitForSelfCheck().then(...)` microtask settle. */
+const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 function buttonByText(banner: Element, text: string): HTMLButtonElement {
   const btn = Array.from(banner.querySelectorAll('button')).find(
@@ -87,17 +91,24 @@ describe('Breakage-notice banner (5.5)', () => {
     expect(banners()).toHaveLength(0);
   });
 
-  it('Retry on a still-broken platform leaves the banner up', () => {
+  it('Retry on a still-broken platform leaves the banner up and fires no recovery', async () => {
     const { adapter } = makeAdapter(BROKEN_HTML);
-    mountBanner(adapter, 'claude');
+    let recovered = 0;
+    mountBanner(adapter, 'claude', { onRecover: () => recovered++ });
 
     buttonByText(banners()[0], BANNER_LABELS.retry).click();
+    await flush();
     expect(banners()).toHaveLength(1);
+    expect(recovered).toBe(0);
   });
 
-  it('Retry on a recovered platform disposes the banner', () => {
+  it('Retry on a recovered platform runs the ready path, then disposes the banner', async () => {
     const { adapter, root } = makeAdapter(BROKEN_HTML);
-    mountBanner(adapter, 'claude');
+    // `onRecover` is the content script's ready path (mount the overlay + observers);
+    // a passing Retry MUST run it, else the banner closes onto a bare page (the
+    // "Retry does nothing, reload works" bug).
+    let recovered = 0;
+    mountBanner(adapter, 'claude', { onRecover: () => recovered++ });
     expect(banners()).toHaveLength(1);
 
     // The host page recovers: the missing composer anchor reappears.
@@ -107,6 +118,8 @@ describe('Breakage-notice banner (5.5)', () => {
     root.querySelector('fieldset')!.appendChild(composer);
 
     buttonByText(banners()[0], BANNER_LABELS.retry).click();
+    await flush();
+    expect(recovered).toBe(1);
     expect(banners()).toHaveLength(0);
   });
 });

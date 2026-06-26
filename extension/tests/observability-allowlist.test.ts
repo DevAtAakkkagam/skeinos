@@ -53,6 +53,10 @@ const VALID_EMITS: Record<EventName, TelemetryEmit> = {
     name: 'adapter_fallback_shown',
     props: { platform: 'gemini', configVer: '1.0.1', reason: 'selfcheck_failed' },
   },
+  adapter_signed_out: {
+    name: 'adapter_signed_out',
+    props: { platform: 'gemini', configVer: '1.0.1' },
+  },
   adapter_recovered: {
     name: 'adapter_recovered',
     props: { platform: 'gemini', configVer: '2.0' },

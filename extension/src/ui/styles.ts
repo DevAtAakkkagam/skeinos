@@ -110,7 +110,13 @@ export const COMPONENT_CSS = `
   border: 1px solid var(--sk-color-border);
   border-radius: var(--sk-radius);
   padding: var(--sk-space-2) var(--sk-space-3);
-  box-shadow: 0 6px 24px color-mix(in srgb, var(--sk-color-shadow) 28%, transparent);
+  /* Layered, negative-spread drop shadow: a tight contact layer + two soft, inset
+     halos so it reads as a natural elevation rather than the single hard 24px smudge
+     that looked blocky over Gemini's colored gradient. */
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--sk-color-shadow) 12%, transparent),
+    0 8px 20px -6px color-mix(in srgb, var(--sk-color-shadow) 20%, transparent),
+    0 18px 48px -12px color-mix(in srgb, var(--sk-color-shadow) 16%, transparent);
 }
 .sk-snackbar__content { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sk-snackbar__content .sk-text { font-weight: 600; }

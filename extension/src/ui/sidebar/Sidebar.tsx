@@ -10,7 +10,7 @@ import { Fragment } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ConversationIndex, Folder, FolderTreeNode, PlatformId } from '../../shared/types';
 import { conversationId, type MutationOp } from '../../shared/workspace';
-import { countByFolder } from '../../core/folders';
+import { countByFolder, rollupCounts } from '../../core/folders';
 import { filterByTags } from '../../core/tags';
 import type { Tag } from '../../shared/types';
 import { Dialog, useMenu, mergeProps, getNodeRoot } from '../primitives';
@@ -137,7 +137,12 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
   // unarchived.
   const liveConvs = visibleConvs.filter((c) => !c.archived);
   const archivedConvs = visibleConvs.filter((c) => c.archived);
-  const counts = countByFolder(liveConvs);
+  // Direct membership, then rolled up the active tree so a parent folder's badge
+  // includes everything in its subfolders (the count equals what expanding the
+  // folder reveals). Archived folders render flat outside the active tree, so they
+  // fall back to their direct count via the merge.
+  const directCounts = countByFolder(liveConvs);
+  const counts = { ...directCounts, ...rollupCounts(tree.active, directCounts) };
 
   // Conversations that belong to no folder — surfaced under the "Unfiled" node so
   // they stay reachable in a folders-only tree (the design has no flat list).
@@ -938,6 +943,9 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
   // A new folder's id is fixed once, so a retry after a (possibly committed but
   // unacknowledged) attempt overwrites the same row instead of duplicating it.
   const [newId] = useState(makeFolderId);
+  // Focus the name field on open instead of Zag's default (the header close button,
+  // first in DOM order) so the user can type a name immediately.
+  const nameRef = useRef<HTMLInputElement>(null);
 
   // A folder cannot be its own parent or nest under one of its descendants, so
   // prune the edited folder's subtree from the options.
@@ -1008,6 +1016,7 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
       onClose={onClose}
       ariaLabel={editing ? t('sidebar.editTitle') : t('sidebar.createTitle')}
       contentTestId="sk-folder-dialog"
+      initialFocusEl={() => nameRef.current}
     >
       <form class="sk-dialog__body sk-folder-form" onSubmit={submit}>
         <div class="sk-dialog__header">
@@ -1030,6 +1039,7 @@ function FolderDialog({ state, tree, onClose, onSubmit }: FolderDialogProps) {
               )}
             </span>
             <input
+              ref={nameRef}
               class="sk-name-field__input"
               data-testid="sk-folder-name"
               aria-label={t('sidebar.name')}

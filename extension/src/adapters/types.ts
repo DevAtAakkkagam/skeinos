@@ -28,6 +28,19 @@ export interface SelfCheckResult {
   missing: string[];
 }
 
+/**
+ * How the content script should react after probing the DOM, derived from
+ * `selfCheck()` + the optional `authedMarker` + the capability tiers (design D2):
+ * - `ready` — all required anchors resolve; mount the full overlay.
+ * - `breakage` — anchors are missing while the user is provably signed in (the
+ *   `authedMarker` resolves) — a genuine breakage that earns the banner. Also the
+ *   legacy default when a config carries no `authedMarker`.
+ * - `signed-out-compose` — not signed in, but the COMPOSE tier resolves: mount the
+ *   input bar only (no history, no banner).
+ * - `signed-out-dormant` — not signed in and no composer: stay quiet (no banner).
+ */
+export type Readiness = 'ready' | 'breakage' | 'signed-out-compose' | 'signed-out-dormant';
+
 /** Live signals an adapter emits so the overlay tracks host-page changes. */
 export type AdapterEvent =
   // `ref` is null when the active tab leaves a conversation (e.g. a "new chat"/home
@@ -35,6 +48,11 @@ export type AdapterEvent =
   // stale one.
   | { type: 'conversation-changed'; ref: ConversationRef | null }
   | { type: 'list-changed' }
+  // One or more conversations disappeared from the host list AND it was a genuine
+  // user delete, not virtualization/scroll-recycling, a sidebar collapse, or a
+  // full-list re-render (the adapter guards all three). `nativeIds` are the removed
+  // ids so the consumer can prune their records (see `observe`).
+  | { type: 'list-removed'; nativeIds: string[] }
   | { type: 'composer-ready' };
 
 /**
@@ -45,6 +63,10 @@ export interface PlatformAdapter {
   readonly platformId: PlatformId;
   readonly configVersion: string;
   selfCheck(): SelfCheckResult;
+  /** Classify the page after probing the DOM (design D2): drives whether the
+   *  content script mounts the full overlay, an input-bar-only overlay, stays
+   *  dormant, or raises the breakage banner. Never throws. */
+  classify(): Readiness;
   detectConversation(): ConversationRef | null;
   listConversations(): ConversationRef[];
   readMessages(nativeId: string): Promise<Message[]>;
@@ -54,6 +76,10 @@ export interface PlatformAdapter {
   insertText(text: string, opts?: { replace?: boolean }): boolean;
   submit(): boolean;
   mountPoints(): { sidebar: HTMLElement; inputBar: HTMLElement } | null;
+  /** The input-bar dock anchor on its own — resolves even when the sidebar anchor
+   *  is absent (a signed-out compose-only page), so the input bar can mount there
+   *  where `mountPoints()` (which requires both) would return null. */
+  inputBarMount(): HTMLElement | null;
   observe(onChange: (e: AdapterEvent) => void): () => void; // returns a disposer
 }
 
@@ -86,6 +112,14 @@ export interface AdapterSelectors {
   sendButton: string;
   sidebarAnchor: string;
   inputBarAnchor: string;
+  /** Optional selector matching an element present ONLY when the user is signed in
+   *  (e.g. an account/avatar control). When it resolves on a failing `selfCheck()`,
+   *  the failure is a genuine breakage (banner); when it does not, the page is
+   *  treated as signed-out (no banner) — see {@link Readiness}. MUST be
+   *  language-independent: no visible text, `aria-label`, or assumed auth/route
+   *  URL (prefer `data-testid`/stable structural attrs). Absent ⇒ never classified
+   *  signed-out (legacy behavior). */
+  authedMarker?: string;
 }
 
 /** Platform write quirks the generic adapter switches on (never on platformId). */
@@ -121,7 +155,23 @@ export interface AdapterConfig {
   behaviors: AdapterBehaviors;
 }
 
-/** The selector keys that must resolve for an overlay to mount (LLD §4.3). */
+/** Anchors the input bar needs: a usable composer + its dock. Present on a
+ *  signed-out page that still exposes a composer (ChatGPT/Gemini), enabling the
+ *  compose-only overlay (design D2). */
+export const COMPOSE_ANCHORS = [
+  'composer',
+  'inputBarAnchor',
+] as const satisfies readonly (keyof AdapterSelectors)[];
+
+/** Anchors the workspace features need: the host conversation list + its nav.
+ *  Absent on a signed-out page even when COMPOSE resolves. */
+export const WORKSPACE_ANCHORS = [
+  'conversationList',
+  'sidebarAnchor',
+] as const satisfies readonly (keyof AdapterSelectors)[];
+
+/** The selector keys that must resolve for the full overlay to mount (LLD §4.3) —
+ *  the union of the COMPOSE and WORKSPACE tiers. */
 export const REQUIRED_ANCHORS = [
   'composer',
   'conversationList',

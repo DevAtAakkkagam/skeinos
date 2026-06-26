@@ -1,6 +1,6 @@
 {
   "platformId": "gemini",
-  "configVersion": "1.0.0",
+  "configVersion": "1.1.0",
   "hostMatch": ["*://gemini.google.com/*"],
   "selectors": {
     "conversationList": "conversations-list",
@@ -13,7 +13,8 @@
     "composer": ".ql-editor",
     "sendButton": "button[aria-label=\"Send message\"]",
     "sidebarAnchor": "bard-sidenav",
-    "inputBarAnchor": "input-area-v2"
+    "inputBarAnchor": "input-area-v2",
+    "authedMarker": ".mavatar-container"
   },
   "behaviors": {
     "insertMode": "execCommand",

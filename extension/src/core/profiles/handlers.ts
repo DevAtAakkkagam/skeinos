@@ -108,8 +108,23 @@ export async function mutateProfileLibrary(
       if (op.instructionText !== undefined) next.instructionText = op.instructionText;
       if (op.appliesTo !== undefined) next.appliesTo = op.appliesTo;
       if (op.responseStyle !== undefined) next.responseStyle = op.responseStyle;
+      // Graduate a starter-kit seed into a user-owned profile on ANY editor save
+      // (starter-kit-provenance), mirroring `prompt.update`: editing a seeded profile
+      // makes it "theirs", so drop the catalog provenance. The provenance band counts
+      // only profiles that still carry `domain`.
+      delete next.domain;
+      delete next.seedId;
       await store.profiles.put(next);
       return { stores: ['profiles'] };
+    }
+    case 'profile.clearDomain': {
+      // Replace step of a starter-kit swap: tombstone every profile still tagged with
+      // this domain (the untouched seeds — edited ones already shed `domain` above).
+      // One broadcast for the batch; reports no touched store when nothing matched.
+      const profiles = await store.profiles.query();
+      const stale = profiles.filter((p) => p.domain === op.domain);
+      for (const p of stale) await store.profiles.delete(p.id);
+      return { stores: stale.length > 0 ? ['profiles'] : [] };
     }
     case 'profile.delete': {
       // Tombstone via the repo (profiles are syncable, so `delete` writes a tombstone).

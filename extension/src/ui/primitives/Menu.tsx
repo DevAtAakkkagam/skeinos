@@ -9,6 +9,7 @@ import type { ComponentChild } from 'preact';
 import * as menu from '@zag-js/menu';
 import { useMachine, normalizeProps } from './machine';
 import { getNodeRoot, nextId } from './shadow';
+import { PopoverScrim } from './PopoverScrim';
 
 export type MenuApi = ReturnType<typeof menu.connect>;
 
@@ -59,6 +60,9 @@ export function Menu({ trigger, items, onSelect, contentTestId, triggerTestId, i
       <button class="sk-btn" data-testid={triggerTestId} {...api.getTriggerProps()}>
         {trigger}
       </button>
+      {api.open && (
+        <PopoverScrim variant="menu" onDismiss={() => api.setOpen(false)} testid="sk-menu-scrim" />
+      )}
       {api.open && (
         <div class="sk-menu__positioner" {...api.getPositionerProps()}>
           <div class="sk-menu" data-testid={contentTestId} {...api.getContentProps()}>

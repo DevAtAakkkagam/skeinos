@@ -18,6 +18,7 @@ import {
   nextOrder,
   pinnedFolders,
   reorderSiblings,
+  rollupCounts,
 } from '../src/core/folders/tree';
 import type { ConversationIndex, Folder } from '../src/shared/types';
 
@@ -159,5 +160,31 @@ describe('Conversation assignment and counts', () => {
   it('counts reflect current assignments and ignore unfiled', () => {
     const counts = countByFolder([conv('1', 'f1'), conv('2', 'f1'), conv('3', 'f2'), conv('4', null)]);
     expect(counts).toEqual({ f1: 2, f2: 1 });
+  });
+
+  it('rolls subfolder counts up into each ancestor', () => {
+    // parent → child → grandchild, with a direct conv at each level.
+    const folders = [
+      folder('parent', { order: 0 }),
+      folder('child', { parentId: 'parent', order: 0 }),
+      folder('grand', { parentId: 'child', order: 0 }),
+    ];
+    const tree = buildTree(folders);
+    const direct = countByFolder([
+      conv('1', 'parent'),
+      conv('2', 'child'),
+      conv('3', 'child'),
+      conv('4', 'grand'),
+    ]);
+    const totals = rollupCounts(tree, direct);
+    expect(totals).toEqual({ parent: 4, child: 3, grand: 1 });
+  });
+
+  it('gives a childless folder its direct count and a parent its subtree total', () => {
+    const folders = [folder('p', { order: 0 }), folder('c', { parentId: 'p', order: 0 })];
+    const tree = buildTree(folders);
+    // Parent has no direct convs; the child holds one.
+    const totals = rollupCounts(tree, countByFolder([conv('1', 'c')]));
+    expect(totals).toEqual({ p: 1, c: 1 });
   });
 });

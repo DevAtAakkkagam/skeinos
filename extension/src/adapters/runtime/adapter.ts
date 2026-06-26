@@ -9,6 +9,8 @@ import {
   type ConversationRef,
   type Message,
   type PlatformAdapter,
+  type Readiness,
+  COMPOSE_ANCHORS,
   REQUIRED_ANCHORS,
 } from '../types';
 import { readComposerText, writeComposer } from './composer-io';
@@ -73,9 +75,42 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     );
   }
 
+  // On a platform that drops its conversation list from the DOM while its side
+  // drawer is collapsed (Gemini — `listHiddenWhenCollapsed`), an absent
+  // `conversationList` is the EXPECTED collapsed state, not a breakage: the list
+  // anchor reappears the moment the user opens the drawer. Requiring it here would
+  // classify a signed-in collapsed page as `breakage` and raise the on-page banner,
+  // when the intended reaction is to activate and let the side panel show the
+  // collapsed-list nudge. So we relax just that one anchor for such platforms; the
+  // composer/sidebar/input-bar anchors stay required (they persist when collapsed).
+  function requiredAnchors(): readonly (typeof REQUIRED_ANCHORS)[number][] {
+    if (!behaviors.listHiddenWhenCollapsed) return REQUIRED_ANCHORS;
+    return REQUIRED_ANCHORS.filter((key) => key !== 'conversationList');
+  }
+
   function selfCheck() {
-    const missing = REQUIRED_ANCHORS.filter((key) => !q(selectors[key]));
+    const missing = requiredAnchors().filter((key) => !q(selectors[key]));
     return { ok: missing.length === 0, missing: [...missing] };
+  }
+
+  /** Whether the config carries an `authedMarker` AND it resolves in the document —
+   *  i.e. the host app shell is rendered for a signed-in user. A config without an
+   *  `authedMarker` can never be proven signed-in here (see `classify`). */
+  function signedInDetected(): boolean {
+    const sel = selectors.authedMarker;
+    return !!sel && !!q(sel);
+  }
+
+  /** Classify the page after a DOM probe (design D2). Fail-quiet: only a provably
+   *  signed-in page with a missing anchor is a `breakage`; anything we cannot prove
+   *  signed-in is treated as signed-out (no banner). A config without an
+   *  `authedMarker` keeps the legacy behavior (a failing check is a `breakage`). */
+  function classify(): Readiness {
+    if (selfCheck().ok) return 'ready';
+    // Can't prove signed-out without a marker → preserve legacy breakage behavior.
+    if (!selectors.authedMarker || signedInDetected()) return 'breakage';
+    const composeOk = COMPOSE_ANCHORS.every((key) => !!q(selectors[key]));
+    return composeOk ? 'signed-out-compose' : 'signed-out-dormant';
   }
 
   // A human title for the open conversation when no list item supplies one — the
@@ -179,6 +214,27 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return sidebar && inputBar ? { sidebar, inputBar } : null;
   }
 
+  /** The input-bar dock on its own — used by the compose-only overlay where the
+   *  sidebar anchor is absent and `mountPoints()` would therefore return null. */
+  function inputBarMount(): HTMLElement | null {
+    return q<HTMLElement>(selectors.inputBarAnchor);
+  }
+
+  // Removal-detection guards (design: DOM row-removal observer). A row vanishing
+  // from the host list is only treated as a real delete when ALL hold: the list is
+  // still present (not collapsed/torn down), the burst is small (a user deletes one
+  // at a time — a mass disappearance is a re-render), and no scroll happened just
+  // before (a scroll that recycles virtualized rows is not a delete). Together these
+  // make a false prune — which would lose the user's folder/tags — very unlikely.
+  const idsOf = (els: Element[]): Set<string> => {
+    const ids = new Set<string>();
+    for (const el of els) {
+      const id = el.getAttribute(selectors.conversationIdAttr);
+      if (id) ids.add(id);
+    }
+    return ids;
+  };
+
   function observe(onChange: (e: AdapterEvent) => void): () => void {
     let disposed = false;
     const emit = (e: AdapterEvent) => {
@@ -186,7 +242,19 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     };
 
     let lastActive = detectConversation()?.nativeId ?? null;
-    let lastCount = itemElements().length;
+    let lastIds = idsOf(itemElements());
+    let lastCount = lastIds.size;
+    // A scroll within this window before a removal marks it as virtualization
+    // recycling rather than a delete. `Date.now()` is fine here — this is the
+    // content-script/DOM path, not a workflow script.
+    const SCROLL_GRACE_MS = 700;
+    // A user deletes conversations one at a time; more than this vanishing at once
+    // is a full-list re-render, never a delete burst.
+    const REMOVE_BURST_CAP = 3;
+    let lastScrollAt = 0;
+    const onScroll = (): void => {
+      lastScrollAt = Date.now();
+    };
     // Track the composer element by identity so an SPA navigation that REPLACES
     // the composer subtree re-emits `composer-ready`, letting an overlay anchored
     // to the composer (the input bar) dispose its orphaned mount and re-anchor
@@ -194,12 +262,33 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     // fires and the existing mount stays valid (design D-3).
     let lastComposer = getInputElement();
 
-    const target: Node = root instanceof Document ? (root.documentElement ?? root) : root;
+    const target: EventTarget & Node =
+      root instanceof Document ? (root.documentElement ?? root) : root;
+    // Capture phase: scroll does not bubble, but the host's scroller is a descendant
+    // of `target`, so capturing here sees its scroll. Passive: we never preventDefault.
+    target.addEventListener('scroll', onScroll, { capture: true, passive: true });
     const mo = new MutationObserver(() => {
-      const count = itemElements().length;
+      const items = itemElements();
+      const ids = idsOf(items);
+      const count = items.length;
       if (count !== lastCount) {
         lastCount = count;
         emit({ type: 'list-changed' });
+      }
+      // Detect genuine deletes: ids present last tick, gone now. Guarded so
+      // virtualization, a collapsed/torn-down list, and full re-renders never prune
+      // (see the guards' rationale above). Update `lastIds` every tick regardless, so
+      // a skipped (guarded-out) disappearance is not re-reported next tick.
+      const removed: string[] = [];
+      for (const id of lastIds) if (!ids.has(id)) removed.push(id);
+      lastIds = ids;
+      if (
+        removed.length > 0 &&
+        ids.size > 0 &&
+        removed.length <= REMOVE_BURST_CAP &&
+        Date.now() - lastScrollAt >= SCROLL_GRACE_MS
+      ) {
+        emit({ type: 'list-removed', nativeIds: removed });
       }
       const ref = detectConversation();
       const active = ref?.nativeId ?? null;
@@ -230,6 +319,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return () => {
       disposed = true;
       mo.disconnect();
+      target.removeEventListener('scroll', onScroll, { capture: true });
     };
   }
 
@@ -237,6 +327,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     platformId: config.platformId,
     configVersion: config.configVersion,
     selfCheck,
+    classify,
     detectConversation,
     listConversations,
     readMessages,
@@ -245,6 +336,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     insertText,
     submit,
     mountPoints,
+    inputBarMount,
     observe,
   };
 }

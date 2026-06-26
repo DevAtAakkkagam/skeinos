@@ -58,4 +58,34 @@ describe('waitForSelfCheck', () => {
     expect(result.ok).toBe(false);
     expect(result.missing).toContain('composer');
   });
+
+  it('early-exits (before the timeout) on a confident signed-out page', async () => {
+    vi.useFakeTimers();
+    // Anchors never resolve, but the page is classified signed-out-compose — there is
+    // no point waiting out the grace period for anchors that need a sign-in to appear.
+    const adapter = {
+      selfCheck: (): SelfCheckResult => ({ ok: false, missing: ['conversationList'] }),
+      classify: () => 'signed-out-compose' as const,
+    };
+    const result = await waitForSelfCheck(adapter, { root: document });
+    expect(result.ok).toBe(false);
+    expect(result.missing).toContain('conversationList');
+  });
+
+  it('does NOT early-exit while a dormant page may still be hydrating', async () => {
+    vi.useFakeTimers();
+    const adapter = {
+      selfCheck: (): SelfCheckResult => ({ ok: false, missing: ['composer'] }),
+      classify: () => 'signed-out-dormant' as const,
+    };
+    let settled = false;
+    void waitForSelfCheck(adapter, { root: document }).then(() => {
+      settled = true;
+    });
+    // Before the timeout the dormant page is still treated as ambiguous (it may yet
+    // hydrate into a breakage), so it has not resolved.
+    await vi.advanceTimersByTimeAsync(SELF_CHECK_TIMEOUT_MS - 1);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+  });
 });

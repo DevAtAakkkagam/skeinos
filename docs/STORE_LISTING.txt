@@ -1,0 +1,46 @@
+SHORT SUMMARY (tagline — max 132 characters)
+
+One organized, searchable home for all your AI chats — folders, search, and a prompt library for Claude, Gemini, Perplexity & ChatGPT.
+
+
+DESCRIPTION
+
+Skeinos turns your AI chat sites into one organized workspace.
+
+If you use Claude, Gemini, Perplexity, or ChatGPT every day, your chats pile up fast — and each site keeps them in a plain, messy list. Skeinos adds a simple sidebar on top of the sites you already use, so you can finally organize, search, and reuse everything in one place.
+
+It works right inside the chat page. Nothing new to log into.
+
+
+WHAT YOU CAN DO
+
+• Organize chats into folders
+  Make folders and sub-folders, give them colors and icons, and drag chats in. Pin the important ones to the top. Archive the ones you don't need right now without deleting them.
+
+• Search everything, instantly
+  Search across your chat titles and messages and jump straight to what you need. Filter by site, folder, tag, or date.
+
+• Save and reuse prompts
+  Keep your best prompts in a prompt library and drop them into any chat from the Skeinos 'Insert Prompt' button or a quick keyboard shortcut (Ctrl+/ or ⌘/). Prompts can have fill-in blanks (like {{topic}}) so you tweak them before sending. Comes with a starter set of ready-made prompts.
+
+• Save instruction profiles
+  Save your go-to instructions (like "answer briefly" or "act as a senior engineer") and switch between them in one tap, on any site.
+
+• Tag and filter
+  Add tags to chats and prompts, then filter by tag to find related work fast.
+
+
+PRIVATE BY DESIGN
+
+Skeinos is local-first. Your conversations, titles, and search index stay on your device and are never sent anywhere — on any plan.
+
+• We never read or send your passwords or logins.
+• No ads. No selling your data. No tracking of what you do.
+• Optional anonymous diagnostics are OFF by default — Skeinos only sends a crash or "a site changed and broke" signal if you choose to turn it on, and it never includes your chat content.
+
+
+SUPPORTED SITES
+
+Claude (claude.ai), Gemini (gemini.google.com), Perplexity (perplexity.ai), and ChatGPT (chatgpt.com). More on the way.
+
+Skeinos is not affiliated with Anthropic, Google, OpenAI, or Perplexity.

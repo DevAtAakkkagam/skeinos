@@ -16,6 +16,7 @@ import { t } from '../src/core/i18n';
 import type { InstructionProfile, PlatformId } from '../src/shared/types';
 import type { ProfileSnapshot } from '../src/shared/profiles';
 import type { Settings, SettingsHandler } from '../src/core/settings';
+import type { BroadcastHandler } from '../src/core/messaging';
 import type { Response } from '../src/shared/messages';
 
 let container: HTMLElement;
@@ -87,6 +88,20 @@ function makeSettings(activeProfileId?: string) {
   return { getSettings, setSettings, subscribeSettings, fire };
 }
 
+// Broadcast seam: captures the handler so a test can fire a `state.changed` to drive
+// the library refresh, mirroring how the worker fans mutations to open views.
+function makeBroadcast() {
+  const handlers = new Set<BroadcastHandler>();
+  const subscribeBroadcast = (h: BroadcastHandler): (() => void) => {
+    handlers.add(h);
+    return () => handlers.delete(h);
+  };
+  const fire = (): void => {
+    for (const h of handlers) h({ kind: 'state.changed', stores: ['profiles'] });
+  };
+  return { subscribeBroadcast, fire };
+}
+
 interface RenderOpts {
   profiles: InstructionProfile[];
   platform?: PlatformId;
@@ -97,6 +112,7 @@ async function renderChip(opts: RenderOpts) {
   const onActiveProfileChange = vi.fn<(t: string | null) => void>();
   const queryProfiles = makeQueryProfiles(opts.profiles);
   const settings = makeSettings(opts.activeProfileId);
+  const broadcast = makeBroadcast();
   mount(
     <ProfileChip
       platform={opts.platform ?? 'claude'}
@@ -105,11 +121,12 @@ async function renderChip(opts: RenderOpts) {
       getSettings={settings.getSettings}
       setSettings={settings.setSettings}
       subscribeSettings={settings.subscribeSettings}
+      subscribeBroadcast={broadcast.subscribeBroadcast}
     />,
   );
   // Flush the load effect + the settings-read effect (both async).
   for (let i = 0; i < 6; i++) await Promise.resolve();
-  return { onActiveProfileChange, queryProfiles, settings };
+  return { onActiveProfileChange, queryProfiles, settings, broadcast };
 }
 
 async function openMenu(): Promise<void> {
@@ -174,6 +191,25 @@ describe('ProfileChip menu (4.3)', () => {
     expect((itemById('a') as HTMLButtonElement).disabled).toBe(false);
     expect((itemById('b') as HTMLButtonElement).disabled).toBe(true);
     expect(itemById('b')!.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('refreshes the library on a state.changed broadcast (profile created elsewhere)', async () => {
+    // Start with an empty library: the picker shows the empty state.
+    const profiles: InstructionProfile[] = [];
+    const { broadcast } = await renderChip({ profiles });
+    await openMenu();
+    expect($('[data-testid="sk-ib-profile-empty"]')).toBeTruthy();
+    expect(items()).toHaveLength(0);
+
+    // A profile is created in the Profiles tab — the worker fans `state.changed`.
+    profiles.push(profile({ id: 'new', name: 'Fresh' }));
+    broadcast.fire();
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+
+    // The picker re-queried and now lists the new profile (no more empty state).
+    expect($('[data-testid="sk-ib-profile-empty"]')).toBeNull();
+    expect(items()).toHaveLength(1);
+    expect(itemById('new')!.textContent).toContain('Fresh');
   });
 
   it('reflects the persisted active profile when the menu is opened', async () => {

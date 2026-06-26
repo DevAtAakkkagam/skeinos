@@ -17,6 +17,9 @@ export interface UseDialogOptions {
   onClose?: () => void;
   ariaLabel?: string;
   getRootNode?: () => Document | ShadowRoot;
+  /** Element to focus when the dialog opens, overriding Zag's default of the first
+   *  focusable element (which is often a header close button, not the primary field). */
+  initialFocusEl?: () => HTMLElement | null;
 }
 
 export function useDialog(options: UseDialogOptions): DialogApi {
@@ -26,6 +29,7 @@ export function useDialog(options: UseDialogOptions): DialogApi {
     open: options.open,
     'aria-label': options.ariaLabel,
     getRootNode: options.getRootNode,
+    initialFocusEl: options.initialFocusEl,
     onOpenChange: (details: { open: boolean }) => {
       if (!details.open) options.onClose?.();
     },
@@ -41,13 +45,15 @@ export interface DialogProps {
   /** `data-testid` for the content element. */
   contentTestId?: string;
   id?: string;
+  /** Element to focus on open, overriding Zag's first-focusable default. */
+  initialFocusEl?: () => HTMLElement | null;
   children: ComponentChild;
 }
 
 /** A modal dialog. Backdrop + content mount only while open, inside the shadow root. */
-export function Dialog({ open, onClose, ariaLabel, contentTestId, id, children }: DialogProps) {
+export function Dialog({ open, onClose, ariaLabel, contentTestId, id, initialFocusEl, children }: DialogProps) {
   const root = useRef<HTMLDivElement>(null);
-  const api = useDialog({ id, open, onClose, ariaLabel, getRootNode: () => getNodeRoot(root.current) });
+  const api = useDialog({ id, open, onClose, ariaLabel, initialFocusEl, getRootNode: () => getNodeRoot(root.current) });
 
   return (
     <div ref={root} class="sk-dialog-host">

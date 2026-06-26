@@ -60,4 +60,12 @@ export type ProfileMutationOp =
       appliesTo?: PlatformId[];
       responseStyle?: InstructionProfile['responseStyle'];
     }
-  | { op: 'profile.delete'; id: string };
+  | { op: 'profile.delete'; id: string }
+  | {
+      /** Remove every profile still tagged with `domain` — the untouched starter
+       *  profiles of a kit (an edit strips `domain`, so edited/created profiles are
+       *  never matched). Drives the starter-kit swap's "replace" step. Mirrors
+       *  {@link PromptMutationOp}'s `prompt.clearDomain`. */
+      op: 'profile.clearDomain';
+      domain: DomainId;
+    };

@@ -13,8 +13,10 @@ import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import type { Prompt, PromptFolder } from '../../shared/types';
 import type { DomainId } from '../../shared/domains';
 import { installPromptSeedsRemote } from '../../core/prompts';
+import { installProfileSeedsRemote } from '../../core/profiles';
 import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
 import type { PromptEditorSubmit } from './PromptEditor';
+import type { StarterKitInfo } from '../starter/StarterKitBand';
 import {
   makePromptId,
   usePromptLibrary,
@@ -49,6 +51,12 @@ export interface PromptsController {
   tagCount: Map<string, number>;
   tagChips: string[];
   filtered: Prompt[];
+
+  // --- starter-kit provenance (starter-kit-provenance) -------------------------
+  /** The active starter kit (domain + count of untouched seeds still present), or
+   *  `null` once every seed has been edited away or deleted. Drives the provenance
+   *  band; derived from `prompts`, so it can never disagree with the rows. */
+  kit: StarterKitInfo | null;
 
   // --- prompt editor -----------------------------------------------------------
   editorOpen: boolean;
@@ -156,6 +164,16 @@ export function usePromptsController(view?: PromptLibraryView): PromptsControlle
     () => inCategory.filter((p) => selectedTags.every((t) => p.tags.includes(t))),
     [inCategory, selectedTags],
   );
+
+  // The active starter kit, derived from the prompts still carrying a `domain` (an
+  // edited seed sheds its `domain` — it has become the user's — so it stops counting,
+  // and the band self-empties). Single-kit-at-a-time (swap model), so the domain is
+  // homogeneous; the first seed's domain names the kit.
+  const kit = useMemo<StarterKitInfo | null>(() => {
+    const seeded = prompts.filter((p) => p.domain);
+    if (seeded.length === 0) return null;
+    return { domain: seeded[0].domain!, count: seeded.length };
+  }, [prompts]);
 
   // --- handlers -----------------------------------------------------------------
   const toggleTag = useCallback(
@@ -290,13 +308,19 @@ export function usePromptsController(view?: PromptLibraryView): PromptsControlle
     setPendingOpenId(id);
   }, []);
 
-  // The library-side starter-prompt install seam. Onboarding's domain picker
-  // (onboarding-flow) seeds via the same worker request from its own surface; this
-  // path is retained for the library. Reconcile via the library's re-read
-  // (observe-don't-replay) so the newly inserted prompts surface without replaying.
+  // The library-side starter-pack install seam. Loading the starter kit always seeds
+  // BOTH the prompt library and the instruction-profile library for the picked domain,
+  // matching onboarding's domain picker (onboarding-flow) — even when triggered from
+  // the prompts empty state. Profile seeding rides alongside, is idempotent, and a
+  // failed profile install never blocks the prompt-driven flow. Reconcile via the
+  // library's re-read (observe-don't-replay) so the newly inserted prompts surface
+  // without replaying.
   const installSeeds = useCallback(
     async (domain: DomainId): Promise<number> => {
-      const res = await installPromptSeedsRemote(domain);
+      const [res] = await Promise.all([
+        installPromptSeedsRemote(domain),
+        installProfileSeedsRemote(domain).catch(() => undefined),
+      ]);
       lib.refresh();
       return res.ok ? res.data.installed : 0;
     },
@@ -317,6 +341,7 @@ export function usePromptsController(view?: PromptLibraryView): PromptsControlle
     tagCount,
     tagChips,
     filtered,
+    kit,
     editorOpen,
     editing,
     openCreate,

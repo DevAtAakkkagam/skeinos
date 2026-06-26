@@ -97,6 +97,13 @@ export const EVENT_ALLOWLIST = {
     configVer: { kind: 'version' },
     reason: { kind: 'enum', values: FALLBACK_REASONS },
   },
+  // The page was classified signed-out (not a breakage): no banner, no degraded
+  // report. Emitted instead of `adapter_fallback_shown` so signed-out visits stay
+  // out of the breakage metric while remaining observable. Id-less by construction.
+  adapter_signed_out: {
+    platform: { kind: 'enum', values: PLATFORMS },
+    configVer: { kind: 'version' },
+  },
   adapter_recovered: {
     platform: { kind: 'enum', values: PLATFORMS },
     configVer: { kind: 'version' },

@@ -14,6 +14,7 @@ import type { JSX } from 'preact';
 import { PlusIcon, PromptIcon } from '../components/Icon';
 import { ProfileEditor } from './ProfileEditor';
 import { ProfileRow } from './ProfileRow';
+import { StarterKitBand } from '../starter/StarterKitBand';
 import { useT } from '../../core/i18n';
 import type { ProfilesController } from './useProfilesController';
 
@@ -40,6 +41,11 @@ export function ProfilesPanel({ controller: c }: ProfilesPanelProps): JSX.Elemen
               <PlusIcon size={16} />
             </button>
           </div>
+
+          {/* Provenance band: names the kit these profiles came from, says they are
+              editable, and hosts the swap entry. Null (hidden) once every seed has
+              graduated or been deleted. */}
+          {c.kit ? <StarterKitBand kit={c.kit} kind="profiles" /> : null}
 
           {c.status === 'loading' ? (
             <div class="sk-empty" data-testid="sk-profiles-loading" role="status" aria-live="polite">

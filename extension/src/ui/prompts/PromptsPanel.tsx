@@ -14,6 +14,7 @@ import { PlusIcon, PromptIcon } from '../components/Icon';
 import { PromptCard } from './PromptCard';
 import { PromptEditor } from './PromptEditor';
 import { StarterSeed } from './StarterSeed';
+import { StarterKitBand } from '../starter/StarterKitBand';
 import { useT } from '../../core/i18n';
 import type { PromptsController } from './usePromptsController';
 
@@ -40,6 +41,11 @@ export function PromptsPanel({ controller: c }: PromptsPanelProps): JSX.Element 
               <PlusIcon size={16} />
             </button>
           </div>
+
+          {/* Provenance band: names the kit these prompts came from, says they are
+              editable, and hosts the swap entry. Null (hidden) once every seed has
+              graduated or been deleted — so it never shows on the empty/loading view. */}
+          {c.kit ? <StarterKitBand kit={c.kit} kind="prompts" /> : null}
 
           {c.status === 'loading' ? (
             <div class="sk-empty" data-testid="sk-prompts-loading" role="status" aria-live="polite">

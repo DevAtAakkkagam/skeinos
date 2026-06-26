@@ -71,6 +71,26 @@ export const fr = {
     '« {name} » sera supprimée et ses prompts deviendront sans catégorie.',
   'prompts.confirmDelete': 'Supprimer',
 
+  // ── Bandeau de provenance du pack de démarrage (Prompts + Profils) ─────────
+  'starterKit.label': 'Pack de démarrage « {name} »',
+  'starterKit.captionPrompts': {
+    one: '1 prompt de démarrage — modifiez ou supprimez à votre guise',
+    other: '{count} prompts de démarrage — modifiez ou supprimez à votre guise',
+  },
+  'starterKit.captionProfiles': {
+    one: '1 profil de démarrage — modifiez ou supprimez à votre guise',
+    other: '{count} profils de démarrage — modifiez ou supprimez à votre guise',
+  },
+  'starterKit.change': 'Changer',
+  'starterKit.changeAria': 'Changer de pack de démarrage',
+  'starterKit.dialogTitle': 'Changer de pack de démarrage',
+  'starterKit.dialogBody':
+    'Choisissez un nouveau pack. Les éléments que vous avez modifiés ou créés sont conservés — seuls les éléments de démarrage intacts du pack actuel sont remplacés.',
+  'starterKit.dialogPick': 'Pack de démarrage',
+  'starterKit.cancel': 'Annuler',
+  'starterKit.replace': 'Remplacer',
+  'starterKit.replacing': 'Remplacement…',
+
   // ── Onglet Profils ───────────────────────────────────────────────────────
   'profiles.panelLabel': 'Profils d’instructions',
   'profiles.sectionTitle': 'Profils',
@@ -220,8 +240,12 @@ export const fr = {
   'conv.archiveAction': 'Archiver',
   'conv.unarchive': 'Désarchiver',
   'conv.emptyArchived': 'Aucune conversation archivée',
-  'conv.capNote': 'Affichage des plus récentes',
-  'conv.of': 'sur',
+  'conv.showMore': 'Afficher {count} de plus',
+  'conv.groupPinned': 'Épinglées',
+  'conv.groupToday': "Aujourd'hui",
+  'conv.groupYesterday': 'Hier',
+  'conv.groupThisWeek': 'Cette semaine',
+  'conv.groupOlder': 'Plus anciennes',
 
   // ── Barre latérale : structure (onglets, recherche, pied de page) ────────
   'shell.workspace': 'Conversations et prompts, un seul fil',

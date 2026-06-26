@@ -11,7 +11,7 @@ import { workspaceStore, type WorkspaceStore } from '../../core/store';
 import { getSettings } from '../../core/settings';
 import { assertWithinQuota } from '../../core/tier';
 import { mutateTags, queryTags } from '../tags';
-import { indexConversationTitle } from '../conversation-index/pipeline';
+import { indexConversationTitle, removeConversation } from '../conversation-index/pipeline';
 import type { ConversationIndex, Folder } from '../../shared/types';
 import {
   conversationId,
@@ -209,6 +209,16 @@ export async function mutateWorkspace(
           nativeId: ref.nativeId,
           title: ref.title,
         });
+      }
+      return { stores: ['conversations', 'searchPostings'] };
+    }
+    case 'conversation.remove': {
+      // The user deleted these conversations on the host — drop their index records
+      // and search postings so they stop showing in the list and in search. Idempotent:
+      // `removeConversation` no-ops on an id we never indexed (already gone, or a stale
+      // adapter signal), so a duplicate or unknown id writes nothing.
+      for (const nativeId of op.nativeIds) {
+        await removeConversation(store, conversationId(op.platform, nativeId));
       }
       return { stores: ['conversations', 'searchPostings'] };
     }

@@ -269,8 +269,26 @@ export async function mutatePromptLibrary(
         next.body = op.body;
         next.variables = parseVariables(op.body);
       }
+      // Graduate a starter-kit seed into a user-owned prompt on ANY editor save
+      // (starter-kit-provenance): once the user edits a seeded prompt it is "theirs",
+      // so drop the catalog provenance. The provenance band counts only prompts that
+      // still carry `domain`, so this is exactly what makes an edited card stop
+      // reading as "from the kit". `prompt.update` is sent only by the editor; usage
+      // bumps (`recordUse`) and category-delete reassignment use other paths and keep
+      // their provenance.
+      delete next.domain;
+      delete next.seedId;
       await store.prompts.put(next);
       return { stores: ['prompts'] };
+    }
+    case 'prompt.clearDomain': {
+      // Replace step of a starter-kit swap: tombstone every prompt still tagged with
+      // this domain (the untouched seeds — edited ones already shed `domain` above).
+      // One broadcast for the batch; reports no touched store when nothing matched.
+      const prompts = await store.prompts.query();
+      const stale = prompts.filter((p) => p.domain === op.domain);
+      for (const p of stale) await store.prompts.delete(p.id);
+      return { stores: stale.length > 0 ? ['prompts'] : [] };
     }
     case 'prompt.delete': {
       // Tombstone via the repo (prompts are syncable, so `delete` writes a tombstone).

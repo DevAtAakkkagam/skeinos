@@ -10,6 +10,7 @@ import { PRIMITIVES_CSS } from '../primitives/styles';
 import { SEARCH_CSS } from '../search/styles';
 import { PROMPTS_CSS } from '../prompts/styles';
 import { PROFILES_CSS } from '../profiles/styles';
+import { STARTER_KIT_CSS } from '../starter/styles';
 import { TAGS_CSS } from '../tags/styles';
 
 // The visible gap above "Personal workspace" is the browser's native side-panel
@@ -52,7 +53,10 @@ const SIDEBAR_FEATURE_CSS = `
 .sk-indexing__label { font-size: var(--sk-text-sm); color: var(--sk-color-muted); }
 .sk-indexing__pct { font-size: var(--sk-text-xs); color: var(--sk-color-muted); font-variant-numeric: tabular-nums; }
 .sk-indexing__track { height: 4px; border-radius: 999px; background: color-mix(in srgb, var(--sk-color-muted) 22%, transparent); overflow: hidden; }
-.sk-indexing__bar { height: 100%; border-radius: 999px; background: var(--sk-color-accent); transition: width 0.2s ease-out; }
+/* Progress fill is a full-width bar scaled on the X axis (transform, not width) so the
+   advance compositor-animates instead of triggering layout on every tick. */
+.sk-indexing__bar { width: 100%; height: 100%; border-radius: 999px; background: var(--sk-color-accent); transform-origin: left center; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) { .sk-indexing__bar { transition: none; } }
 .sk-row--drop { outline: 2px solid var(--sk-color-accent); outline-offset: -2px; }
 /* Folder reorder seam: a thin drop strip between sibling rows, present only while a
    folder is being dragged (so the resting tree never gains gaps). The targeted seam
@@ -239,7 +243,16 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
    the accent colour, so a pinned row reads as pinned at a glance. */
 .sk-conv-row__pin { flex: none; display: inline-flex; align-items: center; justify-content: center; color: var(--sk-color-accent); }
 .sk-conv-row__pin svg { display: block; }
-.sk-conv-list__cap { color: var(--sk-color-muted); font-size: var(--sk-text-sm); margin: var(--sk-space-1) 0 0; }
+/* Relative-date overline inside a long list (PINNED · TODAY · YESTERDAY · THIS WEEK ·
+   OLDER). Reuses the mono section-label voice a level down: tighter tracking and the
+   xs step so it reads as a sub-divider, not a section head. Aligns to the row inset. */
+.sk-conv-group-label { font-family: var(--sk-font-label); text-transform: uppercase; letter-spacing: 0.14em; font-size: var(--sk-text-xs); color: var(--sk-color-muted); list-style: none; margin: 0; padding: var(--sk-space-2) var(--sk-space-2) var(--sk-space-1) calc(var(--sk-space-2) + var(--sk-space-3)); }
+.sk-conv-list__items > .sk-conv-group-label:first-child { padding-top: 0; }
+/* "Show more" reveals the next page — a quiet text action aligned to the rows, warming
+   to the accent on interaction. Not dashed: dashed is reserved for create/future seams. */
+.sk-conv-more { display: inline-flex; align-items: center; align-self: flex-start; gap: var(--sk-space-1); background: none; border: 0; color: var(--sk-color-muted); font: inherit; font-size: var(--sk-text-sm); cursor: pointer; padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-1) calc(var(--sk-space-2) + var(--sk-space-3)); border-radius: var(--sk-radius); }
+.sk-conv-more:hover { color: var(--sk-color-accent); }
+.sk-conv-more:focus-visible { color: var(--sk-color-accent); outline: 2px solid var(--sk-color-accent); outline-offset: -2px; }
 /* Empty-folder hint sits where the conversation rows would: same leading inset as
    .sk-conv-row so it lines up with the parent folder's nested content, not flush-left. */
 .sk-conv-list__empty { padding: var(--sk-space-1) var(--sk-space-2) var(--sk-space-1) calc(var(--sk-space-2) + var(--sk-space-3)); text-align: left; }
@@ -277,8 +290,11 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
    chip keeps its accent tint through hover. The disabled "+ Tag" seam opts out below. */
 .sk-chip { background: color-mix(in srgb, var(--sk-color-fg) 8%, transparent); border: 0; border-radius: 999px; color: var(--sk-color-muted); font: inherit; font-size: var(--sk-text-sm); padding: 2px var(--sk-space-2); cursor: pointer; }
 .sk-chip:not([disabled]):hover { color: var(--sk-color-fg); }
-.sk-chip--active { background: color-mix(in srgb, var(--sk-color-accent) 18%, transparent); color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); }
-.sk-chip--active:hover { color: color-mix(in srgb, var(--sk-color-accent) 70%, var(--sk-color-fg)); }
+/* Active filter: an unmistakable selected state — the accent tint deepens to the
+   active-row's 24% and gains a full hairline ring (never a side-stripe) so "what am I
+   filtered to" reads at a glance across a wrapping chip row. */
+.sk-chip--active { background: color-mix(in srgb, var(--sk-color-accent) 24%, transparent); color: color-mix(in srgb, var(--sk-color-accent) 78%, var(--sk-color-fg)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sk-color-accent) 45%, transparent); }
+.sk-chip--active:hover { color: color-mix(in srgb, var(--sk-color-accent) 78%, var(--sk-color-fg)); }
 .sk-chip:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
 /* The "+ Tag" seam (inert until C7/M2): a dashed ghost that reads as a future add. */
 .sk-chip--add { background: none; border: 1px dashed var(--sk-color-border); }
@@ -309,4 +325,4 @@ details[open] > .sk-sidebar__section-summary .sk-section-caret svg { transform: 
 .sk-search[disabled], .sk-tab[disabled], .sk-chip[disabled] { opacity: 0.55; cursor: not-allowed; }
 `;
 
-export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}\n${PROMPTS_CSS}\n${PROFILES_CSS}\n${TAGS_CSS}`;
+export const SIDEBAR_CSS = `${SIDEBAR_FEATURE_CSS}\n${PRIMITIVES_CSS}\n${SEARCH_CSS}\n${PROMPTS_CSS}\n${PROFILES_CSS}\n${STARTER_KIT_CSS}\n${TAGS_CSS}`;

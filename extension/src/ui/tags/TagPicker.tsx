@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type { Tag } from '../../shared/types';
 import { makeTagId } from '../../core/tags';
 import { quotaDetailOf, type QuotaErrorDetail } from '../../core/tier';
-import { useFloating, getNodeRoot } from '../primitives';
+import { useFloating, getNodeRoot, PopoverScrim } from '../primitives';
 import { CheckIcon, MoreIcon, PlusIcon } from '../components/Icon';
 import { UpgradeNudge } from '../components/UpgradeNudge';
 import { FOLDER_COLORS } from '../sidebar/palette';
@@ -68,25 +68,21 @@ export function TagPicker({ anchor, label, tags, selected, onToggle, mutate, cou
     [setFloating],
   );
 
-  // Dismiss on Esc / outside-click (shadow-aware via the mounting root).
+  // Dismiss on Esc (keyboard path); pointer dismissal is owned by the PopoverScrim
+  // rendered below, which absorbs the outside press so the row/folder behind it is
+  // never activated. (A bare outside-mousedown listener could not do that — it closed
+  // the popover but let the click fall through to the content underneath.)
   useEffect(() => {
     const root = getNodeRoot(popRef.current ?? anchor) as unknown as Document | ShadowRoot;
-    const inside = (t: Node | null) =>
-      !!t && (popRef.current?.contains(t) || (!!anchor && anchor.contains(t)));
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
         onClose();
       }
     };
-    const onDown = (e: Event) => {
-      if (!inside(e.target as Node)) onClose();
-    };
     root.addEventListener('keydown', onKey as EventListener, true);
-    root.addEventListener('mousedown', onDown, true);
     return () => {
       root.removeEventListener('keydown', onKey as EventListener, true);
-      root.removeEventListener('mousedown', onDown, true);
     };
   }, [anchor, onClose]);
 
@@ -96,6 +92,8 @@ export function TagPicker({ anchor, label, tags, selected, onToggle, mutate, cou
   const showSearch = tags.length > 6;
 
   return (
+    <>
+    <PopoverScrim variant="tag" onDismiss={onClose} testid="sk-tag-popover-scrim" />
     <div
       ref={setPop}
       class="sk-tag-popover"
@@ -203,6 +201,7 @@ export function TagPicker({ anchor, label, tags, selected, onToggle, mutate, cou
         )}
       </div>
     </div>
+    </>
   );
 }
 
