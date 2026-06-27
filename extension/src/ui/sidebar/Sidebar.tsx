@@ -164,8 +164,8 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
 
   // Which nodes are expanded to reveal their conversations (folder ids + the
   // UNFILED sentinel). Local view state only — never authoritative (PREACT rule).
-  // Unfiled starts expanded so its conversations lead on first paint (the section
-  // only renders when there are unfiled chats); the user can collapse it freely.
+  // Uncategorized starts expanded so its chats (or, when empty, its first-run
+  // message) are visible on first paint; the user can collapse it freely.
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([UNFILED]));
   // A pinned-row "jump-to" in flight: the canonical tree row to scroll into view
   // once the path to it has expanded and re-rendered. Cleared by the scroll effect.
@@ -183,8 +183,7 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
   // dock's own open/closed state is left untouched: opening it later reveals its
   // folders already expanded.
   const expandAll = () => {
-    const ids = [...allFolderIds(tree.active), ...tree.archived.map((f) => f.id)];
-    if (unfiledConvs.length > 0) ids.push(UNFILED);
+    const ids = [...allFolderIds(tree.active), ...tree.archived.map((f) => f.id), UNFILED];
     setExpanded(new Set(ids));
   };
   const collapseAll = () => setExpanded(new Set());
@@ -434,6 +433,7 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
               mutate={mutate}
               tags={tags}
               context={{ kind: 'folder', name: f.name }}
+              suppressEmpty={node.children.length > 0}
               activePlatform={platform}
               onOpen={onOpenConversation}
             />
@@ -571,13 +571,6 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
   const hasArchive = archivedConvs.length > 0 || tree.archived.length > 0;
   const archiveCount = tree.archived.length + archivedConvs.length;
 
-  // With zero folders we used to lead with a full "create your first folder" card.
-  // But if the user already has unfiled or archived conversations, that blank-slate
-  // pitch is wrong — there IS content. In that case the create prompt is demoted to
-  // a slim ghost row (below) and the Unfiled group / Archive dock lead the panel.
-  // The full card only stands in for a genuinely empty workspace (true first run).
-  const hasContentElsewhere = unfiledConvs.length > 0 || hasArchive;
-
   return (
     <div ref={sidebarRef} class="sk-sidebar" data-testid="sk-sidebar">
       <div class="sk-sidebar__scroll" data-testid="sk-sidebar-scroll">
@@ -657,48 +650,24 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
                   </div>
                 )
               : status === 'ready'
-                ? // A read succeeded but there are no folders. If the user already
-                  // has conversations elsewhere (unfiled or archived), don't lead
-                  // with a blank-slate pitch — demote "create your first folder" to a
-                  // slim ghost row so the Unfiled group / Archive dock carry the
-                  // panel. Only a genuinely empty workspace gets the full first-run
-                  // card. (The section-header "+" stays the persistent create path.)
-                  hasContentElsewhere
-                  ? (
-                      <button
-                        class="sk-ghost-row"
-                        type="button"
-                        data-testid="sk-ghost-new-folder"
-                        onClick={(e) => {
-                          (e as MouseEvent).stopPropagation();
-                          setDialog({ mode: 'create', parentId: null });
-                        }}
-                      >
-                        <PlusIcon size={16} />
-                        <span>{t('sidebar.newFolder')}</span>
-                      </button>
-                    )
-                  : (
-                      <div class="sk-empty" data-testid="sk-folders-empty">
-                        <span class="sk-empty__icon" aria-hidden="true">
-                          <FolderIcon size={40} />
-                        </span>
-                        <p class="sk-empty__title">{t('sidebar.noFolders')}</p>
-                        <p class="sk-empty__body">{t('sidebar.emptyBody')}</p>
-                        <button
-                          class="sk-btn sk-btn--icon"
-                          type="button"
-                          data-testid="sk-empty-new-folder"
-                          onClick={(e) => {
-                            (e as MouseEvent).stopPropagation();
-                            setDialog({ mode: 'create', parentId: null });
-                          }}
-                        >
-                          <PlusIcon size={16} />
-                          {t('sidebar.newFolder')}
-                        </button>
-                      </div>
-                    )
+                ? // A read succeeded but there are no folders. We no longer pitch a
+                  // dedicated "create your first folder" card — the always-present
+                  // Uncategorized section below carries the first-run voice. Folder
+                  // creation stays one slim ghost row away (and the header "+").
+                  (
+                    <button
+                      class="sk-ghost-row"
+                      type="button"
+                      data-testid="sk-ghost-new-folder"
+                      onClick={(e) => {
+                        (e as MouseEvent).stopPropagation();
+                        setDialog({ mode: 'create', parentId: null });
+                      }}
+                    >
+                      <PlusIcon size={16} />
+                      <span>{t('sidebar.newFolder')}</span>
+                    </button>
+                  )
                 : // Still loading: skeleton rows in place of the list (D-2), so a
                   // loading workspace reads as "loading" rather than blank or empty.
                   // They render only here (no folders + status loading) and are
@@ -719,10 +688,12 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
                     </div>
                   )}
 
-          {/* Unfiled lives inside the folders section so the sticky FOLDERS header
-              pins across the whole list (folders + unfiled), not just the folders. */}
-          {unfiledConvs.length > 0 && (
-            <div class="sk-sidebar__section" data-testid="sk-unfiled">
+          {/* Uncategorized lives inside the folders section so the sticky FOLDERS
+              header pins across the whole list (folders + unfiled), not just the
+              folders. It renders unconditionally — even at a count of 0 — so it is a
+              permanent anchor that answers "where are my chats?" and carries the
+              first-run voice via its empty state. */}
+          <div class="sk-sidebar__section" data-testid="sk-unfiled">
             <div class="sk-row" onClick={() => toggleExpanded(UNFILED)}>
               <button
                 class="sk-caret"
@@ -754,8 +725,7 @@ export function Sidebar({ platform, view, tags = [], onOpenConversation }: Sideb
                 />
               </div>
             )}
-            </div>
-          )}
+          </div>
         </div>
       </div>
 

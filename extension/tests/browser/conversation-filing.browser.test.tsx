@@ -142,9 +142,9 @@ describe('conversation filing (real browser)', () => {
     });
 
     handle = mountShell();
-    // The conversations are unfiled — expand the Unfiled node to reveal their rows.
+    // The conversations are unfiled — the Uncategorized node is a permanent fixture
+    // that starts expanded, so their rows are revealed without a click.
     await vi.waitFor(() => expect($('[data-testid=sk-unfiled-caret]')).toBeTruthy());
-    ($('[data-testid=sk-unfiled-caret]') as HTMLElement).click();
     await vi.waitFor(() =>
       expect($$('[data-testid=sk-conv-row]').some((r) => r.dataset.conversationId === 'claude::c1')).toBe(true),
     );

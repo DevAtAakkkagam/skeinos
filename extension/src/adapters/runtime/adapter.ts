@@ -101,14 +101,25 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return !!sel && !!q(sel);
   }
 
-  /** Classify the page after a DOM probe (design D2). Fail-quiet: only a provably
-   *  signed-in page with a missing anchor is a `breakage`; anything we cannot prove
-   *  signed-in is treated as signed-out (no banner). A config without an
-   *  `authedMarker` keeps the legacy behavior (a failing check is a `breakage`). */
+  /** Whether the config carries a `signedOutMarker` AND it resolves — a positive,
+   *  unambiguous "not signed in" signal (a login / sign-up control). It OUTRANKS
+   *  `authedMarker` so a host that renders an account/profile control on its
+   *  logged-out shell (ChatGPT) is never mistaken for a broken signed-in page. */
+  function signedOutDetected(): boolean {
+    const sel = selectors.signedOutMarker;
+    return !!sel && !!q(sel);
+  }
+
+  /** Classify the page after a DOM probe (design D2). Fail-quiet: a `breakage` (the
+   *  banner) is reserved for a page we cannot prove is signed-out. A visible sign-in
+   *  control proves signed-out outright; otherwise we fall back to the authed-marker
+   *  heuristic, and a config with no markers keeps the legacy "failing check ⇒
+   *  breakage" behavior. */
   function classify(): Readiness {
     if (selfCheck().ok) return 'ready';
-    // Can't prove signed-out without a marker → preserve legacy breakage behavior.
-    if (!selectors.authedMarker || signedInDetected()) return 'breakage';
+    const provablySignedOut =
+      signedOutDetected() || (!!selectors.authedMarker && !signedInDetected());
+    if (!provablySignedOut) return 'breakage';
     const composeOk = COMPOSE_ANCHORS.every((key) => !!q(selectors[key]));
     return composeOk ? 'signed-out-compose' : 'signed-out-dormant';
   }

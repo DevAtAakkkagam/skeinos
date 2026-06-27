@@ -41,6 +41,8 @@ const WORKSPACE = '<div id="list"></div><div id="sidebar"></div>';
 // where the list anchor is gone but the sidebar/composer/input-bar persist.
 const SIDEBAR = '<div id="sidebar"></div>';
 const AUTHED = '<div data-testid="account"></div>';
+// A login control present ONLY when signed out (ChatGPT renders `login-button`).
+const SIGNED_OUT = '<div data-testid="login-button"></div>';
 
 function mount(html: string): HTMLElement {
   const root = document.createElement('div');
@@ -89,6 +91,36 @@ describe('adapter.classify (signed-out classification)', () => {
   it('config without authedMarker preserves legacy behavior → breakage on failure', () => {
     // No marker means we cannot prove signed-out, so a failing check stays a breakage.
     expect(classifyWith(COMPOSE)).toBe('breakage');
+  });
+});
+
+describe('adapter.classify (signedOutMarker — positive signed-out signal)', () => {
+  /** Build an adapter whose config carries BOTH markers, then classify `html`. */
+  function classifyMarked(html: string): ReturnType<ReturnType<typeof createAdapter>['classify']> {
+    root = mount(html);
+    const base = cfg('[data-testid="account"]');
+    const config: AdapterConfig = {
+      ...base,
+      selectors: { ...base.selectors, signedOutMarker: '[data-testid="login-button"]' },
+    };
+    return createAdapter(config, { root }).classify();
+  }
+
+  it('signed-out marker resolves → not a breakage even when the authed marker ALSO resolves', () => {
+    // The ChatGPT logged-out homepage: it renders BOTH a login control and an
+    // (ambiguous) profile button. The positive signed-out signal must win — compose
+    // anchors are present, so the page mounts the input bar quietly, no banner.
+    expect(classifyMarked(COMPOSE + AUTHED + SIGNED_OUT)).toBe('signed-out-compose');
+  });
+
+  it('signed-out marker resolves, no composer → signed-out-dormant (still no banner)', () => {
+    expect(classifyMarked(AUTHED + SIGNED_OUT)).toBe('signed-out-dormant');
+  });
+
+  it('signed-out marker absent, authed marker resolves → breakage (genuine signed-in break)', () => {
+    // No login control on the page and the authed marker resolves: a real broken
+    // signed-in layout still earns the banner.
+    expect(classifyMarked(COMPOSE + AUTHED)).toBe('breakage');
   });
 });
 

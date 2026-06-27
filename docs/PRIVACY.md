@@ -1,6 +1,6 @@
 # Skeinos — Privacy Policy
 
-_Last updated: 2026-06-22_
+_Last updated: 2026-06-27_
 
 Skeinos is **local-first and privacy-first**. The extension organizes your AI chats
 (folders, search, prompts, instruction profiles) by reading the pages you already
@@ -63,4 +63,9 @@ session recording or page/DOM capture ("autocapture") is used.
 
 ## Contact
 
-Questions about this policy: privacy@skeinos.app
+Questions about this policy: admin@aakkagam.com
+
+---
+
+Skeinos is offered by Aakkagam. Skeinos is not affiliated with Anthropic, Google,
+OpenAI, or Perplexity.

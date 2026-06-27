@@ -180,9 +180,6 @@ export const en = {
   'sidebar.newFolder': 'New folder',
   'sidebar.expandAll': 'Expand all',
   'sidebar.collapseAll': 'Collapse all',
-  'sidebar.noFolders': 'No folders yet',
-  'sidebar.emptyBody':
-    'Create a folder to start organising conversations across every platform.',
   'sidebar.loading': 'Loading your workspace…',
   'sidebar.loadError': 'Couldn’t load your folders',
   'sidebar.loadErrorBody': 'The workspace didn’t respond. Check your connection and try again.',
@@ -233,7 +230,7 @@ export const en = {
 
   // ── Sidebar: conversation list ───────────────────────────────────────────
   'conv.emptyFolder': 'Nothing here yet',
-  'conv.emptyUnfiled': 'No uncategorized conversations',
+  'conv.emptyUnfiled': 'Your chats will appear here once you start chatting on a supported AI.',
   'conv.open': 'Open conversation',
   'conv.menuTrigger': 'Conversation actions',
   'conv.move': 'Move to folder',

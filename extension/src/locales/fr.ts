@@ -173,9 +173,6 @@ export const fr = {
   'sidebar.newFolder': 'Nouveau dossier',
   'sidebar.expandAll': 'Tout développer',
   'sidebar.collapseAll': 'Tout réduire',
-  'sidebar.noFolders': 'Aucun dossier pour l’instant',
-  'sidebar.emptyBody':
-    'Créez un dossier pour commencer à organiser vos conversations sur toutes les plateformes.',
   'sidebar.loading': 'Chargement de votre espace de travail…',
   'sidebar.loadError': 'Impossible de charger vos dossiers',
   'sidebar.loadErrorBody': 'L’espace de travail n’a pas répondu. Vérifiez votre connexion et réessayez.',
@@ -227,7 +224,7 @@ export const fr = {
 
   // ── Barre latérale : liste des conversations ─────────────────────────────
   'conv.emptyFolder': 'Rien ici pour l’instant',
-  'conv.emptyUnfiled': 'Aucune conversation sans catégorie',
+  'conv.emptyUnfiled': 'Vos conversations apparaîtront ici dès que vous discuterez sur une IA prise en charge.',
   'conv.open': 'Ouvrir la conversation',
   'conv.menuTrigger': 'Actions de la conversation',
   'conv.move': 'Déplacer vers un dossier',

@@ -21,6 +21,27 @@ export default defineConfig({
     permissions: skeinosManifest.permissions.filter((p) =>
       browser === 'firefox' ? p !== 'sidePanel' : true,
     ),
+    // Firefox (AMO) needs a stable add-on id so updates map to the same listing.
+    // Set it explicitly rather than letting Mozilla auto-assign one on first upload,
+    // since the id is permanent once published. Chromium ignores this block.
+    ...(browser === 'firefox'
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: 'skeinos@aakkagam.com',
+              // Firefox data-consent declaration (required for new AMO versions).
+              // `required: ['none']` — nothing is collected without consent; the
+              // only telemetry is opt-in, off-by-default anonymous diagnostics
+              // (crash + adapter-health), declared as OPTIONAL technical data.
+              // Mirrors docs/STORE_DATA_USE.md / the Chrome data disclosure.
+              data_collection_permissions: {
+                required: ['none'],
+                optional: ['technicalAndInteraction'],
+              },
+            },
+          },
+        }
+      : {}),
   }),
   hooks: {
     // Firefox renders its OWN sidebar chrome (a header with the icon + title) from

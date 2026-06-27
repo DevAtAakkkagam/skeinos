@@ -111,6 +111,18 @@ export function validateAdapterConfig(raw: unknown): AdapterConfig | ValidationE
       });
     }
 
+    // Optional: a signed-out marker selector (design D2), same rule as authedMarker.
+    const signedOutMarker = raw.selectors.signedOutMarker;
+    if (
+      signedOutMarker !== undefined &&
+      (typeof signedOutMarker !== 'string' || signedOutMarker.length === 0)
+    ) {
+      errors.push({
+        path: 'selectors.signedOutMarker',
+        message: 'must be a non-empty string when present',
+      });
+    }
+
     // Optional: a URL pattern for active-conversation detection, when present, must
     // be a non-empty string and a valid regex.
     const urlPattern = raw.selectors.conversationUrlPattern;

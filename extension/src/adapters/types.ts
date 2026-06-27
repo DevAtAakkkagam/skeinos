@@ -120,6 +120,15 @@ export interface AdapterSelectors {
    *  URL (prefer `data-testid`/stable structural attrs). Absent ⇒ never classified
    *  signed-out (legacy behavior). */
   authedMarker?: string;
+  /** Optional selector matching an element present ONLY when the user is signed OUT
+   *  (a login / sign-up control). A POSITIVE signed-out signal that OUTRANKS
+   *  {@link authedMarker}: some hosts render an account/profile control on their
+   *  logged-out shell too (ChatGPT renders `accounts-profile-button` when signed
+   *  out), so the absence of a banner must not hinge on the authed marker alone.
+   *  When it resolves on a failing `selfCheck()`, the page is treated as signed-out
+   *  (no banner) regardless of the authed marker. Same i18n rule as `authedMarker`:
+   *  no visible text, `aria-label`, or auth/route URL — prefer `data-testid`. */
+  signedOutMarker?: string;
 }
 
 /** Platform write quirks the generic adapter switches on (never on platformId). */

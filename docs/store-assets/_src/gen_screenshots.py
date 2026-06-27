@@ -13,9 +13,26 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.dirname(HERE)
-RAW = os.path.join(ASSETS, "raw")
+RAW = os.environ.get("SK_RAW", os.path.join(ASSETS, "raw"))
+# Per-shot name-blur boxes. The built-in boxes in SHOTS target the Chrome captures
+# (a ChatGPT greeting on shots 3 & 4). For other capture sets, override per shot via
+# SK_BLUR="<index>:x0,y0,x1,y1;<index>:..." (1-based index). When SK_BLUR is set it
+# REPLACES the built-in boxes entirely. SK_NO_BLUR=1 disables all blurring.
+NO_BLUR = os.environ.get("SK_NO_BLUR") == "1"
+BLUR_OVERRIDE = None
+if os.environ.get("SK_BLUR"):
+    BLUR_OVERRIDE = {}
+    for part in os.environ["SK_BLUR"].split(";"):
+        idx, box = part.split(":")
+        BLUR_OVERRIDE[int(idx)] = tuple(int(v) for v in box.split(","))
 
-W, H = 1280, 800
+# Base layout is 1280x800 (Chrome). SK_SCALE renders the same composition at higher
+# resolution for AMO (recommended up to 2400x1800) — e.g. 1.875 -> 2400x1500.
+SCALE = float(os.environ.get("SK_SCALE", "1"))
+OUTDIR = os.environ.get("SK_OUTDIR", ASSETS)
+def s(v):
+    return int(round(v * SCALE))
+W, H = s(1280), s(800)
 PAGE = (18, 18, 22)
 CARD = (27, 27, 33)
 BORDER = (60, 60, 70)
@@ -27,10 +44,12 @@ URB_B = f"{HERE}/Urbanist-700.ttf"
 URB_M = f"{HERE}/Urbanist-600.ttf"
 SS = 2
 
-# window crop box in the raw captures (x0, y0, x1, y1): trims the host's left
-# nav rail and outer margins but keeps the native composer + Skeinos input bar
-# (centre) AND the Skeinos panel (right), so it reads as a browser extension.
-WINDOW = (108, 14, 1852, 902)
+# window crop box in the raw captures (x0, y0, x1, y1): trims outer chrome but keeps
+# the native composer + Skeinos input bar AND the Skeinos panel, so it reads as a
+# browser extension. Default is tuned to the Chrome captures (panel on the right);
+# override via SK_WINDOW="x0,y0,x1,y1" for other layouts (e.g. Firefox, panel left).
+WINDOW = tuple(int(v) for v in os.environ["SK_WINDOW"].split(",")) if os.environ.get(
+    "SK_WINDOW") else (108, 14, 1852, 902)
 
 GLYPH_LINES = [
     (2.2, 8, 21.8, 8, WHITE), (16, 2.2, 16, 21.8, WHITE),
@@ -97,7 +116,7 @@ def draw_wordmark(img, d, x, y, gs=26, fs=20):
     f = ImageFont.truetype(URB_B, fs)
     track = 0.14 * fs
     asc, desc = f.getmetrics()
-    cx = x + gs + 11
+    cx = x + gs + s(11)
     cy = y + (gs - (asc + desc)) // 2
     for ch in "SKEINOS":
         d.text((cx, cy), ch, font=f, fill=PURPLE if ch == "O" else WHITE)
@@ -109,51 +128,55 @@ def frame(raw_path, headline, subtitle, accent, out_path, blur_box=None):
     d = ImageDraw.Draw(img)
 
     # ---- caption (top, centred): headline + supporting line ----
-    hl_font = ImageFont.truetype(URB_B, 34)
-    sub_font = ImageFont.truetype(URB_M, 19)
+    hl_font = ImageFont.truetype(URB_B, s(34))
+    sub_font = ImageFont.truetype(URB_M, s(19))
     # headline with optional purple accent word(s)
     hl_w = wtext(d, headline, hl_font)
     cx = (W - hl_w) // 2
     for i, word in enumerate(headline.split()):
         col = PURPLE if word.strip(".,&") in accent else WHITE
-        d.text((cx, 30), word, font=hl_font, fill=col)
+        d.text((cx, s(30)), word, font=hl_font, fill=col)
         cx += wtext(d, word + " ", hl_font)
     sub_w = wtext(d, subtitle, sub_font)
-    d.text(((W - sub_w) // 2, 76), subtitle, font=sub_font, fill=MUTED)
+    d.text(((W - sub_w) // 2, s(76)), subtitle, font=sub_font, fill=MUTED)
 
     # ---- browser-window screenshot in a wide soft-shadowed card ----
     shot = Image.open(raw_path).convert("RGB")
-    if blur_box:
+    if blur_box and not NO_BLUR:  # blur_box is in raw-capture coords, SCALE-independent
         region = shot.crop(blur_box).filter(ImageFilter.GaussianBlur(9))
         shot.paste(region, (blur_box[0], blur_box[1]))
     shot = shot.crop(WINDOW)
 
-    card_w = 1184
-    scale = card_w / shot.width
-    sw, sh = card_w, int(shot.height * scale)
+    # Contain within the available card band (width AND height) so any crop aspect
+    # fits without overflowing the canvas — Firefox captures are less wide than Chrome.
+    top_band = s(128)
+    card_max_w = s(1184)
+    card_max_h = H - top_band - s(70)  # leave room for the foot wordmark
+    scale = min(card_max_w / shot.width, card_max_h / shot.height)
+    sw, sh = int(shot.width * scale), int(shot.height * scale)
     shot = shot.resize((sw, sh), Image.LANCZOS)
 
     sx = (W - sw) // 2
-    sy = 128
+    sy = top_band + (card_max_h - sh) // 2
 
     shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ImageDraw.Draw(shadow).rounded_rectangle(
-        [sx - 6, sy - 2, sx + sw + 6, sy + sh + 12], radius=20, fill=(0, 0, 0, 160))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(20))
+        [sx - s(6), sy - s(2), sx + sw + s(6), sy + sh + s(12)], radius=s(20), fill=(0, 0, 0, 160))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(s(20)))
     img.paste(Image.new("RGB", (W, H), (0, 0, 0)), (0, 0), shadow)
 
     mask = Image.new("L", (sw, sh), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, sw - 1, sh - 1], radius=14, fill=255)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, sw - 1, sh - 1], radius=s(14), fill=255)
     img.paste(shot, (sx, sy), mask)
-    d.rounded_rectangle([sx, sy, sx + sw - 1, sy + sh - 1], radius=14, outline=BORDER, width=1)
+    d.rounded_rectangle([sx, sy, sx + sw - 1, sy + sh - 1], radius=s(14), outline=BORDER, width=1)
 
     # ---- foot wordmark (centred) ----
-    fs, gs = 20, 26
+    fs, gs = s(20), s(26)
     track = 0.14 * fs
     f = ImageFont.truetype(URB_B, fs)
     wm_w = sum(wchar(d, c, f) + track for c in "SKEINOS") - track
-    total = gs + 11 + wm_w
-    draw_wordmark(img, d, (W - total) // 2, H - 52, gs=gs, fs=fs)
+    total = gs + s(11) + wm_w
+    draw_wordmark(img, d, (W - total) // 2, H - s(52), gs=gs, fs=fs)
 
     img.save(out_path, quality=95)
     print("wrote", os.path.basename(out_path))
@@ -180,7 +203,11 @@ SHOTS = [
 if __name__ == "__main__":
     for i, shot in enumerate(SHOTS, 1):
         fname, hl, sub, acc = shot[:4]
-        blur_box = shot[4] if len(shot) > 4 else None
+        if BLUR_OVERRIDE is not None:
+            blur_box = BLUR_OVERRIDE.get(i)
+        else:
+            blur_box = shot[4] if len(shot) > 4 else None
         slug = hl.lower().replace(",", "").replace(" ", "-")
+        os.makedirs(OUTDIR, exist_ok=True)
         frame(os.path.join(RAW, fname), hl, sub, acc,
-              os.path.join(ASSETS, f"screenshot-{i}-{slug}.png"), blur_box)
+              os.path.join(OUTDIR, f"screenshot-{i}-{slug}.png"), blur_box)

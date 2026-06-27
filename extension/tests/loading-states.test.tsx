@@ -135,15 +135,15 @@ describe('Skeleton primitive (loading-states 4.1)', () => {
 // 4.2 Sidebar body states
 // =========================================================================== //
 describe('Sidebar body load states (loading-states 4.2)', () => {
-  it('loading + no folders → skeleton rows, not the empty state', () => {
+  it('loading + no folders → skeleton rows, not the ghost row', () => {
     renderSidebar(makeView(EMPTY, { status: 'loading' }));
     expect($('[data-testid=sk-folders-skeleton]')).toBeTruthy();
-    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
   });
 
-  it('ready + no folders → the empty state, not the skeleton', () => {
+  it('ready + no folders → the ghost create-folder row, not the skeleton', () => {
     renderSidebar(makeView(EMPTY, { status: 'ready' }));
-    expect($('[data-testid=sk-folders-empty]')).toBeTruthy();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
     expect($('[data-testid=sk-folders-skeleton]')).toBeNull();
   });
 
@@ -153,15 +153,15 @@ describe('Sidebar body load states (loading-states 4.2)', () => {
     );
     expect($$('[data-testid=sk-folder]')).toHaveLength(1);
     expect($('[data-testid=sk-folders-skeleton]')).toBeNull();
-    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
   });
 
-  it('error → a retry affordance, no skeleton and no empty state', () => {
+  it('error → a retry affordance, no skeleton and no ghost row', () => {
     const retry = vi.fn();
     renderSidebar(makeView(EMPTY, { status: 'error', retry }));
     expect($('[data-testid=sk-folders-retry]')).toBeTruthy();
     expect($('[data-testid=sk-folders-skeleton]')).toBeNull();
-    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
     $('[data-testid=sk-folders-retry]')!.click();
     expect(retry).toHaveBeenCalledTimes(1);
   });

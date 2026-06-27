@@ -170,9 +170,6 @@ export const pt = {
   'sidebar.newFolder': 'Nova pasta',
   'sidebar.expandAll': 'Expandir tudo',
   'sidebar.collapseAll': 'Recolher tudo',
-  'sidebar.noFolders': 'Ainda não há pastas',
-  'sidebar.emptyBody':
-    'Crie uma pasta para começar a organizar conversas em todas as plataformas.',
   'sidebar.loading': 'A carregar a sua área de trabalho…',
   'sidebar.loadError': 'Não foi possível carregar as suas pastas',
   'sidebar.loadErrorBody': 'A área de trabalho não respondeu. Verifique a ligação e tente novamente.',
@@ -223,7 +220,7 @@ export const pt = {
 
   // ── Sidebar: conversation list ───────────────────────────────────────────
   'conv.emptyFolder': 'Ainda não há nada aqui',
-  'conv.emptyUnfiled': 'Não há conversas sem categoria',
+  'conv.emptyUnfiled': 'As suas conversas aparecerão aqui assim que começar a conversar numa IA compatível.',
   'conv.open': 'Abrir conversa',
   'conv.menuTrigger': 'Ações da conversa',
   'conv.move': 'Mover para pasta',

@@ -44,7 +44,20 @@ interface RuntimeOnInstalled {
 }
 
 function scriptingApi(): ScriptingApi | undefined {
-  return extApi<{ scripting?: ScriptingApi }>()?.scripting;
+  // Primary path: the promise-based namespace via extApi (`browser` on Firefox,
+  // `chrome` on Chromium — both return promises for `scripting.executeScript`).
+  const api = extApi<{ scripting?: ScriptingApi }>()?.scripting;
+  if (api) return api;
+  // Fallback AND detection anchor: a DIRECT `chrome.scripting` reference. The
+  // extApi indirection above hides this genuine usage from the Chrome Web Store's
+  // automated permission-usage scanner (which reads the built bundle), so the
+  // `scripting` permission was wrongly flagged "requested but not used". This
+  // literal namespace access makes the usage statically visible. Chromium-only;
+  // Firefox already resolved `browser.scripting` above.
+  if (typeof chrome !== 'undefined' && chrome?.scripting) {
+    return chrome.scripting as ScriptingApi;
+  }
+  return undefined;
 }
 function tabsApi(): TabsQueryApi | undefined {
   return extApi<{ tabs?: TabsQueryApi }>()?.tabs;

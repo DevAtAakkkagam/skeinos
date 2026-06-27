@@ -170,9 +170,6 @@ export const es = {
   'sidebar.newFolder': 'Nueva carpeta',
   'sidebar.expandAll': 'Expandir todo',
   'sidebar.collapseAll': 'Contraer todo',
-  'sidebar.noFolders': 'Aún no hay carpetas',
-  'sidebar.emptyBody':
-    'Crea una carpeta para empezar a organizar conversaciones en todas las plataformas.',
   'sidebar.loading': 'Cargando tu espacio de trabajo…',
   'sidebar.loadError': 'No se pudieron cargar tus carpetas',
   'sidebar.loadErrorBody': 'El espacio de trabajo no respondió. Comprueba tu conexión e inténtalo de nuevo.',
@@ -223,7 +220,7 @@ export const es = {
 
   // ── Sidebar: conversation list ───────────────────────────────────────────
   'conv.emptyFolder': 'Aún no hay nada aquí',
-  'conv.emptyUnfiled': 'No hay conversaciones sin categoría',
+  'conv.emptyUnfiled': 'Tus chats aparecerán aquí en cuanto empieces a chatear en una IA compatible.',
   'conv.open': 'Abrir conversación',
   'conv.menuTrigger': 'Acciones de la conversación',
   'conv.move': 'Mover a una carpeta',

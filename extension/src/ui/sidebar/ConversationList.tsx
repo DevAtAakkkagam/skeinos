@@ -122,6 +122,9 @@ export interface ConversationListProps {
   /** The tag library, for the per-row tag-assignment picker. Defaults to none. */
   tags?: Tag[];
   context: ConversationListContext;
+  /** Suppress the "nothing here yet" empty caption when the list is empty — set for a
+   *  folder that still has subfolders, so the node never reads as bare under them. */
+  suppressEmpty?: boolean;
   /** The panel's active-tab platform — drives open routing (same tab vs side by
    *  side) in the default `onOpen`. */
   activePlatform?: PlatformId;
@@ -137,6 +140,7 @@ export function ConversationList({
   mutate,
   tags = [],
   context,
+  suppressEmpty = false,
   activePlatform,
   onOpen = (c) => void openConversation(c, activePlatform),
 }: ConversationListProps) {
@@ -323,7 +327,7 @@ export function ConversationList({
               ))
             : rows.map(renderRow)}
         </ul>
-      ) : (
+      ) : suppressEmpty ? null : (
         <p class="sk-empty__body sk-conv-list__empty" data-testid="sk-conv-empty">
           {context.kind === 'unfiled'
             ? t('conv.emptyUnfiled')

@@ -119,9 +119,9 @@ describe('Framed shell (6.1)', () => {
     expect(container.textContent).toContain('Chats and prompts, one thread');
     expect($('[data-testid=sk-tab-folders]')).toBeTruthy();
     expect($('[data-testid=sk-settings]')).toBeTruthy();
-    // the live folder body (with its empty-state) is mounted inside
+    // the live folder body (with its ghost create-folder row) is mounted inside
     expect($('[data-testid=sk-sidebar]')).toBeTruthy();
-    expect($('[data-testid=sk-folders-empty]')).toBeTruthy();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
   });
 
   it('omits the app name/glyph (shown by the native side-panel title bar) and keeps the workspace label', async () => {

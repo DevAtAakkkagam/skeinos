@@ -39,6 +39,7 @@ const SELECTOR_KEYS = [
   'sidebarAnchor',
   'inputBarAnchor',
   'authedMarker',
+  'signedOutMarker',
 ] as const satisfies readonly (keyof AdapterSelectors)[];
 
 const REQUIRED = new Set<string>(REQUIRED_ANCHORS);

@@ -169,9 +169,6 @@ export const de = {
   'sidebar.newFolder': 'Neuer Ordner',
   'sidebar.expandAll': 'Alle ausklappen',
   'sidebar.collapseAll': 'Alle einklappen',
-  'sidebar.noFolders': 'Noch keine Ordner',
-  'sidebar.emptyBody':
-    'Erstelle einen Ordner, um Unterhaltungen über alle Plattformen hinweg zu organisieren.',
   'sidebar.loading': 'Dein Arbeitsbereich wird geladen…',
   'sidebar.loadError': 'Deine Ordner konnten nicht geladen werden',
   'sidebar.loadErrorBody': 'Der Arbeitsbereich hat nicht reagiert. Prüfe deine Verbindung und versuche es erneut.',
@@ -222,7 +219,7 @@ export const de = {
 
   // ── Sidebar: conversation list ───────────────────────────────────────────
   'conv.emptyFolder': 'Hier ist noch nichts',
-  'conv.emptyUnfiled': 'Keine Unterhaltungen ohne Kategorie',
+  'conv.emptyUnfiled': 'Deine Chats erscheinen hier, sobald du auf einer unterstützten KI chattest.',
   'conv.open': 'Unterhaltung öffnen',
   'conv.menuTrigger': 'Unterhaltungs-Aktionen',
   'conv.move': 'In Ordner verschieben',

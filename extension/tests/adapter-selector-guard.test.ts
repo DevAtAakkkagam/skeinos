@@ -30,6 +30,7 @@ const LINTED_KEYS: readonly (keyof AdapterSelectors)[] = [
   'sidebarAnchor',
   'inputBarAnchor',
   'authedMarker',
+  'signedOutMarker',
 ];
 
 /** A localized `[aria-label="…"]` value match (the attribute-name read form

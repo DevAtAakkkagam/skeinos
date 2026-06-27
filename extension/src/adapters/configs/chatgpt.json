@@ -1,6 +1,6 @@
 {
   "platformId": "chatgpt",
-  "configVersion": "1.1.0",
+  "configVersion": "1.2.0",
   "hostMatch": ["*://chatgpt.com/*"],
   "selectors": {
     "conversationList": "#history",
@@ -14,7 +14,8 @@
     "sendButton": "button[data-testid=\"send-button\"]",
     "sidebarAnchor": "nav:has(#history)",
     "inputBarAnchor": "form[class*=\"composer\"]",
-    "authedMarker": "[data-testid=\"accounts-profile-button\"]"
+    "authedMarker": "[data-testid=\"accounts-profile-button\"]",
+    "signedOutMarker": "[data-testid=\"login-button\"], [data-testid=\"signup-button\"]"
   },
   "behaviors": {
     "insertMode": "execCommand",

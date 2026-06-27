@@ -94,7 +94,7 @@ describe('ConversationList rendering (4.1)', () => {
 
   it('shows the unfiled empty copy for the Unfiled node', () => {
     renderList([], { context: { kind: 'unfiled' } });
-    expect($('[data-testid=sk-conv-empty]')!.textContent).toContain('No uncategorized conversations');
+    expect($('[data-testid=sk-conv-empty]')!.textContent).toContain('Your chats will appear here');
   });
 
   it('pages the rendered rows and reveals more on demand (no silent truncation)', async () => {

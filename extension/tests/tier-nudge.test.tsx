@@ -85,7 +85,7 @@ describe('folder create — block-with-nudge (3.2/3.6)', () => {
     const view = makeWorkspaceView({ mutate: vi.fn(async () => quotaError('folders', 5)) });
     mount(<Sidebar platform="claude" view={view} />);
 
-    $('[data-testid=sk-empty-new-folder]')!.click();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
     await flush();
     setValue($('[data-testid=sk-folder-name]'), 'Archive');
     await flush(); // let the name state settle before submit
@@ -108,7 +108,7 @@ describe('folder create — block-with-nudge (3.2/3.6)', () => {
     const view = makeWorkspaceView({ mutate: vi.fn(async () => ({ ok: true, applied: true })) });
     mount(<Sidebar platform="claude" view={view} />);
 
-    $('[data-testid=sk-empty-new-folder]')!.click();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
     await flush();
     setValue($('[data-testid=sk-folder-name]'), 'Work');
     await flush(); // let the name state settle before submit

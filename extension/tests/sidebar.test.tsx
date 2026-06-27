@@ -80,34 +80,32 @@ afterEach(() => {
 });
 
 describe('Sidebar empty state (sidebar-shell)', () => {
-  it('renders the empty-state card with a New folder CTA when no active folders exist', () => {
+  it('renders the ghost create-folder row (not a card) when no active folders exist', () => {
     renderSidebar(makeView({ active: [], pinned: [], archived: [] }));
-    const empty = $('[data-testid=sk-folders-empty]');
-    expect(empty).toBeTruthy();
-    expect(empty!.textContent).toContain('No folders yet');
-    expect($('[data-testid=sk-empty-new-folder]')).toBeTruthy();
+    // The dedicated "No folders yet" card is retired — the no-folders path always
+    // falls to the slim ghost row.
+    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
   });
 
-  it('the empty-state CTA opens the create-folder dialog', async () => {
+  it('the ghost row opens the create-folder dialog', async () => {
     renderSidebar(makeView({ active: [], pinned: [], archived: [] }));
     expect($('[data-testid=sk-folder-dialog]')).toBeNull();
-    $('[data-testid=sk-empty-new-folder]')!.click();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
     await new Promise((r) => setTimeout(r, 0)); // let Preact flush the state update
     expect($('[data-testid=sk-folder-dialog]')).toBeTruthy();
   });
 
-  it('does not fire the blank-slate card when unfiled conversations exist', () => {
+  it('renders the ghost row when unfiled conversations exist', () => {
     renderSidebar(
       makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: [conv('u1'), conv('u2')] }),
     );
-    // The full "No folders yet" card must NOT lead over real content...
     expect($('[data-testid=sk-folders-empty]')).toBeNull();
-    // ...it is demoted to a slim ghost row, and the Unfiled group leads.
     expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
     expect($('[data-testid=sk-unfiled]')).toBeTruthy();
   });
 
-  it('does not fire the blank-slate card when archived conversations exist', () => {
+  it('renders the ghost row when archived conversations exist', () => {
     renderSidebar(
       makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: [conv('a1', { archived: true })] }),
     );
@@ -115,19 +113,40 @@ describe('Sidebar empty state (sidebar-shell)', () => {
     expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
     expect($('[data-testid=sk-archive-dock]')).toBeTruthy();
   });
+});
 
-  it('still fires the full card for a genuinely empty workspace (no folders, no content)', () => {
+describe('Sidebar Uncategorized section (folders)', () => {
+  it('renders the Uncategorized section with a 0 count and its empty-state message', () => {
     renderSidebar(makeView({ active: [], pinned: [], archived: [] }));
-    expect($('[data-testid=sk-folders-empty]')).toBeTruthy();
-    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
+    const unfiled = $('[data-testid=sk-unfiled]');
+    expect(unfiled).toBeTruthy();
+    expect($('[data-testid=sk-unfiled-count]')!.textContent).toBe('0');
+    // Expanded by default, so the empty-state message is visible without a click.
+    const empty = $('[data-testid=sk-conv-empty]');
+    expect(empty).toBeTruthy();
+    expect(empty!.textContent).toContain('Your chats will appear here');
   });
 
-  it('the demoted ghost row opens the create-folder dialog', async () => {
-    renderSidebar(makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: [conv('u1')] }));
-    expect($('[data-testid=sk-folder-dialog]')).toBeNull();
-    $('[data-testid=sk-ghost-new-folder]')!.click();
-    await new Promise((r) => setTimeout(r, 0));
-    expect($('[data-testid=sk-folder-dialog]')).toBeTruthy();
+  it('lists unfiled conversations with a matching count when present', () => {
+    renderSidebar(
+      makeView({ active: [], pinned: [], archived: [] }, {}, { conversations: [conv('u1'), conv('u2')] }),
+    );
+    expect($('[data-testid=sk-unfiled-count]')!.textContent).toBe('2');
+    expect($$('[data-testid=sk-conv-row]').length).toBe(2);
+  });
+
+  it('starts expanded on first paint and is included in expand-all', async () => {
+    renderSidebar(makeView({ active: [], pinned: [], archived: [] }));
+    // First paint: caret reports expanded and the empty body is rendered.
+    expect($('[data-testid=sk-unfiled-caret]')!.getAttribute('aria-expanded')).toBe('true');
+    expect($('[data-testid=sk-conv-empty]')).toBeTruthy();
+    // Collapse, then "expand all" must bring it back (the section is in the set).
+    $('[data-testid=sk-unfiled-caret]')!.click();
+    await flush();
+    expect($('[data-testid=sk-unfiled-caret]')!.getAttribute('aria-expanded')).toBe('false');
+    $('[data-testid=sk-expand-all]')!.click();
+    await flush();
+    expect($('[data-testid=sk-unfiled-caret]')!.getAttribute('aria-expanded')).toBe('true');
   });
 });
 
@@ -230,7 +249,7 @@ describe('Sidebar pinned & archive rows (folders delta)', () => {
 describe('Sidebar folder dialog defaults (folders / D5)', () => {
   const openCreate = async () => {
     renderSidebar(makeView({ active: [], pinned: [], archived: [] }));
-    $('[data-testid=sk-empty-new-folder]')!.click();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
     await new Promise((r) => setTimeout(r, 0));
   };
 
@@ -265,7 +284,7 @@ describe('Sidebar folder dialog defaults (folders / D5)', () => {
   it('creates a folder carrying the folder-icon sentinel and blue by default', async () => {
     const mutate = vi.fn(async () => ({ ok: true, applied: true }));
     renderSidebar(makeView({ active: [], pinned: [], archived: [] }, {}, { mutate }));
-    $('[data-testid=sk-empty-new-folder]')!.click();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
     await new Promise((r) => setTimeout(r, 0));
     const input = $('[data-testid=sk-folder-name]') as HTMLInputElement;
     input.value = 'Research';
@@ -397,13 +416,15 @@ describe('Sidebar inline expansion (drill-in)', () => {
     expect($('[data-testid=sk-unfiled-count]')!.textContent).toBe('1');
   });
 
-  it('omits the Unfiled node when every conversation is filed', () => {
+  it('still renders the Uncategorized node (count 0) when every conversation is filed', () => {
     renderSidebar(
       makeView({ active: [node(folder('x'))], pinned: [], archived: [] }, {}, {
         conversations: [conv('a', { folderId: 'x' })],
       }),
     );
-    expect($('[data-testid=sk-unfiled]')).toBeNull();
+    // The section is a permanent fixture now — present even at a count of 0.
+    expect($('[data-testid=sk-unfiled]')).toBeTruthy();
+    expect($('[data-testid=sk-unfiled-count]')!.textContent).toBe('0');
   });
 
   it('auto-expands the path to the active-tab conversation and highlights it', async () => {
@@ -493,32 +514,32 @@ describe('Sidebar archive dock (bottom-pinned archive)', () => {
 describe('Sidebar load states (workspace-view-recovery 7.4)', () => {
   const EMPTY: FolderTreeSnapshot = { active: [], pinned: [], archived: [] };
 
-  it('hides the "No folders yet" empty state until a read has succeeded', () => {
+  it('hides the ghost create-folder row until a read has succeeded', () => {
     renderSidebar(makeView(EMPTY, {}, { status: 'loading' }));
-    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
   });
 
-  it('shows the empty state only once a read succeeded and returned no folders', () => {
+  it('shows the ghost row only once a read succeeded and returned no folders', () => {
     renderSidebar(makeView(EMPTY, {}, { status: 'ready' }));
-    expect($('[data-testid=sk-folders-empty]')).toBeTruthy();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeTruthy();
   });
 
-  it('shows a retry affordance on a failed load, not the empty state', () => {
+  it('shows a retry affordance on a failed load, not the ghost row', () => {
     const retry = vi.fn();
     renderSidebar(makeView(EMPTY, {}, { status: 'error', retry }));
-    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
     const retryBtn = $('[data-testid=sk-folders-retry]');
     expect(retryBtn).toBeTruthy();
     retryBtn!.click();
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it('renders skeleton rows while loading, not the empty state (loading-states D-2)', () => {
+  it('renders skeleton rows while loading, not the ghost row (loading-states D-2)', () => {
     // The loading affordance is now skeleton rows (replacing the old delayed
-    // spinner): they show immediately on `loading`, never the empty-state card.
+    // spinner): they show immediately on `loading`, never the ghost create row.
     renderSidebar(makeView(EMPTY, {}, { status: 'loading' }));
     expect($('[data-testid=sk-folders-skeleton]')).toBeTruthy();
-    expect($('[data-testid=sk-folders-empty]')).toBeNull();
+    expect($('[data-testid=sk-ghost-new-folder]')).toBeNull();
   });
 });
 
@@ -543,7 +564,7 @@ describe('Sidebar create-dialog failure (workspace-view-recovery 7.5)', () => {
     const mutate = vi.fn(async () => ({ ok: false, applied: false }));
     renderSidebar(makeView(EMPTY, {}, { status: 'ready', mutate }));
 
-    $('[data-testid=sk-empty-new-folder]')!.click();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
     await new Promise((r) => setTimeout(r, 0));
     expect($('[data-testid=sk-folder-dialog]')).toBeTruthy();
 
@@ -564,7 +585,7 @@ describe('Sidebar create-dialog failure (workspace-view-recovery 7.5)', () => {
     const mutate = vi.fn(async () => ({ ok: true, applied: true }));
     renderSidebar(makeView(EMPTY, {}, { status: 'ready', mutate }));
 
-    $('[data-testid=sk-empty-new-folder]')!.click();
+    $('[data-testid=sk-ghost-new-folder]')!.click();
     await new Promise((r) => setTimeout(r, 0));
     type('sk-folder-name', 'Research');
     await flush(); // let setName re-render so the submit handler sees the typed name
