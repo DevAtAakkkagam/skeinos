@@ -77,13 +77,13 @@ export function countByTag(conversations: ConversationIndex[]): Record<string, n
   return counts;
 }
 
-/** Narrow `conversations` to those carrying EVERY id in `selected` (AND semantics,
- *  design D-4). An empty selection is the identity (the unified list). Pure + ephemeral
+/** Narrow `conversations` to those carrying ANY id in `selected` (OR semantics).
+ *  An empty selection is the identity (the unified list). Pure + ephemeral
  *  — never mutates a record. */
 export function filterByTags(
   conversations: ConversationIndex[],
   selected: string[],
 ): ConversationIndex[] {
   if (selected.length === 0) return conversations;
-  return conversations.filter((c) => selected.every((id) => c.tags.includes(id)));
+  return conversations.filter((c) => selected.some((id) => c.tags.includes(id)));
 }

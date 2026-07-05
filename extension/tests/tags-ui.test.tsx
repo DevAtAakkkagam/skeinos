@@ -92,9 +92,9 @@ describe('tag selectors (4.6 / 4.7)', () => {
     conv('d', { tags: [] }),
   ];
 
-  it('filterByTags narrows to a single tag and intersects (AND) for many', () => {
+  it('filterByTags narrows to a single tag and unions (OR) for many', () => {
     expect(filterByTags(list, ['t1']).map((c) => c.id)).toEqual(['a', 'b']);
-    expect(filterByTags(list, ['t1', 't2']).map((c) => c.id)).toEqual(['b']);
+    expect(filterByTags(list, ['t1', 't2']).map((c) => c.id)).toEqual(['a', 'b', 'c']);
   });
 
   it('an empty selection is the identity (the unified list)', () => {
@@ -123,12 +123,12 @@ describe('Sidebar narrows by the tag filter and shows row chips (4.6)', () => {
     expect(titles().sort()).toEqual(['Alpha', 'Beta', 'Gamma']);
   });
 
-  it('a single selected tag narrows; two intersect (AND)', () => {
+  it('a single selected tag narrows; two union (OR)', () => {
     render(<Sidebar platform="claude" view={makeWorkspaceView({ conversations: convs, tagFilter: ['t2'] })} />, container);
     expect(titles()).toEqual(['Beta']);
     render(null, container);
     render(<Sidebar platform="claude" view={makeWorkspaceView({ conversations: convs, tagFilter: ['t1', 't2'] })} />, container);
-    expect(titles()).toEqual(['Beta']);
+    expect(titles().sort()).toEqual(['Alpha', 'Beta', 'Gamma']);
   });
 
   it('composes with the platform filter', () => {
