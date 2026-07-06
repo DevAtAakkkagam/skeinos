@@ -100,6 +100,21 @@ jobs:
           # ESM bundle that crashes on Node >= 22.
           npx -y publish-browser-extension@5 $ARGS
 
+      - name: Changelog to run summary
+        if: always()
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          {
+            echo "## Store changelog for $VERSION"
+            echo ""
+            echo "Paste into the CWS description's WHAT'S NEW section (overwrite"
+            echo "the previous one) and the AMO version's release notes:"
+            echo ""
+            echo '```'
+            awk -v v="$VERSION" '/^## /{p = ($2 == v)} p' ../CHANGELOG.md
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Keep release zips as run artifacts
         uses: actions/upload-artifact@v4
         with:
