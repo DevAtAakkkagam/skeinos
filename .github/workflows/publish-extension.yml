@@ -105,4 +105,7 @@ jobs:
         with:
           name: store-packages
           path: extension/.output/skeinos-*.zip
+          # .output/ is a dot-directory; upload-artifact skips hidden paths
+          # unless told otherwise.
+          include-hidden-files: true
           retention-days: 90
