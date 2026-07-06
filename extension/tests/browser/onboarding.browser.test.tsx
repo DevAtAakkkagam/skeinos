@@ -63,8 +63,8 @@ describe('Onboarding stepper (real browser)', () => {
 
     $('[data-testid=sk-onboarding-start]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-onboarding-step-permissions]')).toBeTruthy());
-    // The three P0 hosts render their per-site rows in the real DOM.
-    expect($('[data-testid=sk-onboarding-perm-sites]')!.querySelectorAll('.sk-onb__site').length).toBe(3);
+    // The four supported hosts render their per-site rows in the real DOM.
+    expect($('[data-testid=sk-onboarding-perm-sites]')!.querySelectorAll('.sk-onb__site').length).toBe(4);
 
     $('[data-testid=sk-onboarding-continue]')!.click();
     await vi.waitFor(() => expect($('[data-testid=sk-onboarding-step-starter]')).toBeTruthy());

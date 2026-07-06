@@ -1,6 +1,6 @@
 // Profiles tab in real Chromium: shadow-root scoping + `--sk-*` token resolution, the
-// Folders ⇄ Profiles tab switch, and the editor MODAL opened by clicking a row (Esc
-// closes it). The happy-dom suite covers the logic; this asserts the parts that need a
+// Folders ⇄ Profiles tab switch, and the editor MODAL opened from the row's overflow
+// menu (Esc closes it). The happy-dom suite covers the logic; this asserts the parts that need a
 // real engine (token cascade in the shadow DOM, Zag-free dialog focus/keyboard).
 // Mirrors `prompts.browser.test.tsx`.
 
@@ -52,6 +52,8 @@ function mountPanel(node: preact.ComponentChild) {
   return handle;
 }
 const $ = (sel: string) => handle!.shadowRoot.querySelector(sel) as HTMLElement | null;
+const key = (el: HTMLElement, k: string) =>
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, composed: true }));
 
 afterEach(() => {
   handle?.dispose();
@@ -86,11 +88,16 @@ describe('Profiles tab (real browser)', () => {
     expect($('[data-testid=sk-prompts-panel]')).toBeNull();
   });
 
-  it('clicking a row opens the editor modal, and Escape closes it', async () => {
+  it('the row overflow menu opens the editor modal, and Escape closes it', async () => {
     mountPanel(<Tab view={makeView()} />);
-    const row = $('[data-testid=sk-profile-row-p1]')!;
-    row.focus();
-    row.click();
+    const trigger = $('[data-testid=sk-profile-row-menu]')!;
+    trigger.focus();
+    trigger.click();
+    await vi.waitFor(() => expect($('[data-testid=sk-profile-row-menu-content]')).toBeTruthy());
+    const content = $('[data-testid=sk-profile-row-menu-content]')!;
+    key(content, 'ArrowDown'); // highlight Edit
+    await vi.waitFor(() => expect(content.getAttribute('aria-activedescendant')).toBeTruthy());
+    key(content, 'Enter'); // activate Edit → opens the editor
     await vi.waitFor(() => expect($('[data-testid=sk-profile-editor]')).toBeTruthy());
     $('[data-testid=sk-profile-editor]')!.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }),
