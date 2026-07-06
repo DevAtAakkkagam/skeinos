@@ -18,6 +18,7 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+!.env.submit.example
 
 # Claude Code local config
 .claude/
