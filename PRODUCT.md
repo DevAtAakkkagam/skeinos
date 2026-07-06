@@ -6,8 +6,8 @@ product
 
 ## Users
 
-Multi-LLM power users: people who run parallel conversations across Claude, Gemini,
-Perplexity (and later Grok, DeepSeek, ChatGPT, Mistral) and lose track of where things
+Multi-LLM power users: people who run parallel conversations across Claude, ChatGPT,
+Gemini, Perplexity (and later Grok, DeepSeek, Mistral) and lose track of where things
 live. Researchers, builders, writers, and analysts who treat chat assistants as daily
 tools. Their context is an LLM tab they already have open; Skeinos is a shadow-DOM overlay
 panel riding on top of that host chat, not a destination they navigate to. They are
@@ -45,7 +45,7 @@ weaving many strands into one) as a quiet, tactile signature rather than a loud 
 - **Default indigo SaaS.** The generic Tailwind-indigo-on-white admin panel; Stripe-clone
   dashboards; hero-metric cards and identical card grids. The current chrome leans this way
   and should move away from it.
-- **The host LLM UIs.** Must not mimic or blend into Claude, Gemini, or Perplexity's own
+- **The host LLM UIs.** Must not mimic or blend into Claude, ChatGPT, Gemini, or Perplexity's own
   chrome. Skeinos is a distinct, neutral layer that sits over all of them; it cannot read
   as belonging to any one platform, or it loses its cross-platform identity.
 - **Dark hacker terminal.** No neon-on-black, monospace-everything, cyberpunk privacy-tool

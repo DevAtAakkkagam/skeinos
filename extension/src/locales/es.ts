@@ -297,6 +297,8 @@ export const es = {
   'onboarding.permForGemini': 'Igual — leer para indexar, escribir para insertar. Sin acceso en segundo plano.',
   'onboarding.permForPerplexity':
     'Leer para indexar; escribir para insertar. Nunca leemos mientras la pestaña está en segundo plano.',
+  'onboarding.permForChatgpt':
+    'Igual — leer para indexar, escribir para insertar. Sin acceso en segundo plano.',
   'onboarding.permAssurance':
     'Los permisos son por sitio y revocables en cualquier momento en Ajustes. Nunca leemos credenciales ni enviamos contenido a ninguna parte.',
   'onboarding.starterEyebrow': 'Paso 3 · Biblioteca inicial',
@@ -398,4 +400,50 @@ export const es = {
   // ── Relative time ────────────────────────────────────────────────────────
   // Sub-minute / future gaps; longer gaps format via `Intl.RelativeTimeFormat`.
   'time.justNow': 'ahora mismo',
+
+  // ── Install welcome page (install-welcome) ───────────────────────────────
+  'welcome.eyebrow': 'Primeros pasos',
+  'welcome.titleChrome': 'Un recorrido rápido para Chrome',
+  'welcome.titleFirefox': 'Un recorrido rápido para Firefox',
+  'welcome.lede':
+    'Skeinos vive dentro de tu navegador, sobre los sitios de chat de IA que ya usas. Aquí te mostramos dónde encontrarlo y qué hace.',
+  'welcome.findChrome': 'Encuéntralo en tu barra de herramientas',
+  'welcome.findFirefox': 'Encuéntralo en tu barra lateral',
+  'welcome.diagramChrome':
+    'Una ventana de Chrome con el icono de Skeinos resaltado en la barra de herramientas superior derecha y su panel abierto a la derecha.',
+  'welcome.diagramFirefox':
+    'Una ventana de Firefox con el botón de la barra lateral resaltado arriba a la izquierda y el panel de Skeinos abierto a la izquierda.',
+  'welcome.calloutChrome': 'haz clic para abrir',
+  'welcome.calloutFirefox': 'abre la barra lateral',
+  'welcome.pinTitle': 'Fíjalo para tenerlo siempre a un clic.',
+  'welcome.pinBody': 'Haz clic en la pieza de rompecabezas de tu barra de herramientas y luego en el pin junto a Skeinos.',
+  'welcome.sidebarTitle': 'Abre tu barra lateral y elige Skeinos.',
+  'welcome.sidebarBody':
+    'Usa el botón de la barra lateral en tu barra de herramientas y luego elige Skeinos. Permanece abierto junto a la página mientras te mueves entre los sitios de chat.',
+  'welcome.onlyLead': 'El botón de Skeinos solo se abre en los cuatro sitios de IA de arriba.',
+  'welcome.onlyRest':
+    'Haz clic allí y aparecerá el panel. En cualquier otra página no pasa nada, y es lo esperado.',
+  'welcome.howHeading': 'Cómo funciona',
+  'welcome.stepLabel': 'Paso {n}',
+  'welcome.step1Title': 'Abre un chat',
+  'welcome.step1Body': 'Ve a cualquiera de los cuatro sitios de IA que usas.',
+  'welcome.step2Title': 'Skeinos reúne tus chats',
+  'welcome.step2Body':
+    'Las conversaciones que ves se ordenan en tu barra lateral, aquí mismo en tu ordenador.',
+  'welcome.step3Title': 'Encuéntralos y organízalos',
+  'welcome.step3Body':
+    'Ordena los chats en carpetas, busca en todos los sitios a la vez y reutiliza tus mejores prompts.',
+  'welcome.assureLead': 'Nada sale de tu ordenador.',
+  'welcome.assureBody': 'Tus chats y carpetas se quedan en tu navegador. Sin cuenta, sin inicio de sesión.',
+  'welcome.settings': 'Abrir ajustes',
+  'welcome.feedback': 'Enviar comentarios',
+  'welcome.disclaimer': 'Sin afiliación con Anthropic, Google, Perplexity ni OpenAI.',
+
+  // ── Comentarios y soporte (enlace de feedback compartido) ────────────────
+  'shell.feedback': 'Enviar comentarios',
+  'options.supportHeading': 'Comentarios y soporte',
+  'options.supportIntro':
+    '¿Encontraste un error o un sitio que dejó de funcionar? Cuéntanos: es la forma más rápida de arreglarlo. Una valoración rápida también ayuda a otros a descubrir Skeinos.',
+  'options.sendFeedback': 'Enviar comentarios',
+  'options.rateExtension': 'Valorar Skeinos',
 } satisfies Catalog;

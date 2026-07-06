@@ -10,7 +10,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Folder, PlatformId } from '../../shared/types';
 import { extApi } from '../../core/platform/ext-api';
-import { LockIcon, SearchIcon, SettingsIcon } from '../components/Icon';
+import { ChatIcon, LockIcon, SearchIcon, SettingsIcon } from '../components/Icon';
+import { FEEDBACK_URL } from '../../shared/links';
 import { PlatformLogo } from '../components/PlatformLogo';
 import { PLATFORM_LABELS } from '../../shared/branding';
 import { SearchOverlay } from '../search/SearchOverlay';
@@ -56,6 +57,12 @@ function detectIsMac(): boolean {
 function openOptions(): void {
   const c = extApi<{ runtime?: { openOptionsPage?: () => void } }>();
   c?.runtime?.openOptionsPage?.();
+}
+
+/** Open the feedback form (or the mailto fallback) in a new tab. Guarded for the
+ *  test/no-DOM context. Single source: {@link FEEDBACK_URL} in shared/links. */
+function openFeedback(): void {
+  globalThis.open?.(FEEDBACK_URL, '_blank', 'noopener');
 }
 
 export interface SidebarShellProps {
@@ -332,6 +339,16 @@ export function SidebarShell({ platform, view, promptView, profileView, tagView,
           <LockIcon size={14} />
           {t('shell.localOnly')}
         </span>
+        <button
+          class="sk-icon-btn"
+          type="button"
+          data-testid="sk-feedback"
+          aria-label={t('shell.feedback')}
+          title={t('shell.feedback')}
+          onClick={openFeedback}
+        >
+          <ChatIcon size={16} />
+        </button>
         <button
           class="sk-icon-btn"
           type="button"

@@ -40,6 +40,15 @@ export interface Settings {
    */
   onboardingCompleted: boolean;
   /**
+   * First-run welcome page (install-welcome). Additive optional key — a settings
+   * object written before it existed reads back `false` via the defaults merge.
+   * Set to `true` by the worker the first time it opens `welcome.html` on install,
+   * so an unpacked dev reload (which also fires `onInstalled` with reason
+   * `install`) never reopens the tab. Independent of {@link onboardingCompleted}:
+   * the welcome page is a browser-orientation signpost, NOT the onboarding gate.
+   */
+  welcomeShown?: boolean;
+  /**
    * The user's chosen professional domain, picked during onboarding. Additive
    * optional key — absent (undefined) until the user picks one. Stays the stable
    * filter axis for the prompt library (shared/domains).

@@ -52,6 +52,17 @@ export const COMPONENT_CSS = `
 /* Buttons that lead with an inline-SVG icon: center the icon against the label
    and give them a consistent gap. */
 .sk-btn--icon { display: inline-flex; align-items: center; gap: var(--sk-space-1); }
+/* Secondary button: transparent with a hairline border whose border warms to the
+   accent on hover/focus. One primary (solid) per view; everything else is ghost. */
+.sk-btn--ghost {
+  background: transparent;
+  color: var(--sk-color-fg);
+  border: 1px solid var(--sk-color-border);
+}
+.sk-btn--ghost:hover {
+  border-color: color-mix(in srgb, var(--sk-color-accent) 55%, var(--sk-color-border));
+}
+.sk-btn--ghost:focus-visible { outline: 2px solid var(--sk-color-accent); outline-offset: 2px; }
 /* The ↵ affordance inside a dialog's primary (submit) button: a faint inline glyph
    that signals Enter submits the form. Decorative only — the button stays
    type="submit", which is what actually carries the behaviour. */

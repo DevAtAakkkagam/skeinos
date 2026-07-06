@@ -301,6 +301,8 @@ export const fr = {
   'onboarding.permForGemini': 'Pareil — lire pour indexer, saisir pour insérer. Aucun accès en arrière-plan.',
   'onboarding.permForPerplexity':
     'Lire pour indexer ; saisir pour insérer. Nous ne lisons jamais lorsque l’onglet est en arrière-plan.',
+  'onboarding.permForChatgpt':
+    'Pareil — lire pour indexer, saisir pour insérer. Aucun accès en arrière-plan.',
   'onboarding.permAssurance':
     'Les autorisations sont propres à chaque site et révocables à tout moment dans les Paramètres. Nous ne lisons jamais d’identifiants et n’envoyons aucun contenu nulle part.',
   'onboarding.starterEyebrow': 'Étape 3 · Bibliothèque de démarrage',
@@ -402,4 +404,50 @@ export const fr = {
   // ── Temps relatif ────────────────────────────────────────────────────────
   // Écarts inférieurs à la minute / futurs ; les écarts plus longs sont formatés via `Intl.RelativeTimeFormat`.
   'time.justNow': 'à l’instant',
+
+  // ── Install welcome page (install-welcome) ───────────────────────────────
+  'welcome.eyebrow': 'Prise en main',
+  'welcome.titleChrome': 'Une visite rapide pour Chrome',
+  'welcome.titleFirefox': 'Une visite rapide pour Firefox',
+  'welcome.lede':
+    'Skeinos vit directement dans votre navigateur, par-dessus les sites de chat IA que vous utilisez déjà. Voici où le trouver et ce qu’il fait.',
+  'welcome.findChrome': 'Trouvez-le dans votre barre d’outils',
+  'welcome.findFirefox': 'Trouvez-le dans votre barre latérale',
+  'welcome.diagramChrome':
+    'Une fenêtre Chrome avec l’icône Skeinos mise en évidence en haut à droite de la barre d’outils et son panneau ouvert à droite.',
+  'welcome.diagramFirefox':
+    'Une fenêtre Firefox avec le bouton de barre latérale mis en évidence en haut à gauche et le panneau Skeinos ouvert à gauche.',
+  'welcome.calloutChrome': 'cliquez pour ouvrir',
+  'welcome.calloutFirefox': 'ouvrir la barre latérale',
+  'welcome.pinTitle': 'Épinglez-le pour l’avoir toujours à portée de clic.',
+  'welcome.pinBody': 'Cliquez sur la pièce de puzzle dans votre barre d’outils, puis sur l’épingle à côté de Skeinos.',
+  'welcome.sidebarTitle': 'Ouvrez votre barre latérale et choisissez Skeinos.',
+  'welcome.sidebarBody':
+    'Utilisez le bouton de barre latérale dans votre barre d’outils, puis choisissez Skeinos. Il reste ouvert à côté de la page lorsque vous passez d’un site de chat à l’autre.',
+  'welcome.onlyLead': 'Le bouton Skeinos ne s’ouvre que sur les quatre sites d’IA ci-dessus.',
+  'welcome.onlyRest':
+    'Cliquez dessus à cet endroit, et le panneau apparaît. Sur toute autre page, rien ne se passe, et c’est normal.',
+  'welcome.howHeading': 'Comment ça marche',
+  'welcome.stepLabel': 'Étape {n}',
+  'welcome.step1Title': 'Ouvrir un chat',
+  'welcome.step1Body': 'Rendez-vous sur l’un des quatre sites d’IA que vous utilisez.',
+  'welcome.step2Title': 'Skeinos rassemble vos chats',
+  'welcome.step2Body':
+    'Les conversations que vous voyez sont rangées dans votre barre latérale, ici même sur votre ordinateur.',
+  'welcome.step3Title': 'Retrouvez-les et organisez-les',
+  'welcome.step3Body':
+    'Classez les chats en dossiers, cherchez sur tous les sites à la fois et réutilisez vos meilleurs prompts.',
+  'welcome.assureLead': 'Rien ne quitte votre ordinateur.',
+  'welcome.assureBody': 'Vos chats et dossiers restent dans votre navigateur. Pas de compte, pas de connexion.',
+  'welcome.settings': 'Ouvrir les réglages',
+  'welcome.feedback': 'Envoyer un retour',
+  'welcome.disclaimer': 'Sans lien avec Anthropic, Google, Perplexity ou OpenAI.',
+
+  // ── Retour & assistance (lien de feedback partagé) ───────────────────────
+  'shell.feedback': 'Envoyer un retour',
+  'options.supportHeading': 'Retour & assistance',
+  'options.supportIntro':
+    'Vous avez trouvé un bug, ou un site qui ne fonctionne plus ? Dites-le-nous : c’est le moyen le plus rapide de le corriger. Une petite note aide aussi les autres à découvrir Skeinos.',
+  'options.sendFeedback': 'Envoyer un retour',
+  'options.rateExtension': 'Noter Skeinos',
 } satisfies Catalog;

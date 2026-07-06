@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS, type Settings, type Theme } from '../../shared/settin
 import { Panel } from '../components/Panel';
 import { Text } from '../components/Text';
 import { ConsentToggle } from '../components/ConsentToggle';
+import { FEEDBACK_URL, REVIEW_URL } from '../../shared/links';
 import { useT, type MessageKey } from '../../core/i18n';
 
 // The options-page skeleton (T0.5). It reads current settings, renders them, and
@@ -83,6 +84,28 @@ export function OptionsApp({ onThemeChange }: OptionsAppProps) {
           checked={settings.diagnosticsOptIn}
           onChange={(v) => void toggleConsent('diagnosticsOptIn', v)}
         />
+      </div>
+      <div class="sk-stack" data-testid="sk-support">
+        <Text>{t('options.supportHeading')}</Text>
+        <Text muted>{t('options.supportIntro')}</Text>
+        <div style={{ display: 'flex', gap: 'var(--sk-space-2)', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            class="sk-btn"
+            data-testid="sk-send-feedback"
+            onClick={() => void globalThis.open?.(FEEDBACK_URL, '_blank', 'noopener')}
+          >
+            {t('options.sendFeedback')}
+          </button>
+          <button
+            type="button"
+            class="sk-btn sk-btn--ghost"
+            data-testid="sk-rate"
+            onClick={() => void globalThis.open?.(REVIEW_URL, '_blank', 'noopener')}
+          >
+            {t('options.rateExtension')}
+          </button>
+        </div>
       </div>
     </Panel>
   );

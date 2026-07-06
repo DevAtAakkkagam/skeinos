@@ -263,6 +263,7 @@ export const en = {
   'shell.localOnly': 'Local-only',
   'shell.localOnlyTitle': 'Your data stays on this device — nothing is synced or sent.',
   'shell.settings': 'Settings',
+  'shell.feedback': 'Send feedback',
   'shell.collapsedListNudge':
     '{label}’s chat list is hidden while its sidebar is collapsed. Open it once to sync all your conversations here.',
 
@@ -307,6 +308,7 @@ export const en = {
   'onboarding.permForGemini': 'Same — read to index, type to insert. No background access.',
   'onboarding.permForPerplexity':
     'Read to index; type to insert. We never read while the tab is in the background.',
+  'onboarding.permForChatgpt': 'Same — read to index, type to insert. No background access.',
   'onboarding.permAssurance':
     'Permissions are per-site and revocable any time in Settings. We never read credentials or send content anywhere.',
   'onboarding.starterEyebrow': 'Step 3 · Starter library',
@@ -337,6 +339,46 @@ export const en = {
   'onboarding.back': 'Back',
   'onboarding.continue': 'Continue',
   'onboarding.stepLabel': 'Step {current} of {total}',
+
+  // ── Install welcome page (install-welcome) ───────────────────────────────
+  // The full-tab getting-started page opened once on install. Browser-specific:
+  // `*Chrome`/`*Firefox` variants are selected at build time (import.meta.env).
+  'welcome.eyebrow': 'Getting started',
+  'welcome.titleChrome': 'A quick tour for Chrome',
+  'welcome.titleFirefox': 'A quick tour for Firefox',
+  'welcome.lede':
+    'Skeinos lives right inside your browser, on top of the AI chat sites you already use. Here’s where to find it and what it does.',
+  'welcome.findChrome': 'Find it in your toolbar',
+  'welcome.findFirefox': 'Find it in your sidebar',
+  'welcome.diagramChrome':
+    'A Chrome window with the Skeinos icon highlighted in the top-right toolbar and its panel open on the right.',
+  'welcome.diagramFirefox':
+    'A Firefox window with the sidebar button highlighted at the top-left and the Skeinos panel open on the left.',
+  'welcome.calloutChrome': 'click to open',
+  'welcome.calloutFirefox': 'open the sidebar',
+  'welcome.pinTitle': 'Pin it so it’s always one click away.',
+  'welcome.pinBody': 'Click the puzzle piece in your toolbar, then the pin next to Skeinos.',
+  'welcome.sidebarTitle': 'Open your sidebar and pick Skeinos.',
+  'welcome.sidebarBody':
+    'Use the sidebar button in your toolbar, then choose Skeinos. It stays open beside the page as you move between chat sites.',
+  'welcome.onlyLead': 'The Skeinos button only opens on the four AI sites above.',
+  'welcome.onlyRest':
+    'Click it there, and the panel appears. On any other page nothing happens, and that’s expected.',
+  'welcome.howHeading': 'How it works',
+  'welcome.stepLabel': 'Step {n}',
+  'welcome.step1Title': 'Open a chat',
+  'welcome.step1Body': 'Head to any of the four AI sites you use.',
+  'welcome.step2Title': 'Skeinos gathers your chats',
+  'welcome.step2Body':
+    'The conversations you can see get tidied into your sidebar, right here on your computer.',
+  'welcome.step3Title': 'Find and organize them',
+  'welcome.step3Body':
+    'Sort chats into folders, search across every site at once, and reuse your favorite prompts.',
+  'welcome.assureLead': 'Nothing leaves your computer.',
+  'welcome.assureBody': 'Your chats and folders stay in your browser. No account, no sign-in.',
+  'welcome.settings': 'Open settings',
+  'welcome.feedback': 'Send feedback',
+  'welcome.disclaimer': 'Not affiliated with Anthropic, Google, Perplexity, or OpenAI.',
 
   // ── Search overlay ───────────────────────────────────────────────────────
   'search.title': 'Search conversations',
@@ -396,6 +438,11 @@ export const en = {
   'options.diagnosticsLabel': 'Share diagnostics',
   'options.diagnosticsBody':
     'Anonymous crash and adapter-health reports so we can fix breakage fast. No conversation content, no identity.',
+  'options.supportHeading': 'Feedback & support',
+  'options.supportIntro':
+    'Found a bug, or a site that stopped working? Tell us — it’s the fastest way to get it fixed. A quick rating helps others find Skeinos too.',
+  'options.sendFeedback': 'Send feedback',
+  'options.rateExtension': 'Rate Skeinos',
 
   // ── Upgrade nudge (tier limits) ──────────────────────────────────────────
   'nudge.nounFolders': 'folders',

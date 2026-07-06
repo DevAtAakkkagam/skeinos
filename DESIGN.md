@@ -89,7 +89,7 @@ components:
 **Creative North Star: "The Quiet Loom"**
 
 Skeinos is a calm, structured surface that takes the threads of a user's work, scattered
-across Claude, Gemini, and Perplexity, and weaves them into one legible order. It is a
+across Claude, ChatGPT, Gemini, and Perplexity, and weaves them into one legible order. It is a
 shadow-DOM overlay riding on top of a host chat page, so its first job is to read as a
 distinct, neutral layer: owned, but partial to none of the platforms it sits over, and
 visually quiet against whatever busy UI is underneath it. The loom is structure without
@@ -288,7 +288,7 @@ Urbanist's prose.
 ### Don't:
 - **Don't** ship the default Tailwind-indigo-on-white SaaS admin look: no hero-metric cards,
   no gradient accents, no identical icon-heading-text card grids.
-- **Don't** mimic or blend into Claude, Gemini, or Perplexity's own chrome; Skeinos must read
+- **Don't** mimic or blend into Claude, ChatGPT, Gemini, or Perplexity's own chrome; Skeinos must read
   as a distinct, neutral layer over all of them.
 - **Don't** drift toward the neon-on-black hacker terminal, or toward a bubbly, gamified
   consumer toy. No mascots, bright gradients, emoji spam, or elastic motion.

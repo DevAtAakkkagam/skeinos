@@ -59,4 +59,8 @@ code is loaded; no session replay or autocapture is used.
 
 ## Privacy policy URL
 
-Link the published version of `docs/PRIVACY.md`.
+The published version of `docs/PRIVACY.md`:
+
+    https://skeinos.aakkagam.com/privacy/
+
+Keep the page (`website/privacy/index.html`) in sync with `docs/PRIVACY.md`.

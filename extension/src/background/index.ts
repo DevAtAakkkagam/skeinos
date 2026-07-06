@@ -17,6 +17,7 @@ import {
 } from '../core/observability';
 import { registerSidePanel } from './sidePanel';
 import { registerInjectOpenTabs } from './injectOpenTabs';
+import { registerWelcomeTab } from './welcomeTab';
 
 // ALL registration below is a top-level module side effect (SW-3), run on every
 // worker script evaluation. This is load-bearing: MV3 tears the worker down after
@@ -40,6 +41,11 @@ registerSidePanel();
 // the user's existing chats start ingesting without a manual tab reload. No-op
 // without `chrome.scripting` (e.g. Firefox MV2).
 registerInjectOpenTabs();
+
+// On first install, open the browser-specific welcome/getting-started page in a
+// new tab (install-only, guarded by the `welcomeShown` flag). No-op without
+// `chrome.tabs`/`runtime.getURL`.
+registerWelcomeTab();
 
 // Request handlers (workspace query/mutate, adapter health/degraded). These MUST
 // be top-level so a woken worker can answer the side panel's first message.

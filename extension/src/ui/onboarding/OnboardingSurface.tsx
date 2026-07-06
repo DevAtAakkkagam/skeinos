@@ -42,6 +42,11 @@ const PERM_SITES: readonly { id: string; host: string; forKey: MessageKey }[] = 
     host: 'perplexity.ai',
     forKey: 'onboarding.permForPerplexity',
   },
+  {
+    id: 'chatgpt',
+    host: 'chatgpt.com',
+    forKey: 'onboarding.permForChatgpt',
+  },
 ];
 
 const STEP_COUNT = 4;

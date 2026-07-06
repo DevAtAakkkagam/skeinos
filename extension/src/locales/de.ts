@@ -296,6 +296,8 @@ export const de = {
   'onboarding.permForGemini': 'Genauso – lesen zum Indexieren, tippen zum Einfügen. Kein Hintergrundzugriff.',
   'onboarding.permForPerplexity':
     'Lesen zum Indexieren; tippen zum Einfügen. Wir lesen nie, während der Tab im Hintergrund ist.',
+  'onboarding.permForChatgpt':
+    'Genauso – lesen zum Indexieren, tippen zum Einfügen. Kein Hintergrundzugriff.',
   'onboarding.permAssurance':
     'Berechtigungen gelten pro Website und sind jederzeit in den Einstellungen widerrufbar. Wir lesen nie Zugangsdaten und senden keine Inhalte irgendwohin.',
   'onboarding.starterEyebrow': 'Schritt 3 · Starter-Bibliothek',
@@ -397,4 +399,50 @@ export const de = {
   // ── Relative time ────────────────────────────────────────────────────────
   // Sub-minute / future gaps; longer gaps format via `Intl.RelativeTimeFormat`.
   'time.justNow': 'gerade eben',
+
+  // ── Install welcome page (install-welcome) ───────────────────────────────
+  'welcome.eyebrow': 'Erste Schritte',
+  'welcome.titleChrome': 'Eine kurze Tour für Chrome',
+  'welcome.titleFirefox': 'Eine kurze Tour für Firefox',
+  'welcome.lede':
+    'Skeinos lebt direkt in deinem Browser, über den KI-Chat-Seiten, die du bereits nutzt. Hier findest du es und siehst, was es kann.',
+  'welcome.findChrome': 'In deiner Symbolleiste finden',
+  'welcome.findFirefox': 'In deiner Seitenleiste finden',
+  'welcome.diagramChrome':
+    'Ein Chrome-Fenster mit dem hervorgehobenen Skeinos-Symbol oben rechts in der Symbolleiste und dem geöffneten Panel auf der rechten Seite.',
+  'welcome.diagramFirefox':
+    'Ein Firefox-Fenster mit der hervorgehobenen Seitenleisten-Schaltfläche oben links und dem geöffneten Skeinos-Panel auf der linken Seite.',
+  'welcome.calloutChrome': 'zum Öffnen klicken',
+  'welcome.calloutFirefox': 'Seitenleiste öffnen',
+  'welcome.pinTitle': 'Fixiere es, damit es immer einen Klick entfernt ist.',
+  'welcome.pinBody': 'Klicke auf das Puzzleteil in deiner Symbolleiste und dann auf die Stecknadel neben Skeinos.',
+  'welcome.sidebarTitle': 'Öffne deine Seitenleiste und wähle Skeinos.',
+  'welcome.sidebarBody':
+    'Nutze die Seitenleisten-Schaltfläche in deiner Symbolleiste und wähle dann Skeinos. Es bleibt neben der Seite geöffnet, während du zwischen den Chat-Seiten wechselst.',
+  'welcome.onlyLead': 'Die Skeinos-Schaltfläche öffnet sich nur auf den vier KI-Seiten oben.',
+  'welcome.onlyRest':
+    'Klicke dort darauf, und das Panel erscheint. Auf jeder anderen Seite passiert nichts – das ist so gewollt.',
+  'welcome.howHeading': 'So funktioniert es',
+  'welcome.stepLabel': 'Schritt {n}',
+  'welcome.step1Title': 'Einen Chat öffnen',
+  'welcome.step1Body': 'Gehe zu einer der vier KI-Seiten, die du nutzt.',
+  'welcome.step2Title': 'Skeinos sammelt deine Chats',
+  'welcome.step2Body':
+    'Die sichtbaren Unterhaltungen werden in deiner Seitenleiste geordnet – direkt hier auf deinem Computer.',
+  'welcome.step3Title': 'Finden und organisieren',
+  'welcome.step3Body':
+    'Sortiere Chats in Ordner, suche über alle Seiten hinweg und verwende deine besten Prompts wieder.',
+  'welcome.assureLead': 'Nichts verlässt deinen Computer.',
+  'welcome.assureBody': 'Deine Chats und Ordner bleiben in deinem Browser. Kein Konto, keine Anmeldung.',
+  'welcome.settings': 'Einstellungen öffnen',
+  'welcome.feedback': 'Feedback senden',
+  'welcome.disclaimer': 'Nicht verbunden mit Anthropic, Google, Perplexity oder OpenAI.',
+
+  // ── Feedback & Support (shared feedback link) ────────────────────────────
+  'shell.feedback': 'Feedback senden',
+  'options.supportHeading': 'Feedback & Support',
+  'options.supportIntro':
+    'Einen Fehler gefunden oder funktioniert eine Website nicht mehr? Sag uns Bescheid – so wird es am schnellsten behoben. Eine kurze Bewertung hilft auch anderen, Skeinos zu finden.',
+  'options.sendFeedback': 'Feedback senden',
+  'options.rateExtension': 'Skeinos bewerten',
 } satisfies Catalog;

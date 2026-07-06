@@ -41,3 +41,10 @@ playwright-report/
 
 # Tooling caches
 .playwright-mcp/
+
+# Demo video: vendored HyperFrames agent skills (reinstall: npx skills add heygen-com/hyperframes;
+# pinned by skills-lock.json) and regenerable outputs (see promo/demo-video/README.md).
+# Screencasts/ stays tracked — it is the only copy of the raw footage.
+promo/demo-video/.agents/
+promo/demo-video/skeinos-demo.mp4
+promo/demo-video/skeinos-demo.gif

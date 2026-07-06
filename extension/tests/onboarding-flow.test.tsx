@@ -185,7 +185,7 @@ describe('Permissions priming (8.3)', () => {
     (globalThis as { chrome?: unknown }).chrome = originalChrome;
   });
 
-  it('lists the three P0 hosts with per-site "for" copy and a "Read & type" badge', async () => {
+  it('lists the four supported hosts with per-site "for" copy and a "Read & type" badge', async () => {
     mount();
     $('[data-testid=sk-onboarding-start]')!.click();
     await flush();
@@ -193,16 +193,16 @@ describe('Permissions priming (8.3)', () => {
     const sites = $('[data-testid=sk-onboarding-perm-sites]')!;
     expect(sites).toBeTruthy();
     const hosts = [...sites.querySelectorAll('.sk-onb__site-host')].map((n) => n.textContent);
-    expect(hosts).toEqual(['claude.ai', 'gemini.google.com', 'perplexity.ai']);
+    expect(hosts).toEqual(['claude.ai', 'gemini.google.com', 'perplexity.ai', 'chatgpt.com']);
 
     // Each site has non-empty per-site "for" copy.
     const fors = [...sites.querySelectorAll('.sk-onb__site-for')].map((n) => n.textContent ?? '');
-    expect(fors).toHaveLength(3);
+    expect(fors).toHaveLength(4);
     expect(fors.every((t) => t.trim().length > 0)).toBe(true);
 
     // Each site carries a "Read & type" badge.
     const badges = [...sites.querySelectorAll('.sk-onb__site-badge')].map((n) => n.textContent);
-    expect(badges).toEqual(['Read & type', 'Read & type', 'Read & type']);
+    expect(badges).toEqual(['Read & type', 'Read & type', 'Read & type', 'Read & type']);
 
     // The assurance line is present.
     expect($('[data-testid=sk-onboarding-perm-assurance]')).toBeTruthy();

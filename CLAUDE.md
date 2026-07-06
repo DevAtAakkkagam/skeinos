@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Skeinos** — a Manifest V3 browser extension that overlays a unified organization,
 search, prompt-library, and multi-model-comparison layer on top of LLM chat sites
-(Claude, Gemini, Perplexity, and later Grok, DeepSeek, ChatGPT, Mistral). It is **local-first
+(Claude, ChatGPT, Gemini, Perplexity, and later Grok, DeepSeek, Mistral). It is **local-first
 and privacy-first**: conversation content never leaves the device on the free tier; only
 encrypted metadata syncs on paid tiers.
 
