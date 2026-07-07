@@ -51,10 +51,13 @@
       "@type": "SoftwareApplication",
       "name": "Skeinos",
       "applicationCategory": "BrowserApplication",
-      "operatingSystem": "Chrome, Manifest V3",
+      "operatingSystem": "Chrome, Firefox, Manifest V3",
       "description": "A free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Conversations are indexed locally and never leave the device.",
       "url": "https://skeinos.aakkagam.com/",
-      "downloadUrl": "https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj",
+      "downloadUrl": [
+        "https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj",
+        "https://addons.mozilla.org/en-US/firefox/addon/skeinos/"
+      ],
       "image": "https://skeinos.aakkagam.com/assets/og-image.png",
       "featureList": [
         "Organize conversations into folders and tags across every LLM site",
@@ -95,7 +98,7 @@
         {
           "@type": "Question",
           "name": "Which browsers and AI sites does Skeinos support?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Skeinos runs on Chrome today and works on Claude, ChatGPT, Gemini, and Perplexity. It is built on Manifest V3, with Firefox and more platforms on the way." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Skeinos runs on Chrome and Firefox and works on Claude, ChatGPT, Gemini, and Perplexity. It is built on Manifest V3, with more platforms on the way." }
         }
       ]
     }
@@ -382,7 +385,7 @@
     <nav aria-label="Primary">
       <a class="link" href="#how">How it works</a>
       <a class="link" href="#privacy">Privacy</a>
-      <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener">Add to Chrome</a>
+      <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener" data-store-cta><span data-cta-label>Add to Chrome</span></a>
     </nav>
   </div>
 </header>
@@ -395,9 +398,9 @@
       <h1 id="hero-title" class="reveal d1">One organized home for all your AI chats.</h1>
       <p class="lead reveal d2">Skeinos weaves your Claude, ChatGPT, Gemini, and Perplexity conversations into one searchable workspace. File a thread, find an old chat, drop in a saved prompt, in seconds. <b>Everything stays on your device.</b></p>
       <div class="cta-row reveal d3">
-        <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener">
+        <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener" data-store-cta>
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Add to Chrome, free
+          <span data-cta-label>Add to Chrome, free</span>
         </a>
         <a class="btn btn-ghost" href="#how">See how it works</a>
       </div>
@@ -494,7 +497,7 @@
         </div>
         <div class="qa">
           <dt>Which browsers and AI sites does Skeinos support?</dt>
-          <dd>Skeinos runs on Chrome today and works on Claude, ChatGPT, Gemini, and Perplexity. It is built on Manifest V3, with Firefox and more platforms on the way.</dd>
+          <dd>Skeinos runs on Chrome and Firefox and works on Claude, ChatGPT, Gemini, and Perplexity. It is built on Manifest V3, with more platforms on the way.</dd>
         </div>
       </dl>
     </div>
@@ -506,9 +509,9 @@
       <span class="overline">Get started</span>
       <h2 id="final-title">Weave your AI chats into one thread.</h2>
       <div class="cta-row">
-        <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener">
+        <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener" data-store-cta>
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Add to Chrome, free
+          <span data-cta-label>Add to Chrome, free</span>
         </a>
       </div>
       <div class="trust">
@@ -535,6 +538,7 @@
     </a>
     <nav aria-label="Footer">
       <a href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener">Chrome Web Store</a>
+      <a href="https://addons.mozilla.org/en-US/firefox/addon/skeinos/" rel="noopener">Firefox Add-ons</a>
       <a href="/privacy/">Privacy</a>
       <a href="https://docs.google.com/forms/d/e/1FAIpQLSdwvGDEqZ3cv9_Fbpt0GqS70tLQWHRl209wUW3uzejlusmvXg/viewform" target="_blank" rel="noopener">Send feedback</a>
     </nav>
@@ -543,6 +547,17 @@
 </footer>
 
 <script>
+  // Firefox visitors get the Firefox Add-ons link; the markup defaults to Chrome.
+  (function () {
+    if (!/Firefox/.test(navigator.userAgent)) return;
+    var ctas = document.querySelectorAll('a[data-store-cta]');
+    for (var i = 0; i < ctas.length; i++) {
+      ctas[i].href = 'https://addons.mozilla.org/en-US/firefox/addon/skeinos/';
+      var label = ctas[i].querySelector('[data-cta-label]');
+      if (label) label.textContent = label.textContent.replace('Chrome', 'Firefox');
+    }
+  })();
+
   // Header hairline on scroll (no layout animation).
   (function () {
     var h = document.getElementById('siteheader');

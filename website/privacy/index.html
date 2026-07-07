@@ -232,7 +232,7 @@
     <nav aria-label="Primary">
       <a class="link" href="/#how">How it works</a>
       <a class="link" href="/#privacy">Privacy</a>
-      <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener">Add to Chrome</a>
+      <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener" data-store-cta><span data-cta-label>Add to Chrome</span></a>
     </nav>
   </div>
 </header>
@@ -297,6 +297,7 @@
     <nav aria-label="Footer">
       <a href="/">Home</a>
       <a href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener">Chrome Web Store</a>
+      <a href="https://addons.mozilla.org/en-US/firefox/addon/skeinos/" rel="noopener">Firefox Add-ons</a>
       <a href="/privacy/" aria-current="page">Privacy</a>
       <a href="https://docs.google.com/forms/d/e/1FAIpQLSdwvGDEqZ3cv9_Fbpt0GqS70tLQWHRl209wUW3uzejlusmvXg/viewform" target="_blank" rel="noopener">Send feedback</a>
     </nav>
@@ -305,6 +306,17 @@
 </footer>
 
 <script>
+  // Firefox visitors get the Firefox Add-ons link; the markup defaults to Chrome.
+  (function () {
+    if (!/Firefox/.test(navigator.userAgent)) return;
+    var ctas = document.querySelectorAll('a[data-store-cta]');
+    for (var i = 0; i < ctas.length; i++) {
+      ctas[i].href = 'https://addons.mozilla.org/en-US/firefox/addon/skeinos/';
+      var label = ctas[i].querySelector('[data-cta-label]');
+      if (label) label.textContent = label.textContent.replace('Chrome', 'Firefox');
+    }
+  })();
+
   (function () {
     var h = document.getElementById('siteheader');
     var onScroll = function () {
