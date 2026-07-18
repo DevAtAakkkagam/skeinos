@@ -1,6 +1,8 @@
 <!-- Representative Perplexity DOM snapshot, shaped from the live www.perplexity.ai
-     thread + sidebar (captured 2026-06). Threads are `/search/<id>` links inside
-     `nav[aria-label="Main"]`; each is an *overlay* anchor (absolute inset-0) whose
+     thread + sidebar (captured 2026-06; nav anchors re-verified 2026-07 after the
+     sidebar lost its `collapsed-sidebar-expand-area` testid — the sidebar is now
+     anchored by its stable `group/sidebar` class). Threads are `/search/<id>`
+     links inside the sidebar nav; each is an *overlay* anchor (absolute inset-0) whose
      title lives in its `aria-label` and in a sibling title div — never in the link's
      own text — so the config reads the title via `conversationTitleAttr="aria-label"`.
      The active thread carries aria-current (the contract's accessible convention).
@@ -10,8 +12,7 @@
      `#ask-input` id, the `group/query` + `markdown-content` class/id — never the
      volatile Tailwind utility classes. See tests/fixtures/README.md. -->
 <div class="app">
-  <nav aria-label="Main" class="group/sidebar">
-    <div aria-hidden="true" data-testid="collapsed-sidebar-expand-area"></div>
+  <nav aria-label="Main" class="group/sidebar hidden relative z-10 min-h-0 flex-none h-full">
     <div class="group/collapsible-sidebar-section">
       <div class="group/sidebar-sub-menu relative block w-full">
         <a draggable="false" aria-label="Rump steaks" aria-current="page" class="reset interactable absolute inset-0" href="/search/conv-1"><span></span></a>

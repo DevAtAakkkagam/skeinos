@@ -1,9 +1,9 @@
 {
   "platformId": "perplexity",
-  "configVersion": "1.2.0",
+  "configVersion": "1.3.0",
   "hostMatch": ["*://*.perplexity.ai/*"],
   "selectors": {
-    "conversationList": "nav:has([data-testid=\"collapsed-sidebar-expand-area\"])",
+    "conversationList": "nav[class*=\"group/sidebar\"]",
     "conversationItem": "a[href^=\"/search/\"]",
     "conversationTitle": "[class*=\"truncate\"]",
     "conversationTitleAttr": "aria-label",
@@ -13,7 +13,7 @@
     "messageAssistant": "[id^=\"markdown-content\"]",
     "composer": "#ask-input",
     "sendButton": "button[aria-label=\"Submit\"]",
-    "sidebarAnchor": "nav:has([data-testid=\"collapsed-sidebar-expand-area\"])",
+    "sidebarAnchor": "nav[class*=\"group/sidebar\"]",
     "inputBarAnchor": "div:has(> #ask-input)",
     "authedMarker": "[*|href=\"#pplx-icon-user-filled\"]"
   },
