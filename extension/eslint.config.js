@@ -74,6 +74,16 @@ export default tseslint.config(
     },
   },
 
+  // Playwright-driven scripts pass callbacks to `page.evaluate()` /
+  // `waitForFunction()` that execute inside the page, so they reference
+  // browser globals (`document`, `location`) from an otherwise-Node file.
+  {
+    files: ['scripts/sanity-check.mjs'],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
+  },
+
   // i18n guard ([PREACT-7] / D-i18n-7): no hard-coded user-facing text in the shadow
   // DOM UI. Every visible string must come from a catalog via `t()`/`useT()`, so the
   // German pass and the ~40% pseudo-locale expansion are catalog work, not component
