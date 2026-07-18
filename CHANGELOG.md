@@ -5,6 +5,14 @@ the publish workflow prints the current version's section in its run summary,
 to be pasted into the Chrome Web Store description's "WHAT'S NEW" section
 (overwrite the previous one) and the Firefox AMO version release notes.
 
+## 0.1.5 — 2026-07-18
+
+• Skeinos can now repair chat-site compatibility breakages remotely — no store update needed when a site changes its layout.
+• Rebuilt Claude support for Claude's July 2026 interface redesign.
+• Fixed: the Perplexity sidebar attaches correctly again after a recent site update.
+• Fixed: stray icon characters no longer appear in conversation titles.
+• Fixed: conversation lists keep the chat site's own most-recent-first order.
+
 ## 0.1.4 — 2026-07-06
 
 • Welcome page after install — a quick tour of the sidebar, search, and prompt library, in all 5 languages.
