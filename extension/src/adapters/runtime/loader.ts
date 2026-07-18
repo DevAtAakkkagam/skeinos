@@ -12,7 +12,7 @@ import { getBundledConfig } from '../configs';
 import { isValidationErrors, validateAdapterConfig } from './validate';
 
 /** Where remote selector hot-fixes are published, per platform. */
-const REMOTE_CONFIG_BASE = 'https://configs.skeinos.app/adapters';
+const REMOTE_CONFIG_BASE = 'https://skeinos.aakkagam.com/adapters';
 const CACHE_PREFIX = 'skeinos.adapterConfig.';
 
 /** A durable last-known-good cache for adopted remote configs (survives SW death). */

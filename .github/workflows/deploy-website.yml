@@ -10,6 +10,7 @@ on:
     branches: [main]
     paths:
       - 'website/**'
+      - 'extension/src/adapters/configs/*.json'
       - '.github/workflows/deploy-website.yml'
   workflow_dispatch: {}
 
@@ -25,6 +26,19 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+
+      # Adapter selector hot-fix channel: the extension's config loader polls
+      # https://skeinos.aakkagam.com/adapters/<platform>.json when a platform is
+      # degraded (adapters/runtime/loader.ts). Publish the configs from their
+      # single source of truth so a selector fix ships by bumping configVersion
+      # and pushing to main — no store release.
+      - name: Stage adapter configs
+        run: |
+          mkdir -p website/adapters
+          for f in extension/src/adapters/configs/*.json; do
+            jq -e . "$f" > /dev/null
+            cp "$f" website/adapters/
+          done
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
