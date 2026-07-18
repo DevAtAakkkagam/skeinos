@@ -81,6 +81,7 @@ export interface AdapterDiagnostics {
   /** Non-selector config values, surfaced verbatim for context (not queried). */
   raw: {
     conversationIdAttr: string;
+    conversationIdPattern?: string;
     conversationTitleAttr?: string;
     conversationUrlPattern?: string;
   };
@@ -135,6 +136,7 @@ export function buildDiagnostics(
     selectors: selectorProbes,
     raw: {
       conversationIdAttr: selectors.conversationIdAttr,
+      conversationIdPattern: selectors.conversationIdPattern,
       conversationTitleAttr: selectors.conversationTitleAttr,
       conversationUrlPattern: selectors.conversationUrlPattern,
     },

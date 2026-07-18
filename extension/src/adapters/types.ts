@@ -100,11 +100,19 @@ export interface AdapterSelectors {
    *  after `conversationTitle`'s text and before the item's own text. */
   conversationTitleAttr?: string;
   conversationIdAttr: string;
+  /** Optional regex (as a string) applied to the RAW `conversationIdAttr` value to
+   *  extract the canonical `nativeId` — capture group 1 when present, else the
+   *  whole match; a non-matching or malformed pattern passes the raw value through.
+   *  For hosts whose DOM id carries a prefix the URL id does not (Claude's rows say
+   *  `data-row-key="chat:<uuid>"` while the URL says `/chat/<uuid>`), this is what
+   *  makes both sources yield the SAME id, which the runtime requires. */
+  conversationIdPattern?: string;
   /** Optional regex (as a string) that extracts the open conversation's `nativeId`
    *  straight from the page URL — the reliable signal when the host collapses or
    *  virtualizes its list so the open chat has no DOM item to mark. Capture group 1
    *  is used when present, else the whole match. The result must equal the
-   *  `conversationIdAttr` value the list items carry, so highlighting matches. */
+   *  (`conversationIdPattern`-normalized) `conversationIdAttr` value the list items
+   *  carry, so highlighting matches. */
   conversationUrlPattern?: string;
   messageUser: string;
   messageAssistant: string;

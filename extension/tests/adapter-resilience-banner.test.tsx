@@ -11,18 +11,17 @@ import type { AdapterConfig, PlatformAdapter, PlatformId } from '../src/adapters
 
 const claudeConfig = getBundledConfig('claude') as AdapterConfig;
 
-// Minimal host markup matching the Claude config's required anchors (the sidebar
-// <nav> keyed by its stable `pin-sidebar-toggle` testid, a fieldset input bar, and
-// the chat-input composer).
+// Minimal host markup matching the Claude config's required anchors (the dframe
+// aside sidebar, a fieldset input bar, and the chat-input composer).
 const HEALTHY_HTML = `
-  <nav><button data-testid="pin-sidebar-toggle"></button><a href="/chat/c1">Chat</a></nav>
+  <aside class="dframe-sidebar"><div data-row-key="chat:c1"><div data-row=""><button data-row-main-button="">Chat</button></div></div></aside>
   <fieldset>
     <div data-testid="chat-input" contenteditable="true" class="tiptap ProseMirror"></div>
   </fieldset>
 `;
 // A "broken config": the composer anchor the selectors target is gone.
 const BROKEN_HTML = `
-  <nav><button data-testid="pin-sidebar-toggle"></button><a href="/chat/c1">Chat</a></nav>
+  <aside class="dframe-sidebar"><div data-row-key="chat:c1"><div data-row=""><button data-row-main-button="">Chat</button></div></div></aside>
   <fieldset></fieldset>
 `;
 

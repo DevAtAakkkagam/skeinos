@@ -34,6 +34,58 @@ runAdapterContract({
   expected: expected as ContractExpectations,
 });
 
+describe('Claude conversationIdPattern id normalization', () => {
+  function mount(config: AdapterConfig): { adapter: ReturnType<typeof createAdapter>; root: HTMLElement } {
+    const root = document.createElement('div');
+    root.innerHTML = claudeHtml;
+    document.body.appendChild(root);
+    return {
+      adapter: createAdapter(config, { root, getUrl: () => 'https://claude.ai/chat/conv-1' }),
+      root,
+    };
+  }
+
+  it('list ids are the bare uuid (the `chat:` row prefix is stripped)', () => {
+    const { adapter, root } = mount(claudeConfig);
+    expect(adapter.listConversations().map((r) => r.nativeId)).toEqual(['conv-1', 'conv-2']);
+    root.remove();
+  });
+
+  it('the DOM id equals the URL-derived id, so the active row supplies the title', () => {
+    const { adapter, root } = mount(claudeConfig);
+    const ref = adapter.detectConversation();
+    expect(ref?.nativeId).toBe('conv-1');
+    expect(ref?.title).toBe('Quantum basics');
+    root.remove();
+  });
+
+  it('fails open: a malformed pattern falls back to the raw attribute value', () => {
+    const broken: AdapterConfig = {
+      ...claudeConfig,
+      selectors: { ...claudeConfig.selectors, conversationIdPattern: '(' },
+    };
+    const { adapter, root } = mount(broken);
+    expect(adapter.listConversations().map((r) => r.nativeId)).toEqual([
+      'chat:conv-1',
+      'chat:conv-2',
+    ]);
+    root.remove();
+  });
+
+  it('fails open: a non-matching value passes through raw', () => {
+    const strict: AdapterConfig = {
+      ...claudeConfig,
+      selectors: { ...claudeConfig.selectors, conversationIdPattern: '^session:(.+)$' },
+    };
+    const { adapter, root } = mount(strict);
+    expect(adapter.listConversations().map((r) => r.nativeId)).toEqual([
+      'chat:conv-1',
+      'chat:conv-2',
+    ]);
+    root.remove();
+  });
+});
+
 describe('Claude self-check fails cleanly on a broken fixture', () => {
   it('reports the missing composer anchor and does not throw', () => {
     const root = document.createElement('div');

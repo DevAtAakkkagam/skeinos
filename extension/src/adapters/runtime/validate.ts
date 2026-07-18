@@ -123,6 +123,27 @@ export function validateAdapterConfig(raw: unknown): AdapterConfig | ValidationE
       });
     }
 
+    // Optional: an id-normalization pattern applied to `conversationIdAttr` values,
+    // when present, must be a non-empty string and a valid regex.
+    const idPattern = raw.selectors.conversationIdPattern;
+    if (idPattern !== undefined) {
+      if (typeof idPattern !== 'string' || idPattern.length === 0) {
+        errors.push({
+          path: 'selectors.conversationIdPattern',
+          message: 'must be a non-empty string when present',
+        });
+      } else {
+        try {
+          new RegExp(idPattern);
+        } catch {
+          errors.push({
+            path: 'selectors.conversationIdPattern',
+            message: 'must be a valid regular expression',
+          });
+        }
+      }
+    }
+
     // Optional: a URL pattern for active-conversation detection, when present, must
     // be a non-empty string and a valid regex.
     const urlPattern = raw.selectors.conversationUrlPattern;

@@ -43,8 +43,31 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return qa(listScope(), selectors.conversationItem);
   }
 
+  // Normalize a raw `conversationIdAttr` value into the canonical `nativeId` via
+  // the optional `conversationIdPattern` (capture 1, else whole match). Compiled
+  // once; a malformed pattern (bad remote hot-fix) disables normalization rather
+  // than throwing, and a non-matching value passes through raw — both fail-open.
+  let idRegex: RegExp | null = null;
+  if (selectors.conversationIdPattern) {
+    try {
+      idRegex = new RegExp(selectors.conversationIdPattern);
+    } catch {
+      idRegex = null;
+    }
+  }
+  function normalizeId(raw: string): string {
+    if (!idRegex) return raw;
+    const m = raw.match(idRegex);
+    return m ? (m[1] ?? m[0]) : raw;
+  }
+
+  function itemId(item: Element): string {
+    const raw = item.getAttribute(selectors.conversationIdAttr);
+    return raw ? normalizeId(raw) : '';
+  }
+
   function refFromItem(item: Element): ConversationRef {
-    const nativeId = item.getAttribute(selectors.conversationIdAttr) ?? '';
+    const nativeId = itemId(item);
     const titleEl = item.querySelector(selectors.conversationTitle);
     // Prefer the title element's text; then a configured title attribute (for hosts
     // that label an item via an attribute rather than text); then the item's text.
@@ -69,7 +92,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     const url = getUrl();
     return (
       items.find((el) => {
-        const id = el.getAttribute(selectors.conversationIdAttr);
+        const id = itemId(el);
         return !!id && url.includes(id);
       }) ?? null
     );
@@ -157,9 +180,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     }
     if (!m) return null;
     const nativeId = m[1] ?? m[0];
-    const item = itemElements().find(
-      (el) => el.getAttribute(selectors.conversationIdAttr) === nativeId,
-    );
+    const item = itemElements().find((el) => itemId(el) === nativeId);
     return { nativeId, title: item ? refFromItem(item).title : firstUserTitle(), url };
   }
 
@@ -240,7 +261,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
   const idsOf = (els: Element[]): Set<string> => {
     const ids = new Set<string>();
     for (const el of els) {
-      const id = el.getAttribute(selectors.conversationIdAttr);
+      const id = itemId(el);
       if (id) ids.add(id);
     }
     return ids;

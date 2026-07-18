@@ -95,6 +95,20 @@ describe('AdapterConfig validation (T1.1)', () => {
       expect(result.some((e) => e.path === 'selectors.conversationUrlPattern')).toBe(true);
     }
   });
+
+  it('accepts an optional conversationIdPattern, rejects an invalid regex', () => {
+    const ok = makeConfig();
+    ok.selectors.conversationIdPattern = '^chat:(.+)$';
+    expect(isValidationErrors(validateAdapterConfig(ok))).toBe(false);
+
+    const bad = makeConfig();
+    bad.selectors.conversationIdPattern = '(';
+    const result = validateAdapterConfig(bad);
+    expect(isValidationErrors(result)).toBe(true);
+    if (isValidationErrors(result)) {
+      expect(result.some((e) => e.path === 'selectors.conversationIdPattern')).toBe(true);
+    }
+  });
 });
 
 describe('detectConversation: URL fallback when the list has no DOM item', () => {

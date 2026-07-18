@@ -238,4 +238,101 @@ describe('searchPostings prefix-shard reshape (1.4)', () => {
       await deleteDB(name);
     }
   });
+
+  it('v7 rewrites legacy Claude ids to the bare uuid, preserving organization (no data loss, 8.2)', async () => {
+    const name = `skeinos-migrate-v7-${dbCounter++}`;
+
+    // Create a database at v6 (the real pre-v7 history) and seed the legacy state
+    // the 2026-07 Claude UI change strands: href-form nativeIds, a transitional
+    // `chat:`-prefixed duplicate, postings under both doc ids, and an active record.
+    const preV7: Migration[] = MIGRATIONS.slice(0, 6);
+    let db: IDBPDatabase = await openDb(name, preV7, 6);
+    await db.put('conversations', {
+      id: 'claude::/chat/uuid-1',
+      platform: 'claude',
+      nativeId: '/chat/uuid-1',
+      title: 'Filed legacy',
+      folderId: 'f1',
+      tags: ['t1'],
+      pinned: true,
+    });
+    // Transitional dup: the same conversation ingested under BOTH id forms (an old
+    // runtime running the remote v2 config) — canonical form has no organization.
+    await db.put('conversations', {
+      id: 'claude::/chat/uuid-2',
+      platform: 'claude',
+      nativeId: '/chat/uuid-2',
+      title: 'Dup legacy',
+      folderId: 'f2',
+      tags: [],
+    });
+    await db.put('conversations', {
+      id: 'claude::chat:uuid-2',
+      platform: 'claude',
+      nativeId: 'chat:uuid-2',
+      title: 'Dup transitional',
+      folderId: null,
+      tags: [],
+    });
+    // A non-Claude record must pass through untouched.
+    await db.put('conversations', {
+      id: 'chatgpt::/c/other',
+      platform: 'chatgpt',
+      nativeId: '/c/other',
+      title: 'Other platform',
+      folderId: null,
+      tags: [],
+    });
+    await db.put('searchPostings', {
+      prefix: 'qu',
+      terms: {
+        quantum: [
+          { docId: 'claude::/chat/uuid-1', field: 'title', positions: [0] },
+          { docId: 'claude::/chat/uuid-2', field: 'title', positions: [1] },
+          { docId: 'claude::chat:uuid-2', field: 'title', positions: [1] },
+          { docId: 'chatgpt::/c/other', field: 'title', positions: [2] },
+        ],
+      },
+    });
+    await db.put('activeConversations', {
+      platform: 'claude',
+      nativeId: '/chat/uuid-1',
+      title: 'Filed legacy',
+      updatedAt: 1,
+    });
+    db.close();
+
+    // Reopen with the REAL full migration list — v7 runs against the seeded state.
+    db = await openDb(name, MIGRATIONS, 7);
+    try {
+      // Legacy ids are gone; canonical records carry the preserved organization.
+      expect(await db.get('conversations', 'claude::/chat/uuid-1')).toBeUndefined();
+      expect(await db.get('conversations', 'claude::/chat/uuid-2')).toBeUndefined();
+      expect(await db.get('conversations', 'claude::uuid-1')).toMatchObject({
+        nativeId: 'uuid-1',
+        folderId: 'f1',
+        tags: ['t1'],
+        pinned: true,
+      });
+      // The dup collapsed into ONE canonical record carrying the organization.
+      // (Which title survives the merge is immaterial — the next list ingest
+      // refreshes it via the idempotent title-index path.)
+      expect(await db.get('conversations', 'claude::uuid-2')).toMatchObject({
+        nativeId: 'uuid-2',
+        folderId: 'f2',
+      });
+      expect(await db.get('conversations', 'chatgpt::/c/other')).toBeTruthy();
+
+      // Postings docIds rewritten, the transitional dup posting collapsed.
+      const shard = await db.get('searchPostings', 'qu');
+      const docIds = shard.terms.quantum.map((p: { docId: string }) => p.docId);
+      expect(docIds).toEqual(['claude::uuid-1', 'claude::uuid-2', 'chatgpt::/c/other']);
+
+      // The active-conversation record follows the id change.
+      expect(await db.get('activeConversations', 'claude')).toMatchObject({ nativeId: 'uuid-1' });
+    } finally {
+      db.close();
+      await deleteDB(name);
+    }
+  });
 });

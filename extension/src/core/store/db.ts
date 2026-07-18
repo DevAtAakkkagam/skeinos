@@ -6,13 +6,27 @@
 // replays the same ordered history and "no data loss" (NFR 8.2) stays testable.
 
 import { openDB, type IDBPDatabase, type IDBPTransaction } from 'idb';
+import type { ActiveConversation, ConversationIndex, SearchShard } from '../../shared/types';
 import { ALL_STORES, DB_NAME } from './schema';
 
+// A migration may be async to rewrite data (v7): `idb` keeps the versionchange
+// transaction alive across awaits on its own stores, and `openDb` awaits each
+// step in order before the next runs.
 export type Migration = (
   db: IDBPDatabase,
   tx: IDBPTransaction<unknown, string[], 'versionchange'>,
   oldVersion: number,
-) => void;
+) => void | Promise<void>;
+
+/** v7 helper: the bare-uuid form of a legacy Claude `nativeId`, or `null` when the
+ *  id is already canonical. Two legacy forms exist: `/chat/<uuid>` (the pre-2026-07
+ *  config read the row `href`) and `chat:<uuid>` (a pre-v7 runtime running the
+ *  remote v2 config read `data-row-key` without normalizing it). */
+function legacyClaudeId(nativeId: string): string | null {
+  if (nativeId.startsWith('/chat/')) return nativeId.slice('/chat/'.length);
+  if (nativeId.startsWith('chat:')) return nativeId.slice('chat:'.length);
+  return null;
+}
 
 /**
  * Ordered migration list. v1 creates every store + index in the §6 table.
@@ -83,6 +97,78 @@ export const MIGRATIONS: Migration[] = [
       db.createObjectStore('platformState', { keyPath: 'platform' });
     }
   },
+  // v7 — Claude's 2026-07 UI rewrite changed how conversation ids surface: rows
+  // carry `data-row-key="chat:<uuid>"` and the runtime now normalizes both the DOM
+  // and URL sources to the BARE uuid (`conversationIdPattern`). Rewrite existing
+  // Claude records from the legacy nativeId forms to the bare uuid so folder /
+  // pin / tag assignments survive the id change instead of orphaning. Rewrites:
+  // `conversations` (id + nativeId), `searchPostings` (posting docIds, deduped in
+  // case a transitional install indexed the same doc under both forms), and
+  // `activeConversations`. Idempotent: canonical ids pass through untouched, so a
+  // replay (or a fresh install, guarded below) is a no-op.
+  async (_db, tx, oldVersion) => {
+    if (oldVersion === 0) return; // fresh install — nothing legacy to rewrite
+    const conv = tx.objectStore('conversations');
+    const records = (await conv.getAll()) as ConversationIndex[];
+    for (const rec of records) {
+      if (rec.platform !== 'claude') continue;
+      const canon = legacyClaudeId(rec.nativeId ?? '');
+      if (canon === null) continue;
+      const newId = `claude::${canon}`;
+      const existing = (await conv.get(newId)) as ConversationIndex | undefined;
+      await conv.delete(rec.id);
+      if (existing) {
+        // Both forms exist (transitional dup): keep the canonical record's content
+        // but adopt the legacy record's organization where the canonical has none.
+        await conv.put({
+          ...existing,
+          folderId: existing.folderId ?? rec.folderId ?? null,
+          tags: existing.tags?.length ? existing.tags : (rec.tags ?? []),
+          pinned: existing.pinned ?? rec.pinned,
+          archived: existing.archived ?? rec.archived,
+          color: existing.color ?? rec.color,
+        });
+      } else {
+        await conv.put({ ...rec, id: newId, nativeId: canon });
+      }
+    }
+    // Postings reference conversations by docId — rewrite the same legacy forms,
+    // then drop exact (docId, field) duplicates a transitional index left behind.
+    const shards = tx.objectStore('searchPostings');
+    let cursor = await shards.openCursor();
+    while (cursor) {
+      const shard = cursor.value as SearchShard;
+      let changed = false;
+      for (const term of Object.keys(shard.terms ?? {})) {
+        const postings = shard.terms[term];
+        for (const p of postings) {
+          if (!p.docId.startsWith('claude::')) continue;
+          const canon = legacyClaudeId(p.docId.slice('claude::'.length));
+          if (canon !== null) {
+            p.docId = `claude::${canon}`;
+            changed = true;
+          }
+        }
+        if (changed) {
+          const seen = new Set<string>();
+          shard.terms[term] = postings.filter((p) => {
+            const key = `${p.docId} ${p.field}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        }
+      }
+      if (changed) await cursor.update(shard);
+      cursor = await cursor.continue();
+    }
+    const active = tx.objectStore('activeConversations');
+    const activeClaude = (await active.get('claude')) as ActiveConversation | undefined;
+    if (activeClaude) {
+      const canon = legacyClaudeId(activeClaude.nativeId ?? '');
+      if (canon !== null) await active.put({ ...activeClaude, nativeId: canon });
+    }
+  },
 ];
 
 /**
@@ -96,11 +182,12 @@ export function openDb(
   version: number = migrations.length,
 ): Promise<IDBPDatabase> {
   return openDB(name, version, {
-    upgrade(db, oldVersion, newVersion, tx) {
+    async upgrade(db, oldVersion, newVersion, tx) {
       const target = newVersion ?? migrations.length;
-      // Run only steps newer than the on-disk version, in order.
+      // Run only steps newer than the on-disk version, in order. Awaited so an
+      // async data-rewrite step fully completes before the next step runs.
       for (let v = oldVersion; v < target; v++) {
-        migrations[v]?.(db, tx, oldVersion);
+        await migrations[v]?.(db, tx, oldVersion);
       }
     },
   });

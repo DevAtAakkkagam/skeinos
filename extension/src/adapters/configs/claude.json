@@ -1,24 +1,25 @@
 {
   "platformId": "claude",
-  "configVersion": "1.2.0",
+  "configVersion": "2.0.0",
   "hostMatch": ["*://claude.ai/*"],
   "selectors": {
-    "conversationList": "nav:has([data-testid=\"pin-sidebar-toggle\"])",
-    "conversationItem": "a[href^=\"/chat/\"]",
-    "conversationTitle": ".sr-only",
-    "conversationIdAttr": "href",
-    "conversationUrlPattern": "/chat/[^/?#]+",
+    "conversationList": "aside.dframe-sidebar",
+    "conversationItem": "[data-row-key^=\"chat:\"]",
+    "conversationTitle": "[data-row-main-button]",
+    "conversationIdAttr": "data-row-key",
+    "conversationIdPattern": "^chat:(.+)$",
+    "conversationUrlPattern": "/chat/([^/?#]+)",
     "messageUser": "[data-testid=\"user-message\"]",
-    "messageAssistant": ".font-claude-message",
+    "messageAssistant": ".font-claude-response",
     "composer": "[data-testid=\"chat-input\"]",
     "sendButton": "button[aria-label=\"Send message\"]",
-    "sidebarAnchor": "nav:has([data-testid=\"pin-sidebar-toggle\"])",
+    "sidebarAnchor": "aside.dframe-sidebar",
     "inputBarAnchor": "fieldset",
     "authedMarker": "[data-testid=\"user-menu-button\"]"
   },
   "behaviors": {
     "insertMode": "react-set",
-    "submitMode": "click",
+    "submitMode": "enter",
     "supportsSystemPrompt": true
   }
 }

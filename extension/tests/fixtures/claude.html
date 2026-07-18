@@ -1,38 +1,49 @@
-<!-- Representative Claude DOM snapshot, shaped from the live claude.ai sidebar +
-     tiptap composer (captured 2026-06). Conversations are `/chat/<id>` links inside
-     nav[aria-label="Sidebar"], each carrying its title in an `.sr-only` span; the
-     composer is the tiptap/ProseMirror contenteditable inside a <fieldset>.
-     See tests/fixtures/README.md — re-capture if the live selectors drift. -->
+<!-- Representative Claude DOM snapshot, shaped from the live claude.ai "dframe"
+     UI (captured 2026-07 after the redesign that removed the old <nav> sidebar).
+     The sidebar is aside.dframe-sidebar (present even when collapsed); conversation
+     rows are id-less buttons whose row WRAPPER carries data-row-key="chat:<uuid>"
+     (the runtime normalizes that to the bare uuid via conversationIdPattern, to
+     match the /chat/<uuid> URL id); the title is the row main button's text. A
+     non-chat row (data-row-key="label:recents") is included to prove the
+     `[data-row-key^="chat:"]` item selector excludes it. Assistant turns are
+     div[data-is-streaming] containers holding an sr-only heading plus the
+     .font-claude-response content node; the composer is the tiptap/ProseMirror
+     contenteditable inside a <fieldset>, with no send button until text is typed
+     (submitMode is "enter"). See tests/fixtures/README.md — re-capture if the live
+     selectors drift. -->
 <div class="app">
-  <nav aria-label="Sidebar">
-    <button data-testid="pin-sidebar-toggle" aria-label="Close sidebar"></button>
-    <a href="/new" aria-label="New chat">New chat</a>
-    <a href="/recents" aria-label="Chats">Chats</a>
-    <ul class="flex flex-col gap-px">
-      <li>
-        <a href="/chat/conv-1" aria-current="page">
-          <span class="sr-only">Quantum basics</span>
-          <span aria-hidden="true">Quantum basics</span>
-        </a>
-      </li>
-      <li>
-        <a href="/chat/conv-2">
-          <span class="sr-only">Trip planning</span>
-          <span aria-hidden="true">Trip planning</span>
-        </a>
-      </li>
-    </ul>
-  </nav>
+  <button data-testid="user-menu-button"></button>
+  <aside class="dframe-sidebar" data-variant="web" data-density="comfortable" aria-label="Sidebar">
+    <div class="dframe-sidebar-body">
+      <div data-row-key="label:recents" class="relative">
+        <div data-row=""><button type="button" data-row-main-button="">Recents</button></div>
+      </div>
+      <div data-row-key="chat:conv-1" class="relative df-drag-shiftable" aria-current="page">
+        <div data-row="" data-selected="focused">
+          <button type="button" data-roving-item="" data-row-main-button="">Quantum basics</button>
+        </div>
+      </div>
+      <div data-row-key="chat:conv-2" class="relative df-drag-shiftable">
+        <div data-row="">
+          <button type="button" data-roving-item="" data-row-main-button="">Trip planning</button>
+        </div>
+      </div>
+    </div>
+  </aside>
 
   <main>
-    <div class="thread">
-      <div data-testid="user-message">What is superposition?</div>
-      <div class="font-claude-message">Superposition is a quantum state combining possibilities.</div>
+    <div data-autoscroll-container="">
+      <div data-test-render-count="1">
+        <div data-testid="user-message">What is superposition?</div>
+      </div>
+      <div data-test-render-count="1" data-is-streaming="false">
+        <h2 class="sr-only">Claude responded:</h2>
+        <div class="font-claude-response">Superposition is a quantum state combining possibilities.</div>
+      </div>
     </div>
 
     <fieldset>
       <div contenteditable="true" data-testid="chat-input" class="tiptap ProseMirror"></div>
-      <button aria-label="Send message">Send</button>
     </fieldset>
   </main>
 </div>
