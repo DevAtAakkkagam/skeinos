@@ -66,18 +66,30 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return raw ? normalizeId(raw) : '';
   }
 
+  // Host icon fonts (Claude's "Anthropicons") embed their glyphs as REAL text —
+  // private-use-area characters inside the title element — so a raw `textContent`
+  // title carries an invisible PUA char that renders as a tofu box in our UI and
+  // pollutes the search index. Strip PUA (all three planes) and zero-width/BOM
+  // characters, then collapse the whitespace that stripping leaves behind.
+  function cleanTitle(raw: string): string {
+    return raw
+      .replace(/[\u{E000}-\u{F8FF}\u{F0000}-\u{FFFFD}\u{100000}-\u{10FFFD}\u{FEFF}\u{200B}-\u{200D}]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function refFromItem(item: Element): ConversationRef {
     const nativeId = itemId(item);
     const titleEl = item.querySelector(selectors.conversationTitle);
     // Prefer the title element's text; then a configured title attribute (for hosts
     // that label an item via an attribute rather than text); then the item's text.
     const titleAttr = selectors.conversationTitleAttr;
-    const title = (
+    const title = cleanTitle(
       titleEl?.textContent ??
-      (titleAttr ? item.getAttribute(titleAttr) : null) ??
-      item.textContent ??
-      ''
-    ).trim();
+        (titleAttr ? item.getAttribute(titleAttr) : null) ??
+        item.textContent ??
+        '',
+    );
     const url =
       item.getAttribute('href') ?? item.querySelector('a')?.getAttribute('href') ?? '';
     return { nativeId, title, url };
@@ -158,7 +170,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
   // title the moment the list renders (the title-index path is read-modify-write).
   function firstUserTitle(): string {
     const el = q(selectors.messageUser);
-    const text = (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    const text = cleanTitle(el?.textContent ?? '');
     return text.length > 80 ? `${text.slice(0, 79)}…` : text;
   }
 

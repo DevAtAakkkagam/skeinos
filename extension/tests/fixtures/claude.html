@@ -20,7 +20,10 @@
       </div>
       <div data-row-key="chat:conv-1" class="relative df-drag-shiftable" aria-current="page">
         <div data-row="" data-selected="focused">
-          <button type="button" data-roving-item="" data-row-main-button="">Quantum basics</button>
+          <!-- The leading &#xE037; is REAL: Claude's Anthropicons icon glyph is a
+               private-use-area character inside the button text; the adapter's
+               title sanitation must strip it (it renders as a tofu box). -->
+          <button type="button" data-roving-item="" data-row-main-button=""><span class="df-leading-slot">&#xE037;</span>Quantum basics</button>
         </div>
       </div>
       <div data-row-key="chat:conv-2" class="relative df-drag-shiftable">
