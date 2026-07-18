@@ -202,12 +202,21 @@ export async function mutateWorkspace(
       // gated), preserves the existing `folderId` / pin / archive / colour / tags
       // (read-modify-write), and never clobbers a body already indexed from a full
       // read. Message bodies are indexed separately when a conversation is opened.
-      for (const ref of op.refs) {
+      //
+      // `refs` arrive in host-list DOM order, and every host renders newest-first —
+      // so each record is stamped `base - position`, preserving that recency order.
+      // (Stamping plain Date.now() per record gave the NEWEST conversation the
+      // OLDEST timestamp, so the side panel — sorted by updatedAt desc — showed the
+      // whole initial ingest reversed.) Re-ingests of unchanged records are hash-
+      // gated no-ops, so these synthetic stamps never churn existing rows.
+      const base = Date.now();
+      for (const [i, ref] of op.refs.entries()) {
         await indexConversationTitle(store, {
           id: conversationId(op.platform, ref.nativeId),
           platform: op.platform,
           nativeId: ref.nativeId,
           title: ref.title,
+          updatedAt: base - i,
         });
       }
       return { stores: ['conversations', 'searchPostings'] };

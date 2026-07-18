@@ -114,6 +114,42 @@ describe('mutate → persist → re-query round-trips', () => {
     expect(snap.conversations.find((c) => c.id === 'claude::c2')?.folderId).toBeNull();
   });
 
+  it('ingest preserves host recency order: newest-first refs get descending updatedAt', async () => {
+    // Hosts list newest-first; the ingest stamps `base - position`, so sorting by
+    // updatedAt desc must reproduce the ref order — NOT reverse it (the bug where
+    // "Birthday Wishes GIF", first in the host list, sorted last after ingest).
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'chatgpt',
+      refs: [
+        { nativeId: 'newest', title: 'Birthday Wishes GIF' },
+        { nativeId: 'middle', title: 'SQL Joins Explained' },
+        { nativeId: 'oldest', title: 'Immigration Check' },
+      ],
+    });
+
+    const snap = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (snap.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    const byRecency = [...snap.conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+    expect(byRecency.map((c) => c.nativeId)).toEqual(['newest', 'middle', 'oldest']);
+
+    // A re-ingest of the unchanged list is a hash-gated no-op — timestamps
+    // (and therefore the order) must not churn.
+    const stamps = new Map(snap.conversations.map((c) => [c.nativeId, c.updatedAt]));
+    await mutateWorkspace(store, {
+      op: 'conversation.ingest',
+      platform: 'chatgpt',
+      refs: [
+        { nativeId: 'newest', title: 'Birthday Wishes GIF' },
+        { nativeId: 'middle', title: 'SQL Joins Explained' },
+        { nativeId: 'oldest', title: 'Immigration Check' },
+      ],
+    });
+    const again = await queryWorkspace(store, { kind: 'conversation.list' });
+    if (again.kind !== 'conversation.list') throw new Error('expected conversation.list');
+    for (const c of again.conversations) expect(c.updatedAt).toBe(stamps.get(c.nativeId));
+  });
+
   it('conversation.list returns the UNIFIED set across every platform (no platform filter)', async () => {
     await mutateWorkspace(store, { op: 'folder.create', id: 'a', name: 'A' });
     await mutateWorkspace(store, {
