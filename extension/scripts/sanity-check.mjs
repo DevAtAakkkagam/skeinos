@@ -221,6 +221,7 @@ async function setup() {
     channel: 'chrome',
     headless: false,
     viewport: { width: 1440, height: 900 },
+    ignoreDefaultArgs: ['--enable-automation'],
   });
   const page = await context.newPage();
   for (const config of configs) {
@@ -234,7 +235,7 @@ async function setup() {
         ([composerSel, authedSel]) =>
           document.querySelector(composerSel) && (!authedSel || document.querySelector(authedSel)),
         [config.selectors.composer, config.selectors.authedMarker ?? ''],
-        { timeout: 180_000 },
+        { timeout: 300_000 },
       )
       .then(() => true)
       .catch(() => false);
@@ -260,6 +261,10 @@ async function main() {
       channel: 'chrome',
       headless: !HEADED,
       viewport: { width: 1440, height: 900 },
+      // Drop the automation banner flag so the fingerprint matches the plain-Chrome
+      // sessions where logins/clearances were established (navigator.webdriver stays
+      // false, as in normal use of this profile). We monitor our own accounts, daily.
+      ignoreDefaultArgs: ['--enable-automation'],
     });
   } catch (err) {
     // Most likely the profile is locked by a live Claude Code browser session —
