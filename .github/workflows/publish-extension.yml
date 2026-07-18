@@ -17,6 +17,10 @@ name: Publish extension
 #            CHROME_SERVICE_ACCOUNT_PRIVATE_KEY
 #   Firefox: FIREFOX_EXTENSION_ID, FIREFOX_JWT_ISSUER, FIREFOX_JWT_SECRET
 #   Edge   : EDGE_PRODUCT_ID, EDGE_CLIENT_ID, EDGE_API_KEY
+#
+# Stores REJECT a version they already have (CWS: PKG_INVALID_VERSION_NUMBER,
+# AMO: 409 "already exists") — pick only the store(s) that still need the
+# current version, or bump the version first for a full `all` release.
 
 on:
   workflow_dispatch:
