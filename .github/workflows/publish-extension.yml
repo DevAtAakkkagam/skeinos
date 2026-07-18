@@ -1,12 +1,14 @@
 name: Publish extension
 
-# Uploads a release build to the Chrome Web Store and/or Firefox AMO via
-# publish-browser-extension (the tool behind `wxt submit`). Manual-only:
-# run it from the Actions tab once the version bump is on main.
+# Uploads a release build to the Chrome Web Store, Firefox AMO, and/or Edge
+# Add-ons via publish-browser-extension (the tool behind `wxt submit`).
+# Manual-only: run it from the Actions tab once the version bump is on main.
 #
 # It SUBMITS FOR REVIEW — store review still happens; Chrome auto-publishes
-# after approval, AMO signs/reviews listed versions. Store listing text
-# (description / what's-new) is not touched — update that in the dashboards.
+# after approval, AMO signs/reviews listed versions, Edge publishes after
+# Partner Center certification. Store listing text (description / what's-new)
+# is not touched — update that in the dashboards. Edge reuses the Chrome zip
+# (same Chromium build).
 #
 # Required repo secrets (Chrome uses CWS API v2 with a Google Cloud
 # service account — see extension/.env.submit.example):
@@ -14,6 +16,7 @@ name: Publish extension
 #            CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL,
 #            CHROME_SERVICE_ACCOUNT_PRIVATE_KEY
 #   Firefox: FIREFOX_EXTENSION_ID, FIREFOX_JWT_ISSUER, FIREFOX_JWT_SECRET
+#   Edge   : EDGE_PRODUCT_ID, EDGE_CLIENT_ID, EDGE_API_KEY
 
 on:
   workflow_dispatch:
@@ -21,8 +24,8 @@ on:
       store:
         description: Which store(s) to publish to
         type: choice
-        options: [both, chrome, firefox]
-        default: both
+        options: [all, chrome, firefox, edge]
+        default: all
       dry-run:
         description: Validate credentials and package without uploading
         type: boolean
@@ -60,16 +63,16 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Zip (Chrome)
-        if: ${{ inputs.store == 'both' || inputs.store == 'chrome' }}
+      - name: Zip (Chrome/Edge)
+        if: ${{ inputs.store != 'firefox' }}
         run: npm run zip
 
       - name: Check bundle budgets
-        if: ${{ inputs.store == 'both' || inputs.store == 'chrome' }}
+        if: ${{ inputs.store != 'firefox' }}
         run: npm run check:size
 
       - name: Zip (Firefox + sources)
-        if: ${{ inputs.store == 'both' || inputs.store == 'firefox' }}
+        if: ${{ inputs.store == 'all' || inputs.store == 'firefox' }}
         run: npm run zip:firefox
 
       - name: Submit to stores
@@ -82,15 +85,23 @@ jobs:
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          STORE="${{ inputs.store }}"
           ARGS=""
-          if [[ "${{ inputs.store }}" != "firefox" ]]; then
+          if [[ "$STORE" == "all" || "$STORE" == "chrome" ]]; then
             ARGS="$ARGS --chrome-zip .output/skeinos-$VERSION-chrome.zip"
           fi
-          if [[ "${{ inputs.store }}" != "chrome" ]]; then
+          if [[ "$STORE" == "all" || "$STORE" == "firefox" ]]; then
             ARGS="$ARGS --firefox-zip .output/skeinos-$VERSION-firefox.zip"
             ARGS="$ARGS --firefox-sources-zip .output/skeinos-$VERSION-sources.zip"
+          fi
+          if [[ "$STORE" == "all" || "$STORE" == "edge" ]]; then
+            # Edge takes the same Chromium package as Chrome.
+            ARGS="$ARGS --edge-zip .output/skeinos-$VERSION-chrome.zip"
           fi
           if [[ "${{ inputs.dry-run }}" == "true" ]]; then
             ARGS="--dry-run $ARGS"
@@ -108,7 +119,8 @@ jobs:
             echo "## Store changelog for $VERSION"
             echo ""
             echo "Paste into the CWS description's WHAT'S NEW section (overwrite"
-            echo "the previous one) and the AMO version's release notes:"
+            echo "the previous one), the AMO version's release notes, and the"
+            echo "Edge Partner Center submission's notes for certification:"
             echo ""
             echo '```'
             awk -v v="$VERSION" '/^## /{p = ($2 == v)} p' ../CHANGELOG.md
