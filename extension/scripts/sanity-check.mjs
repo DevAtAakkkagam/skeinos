@@ -21,10 +21,17 @@
 //                 for you to log in / clear bot challenges, persisting the session
 //                 into the check profile. Run once initially and whenever a
 //                 scheduled run reports `signed-out` or `challenge`.
+//   --interactive SEMI-AUTOMATED (recommended): launches a NORMAL Chrome (no
+//                 automation flags — Google sign-in works, Cloudflare sees a
+//                 human) with a local debug port on the check profile. You log
+//                 in / clear challenges, press ENTER (or `touch
+//                 ~/.skeinos-sanity/continue`), and the script then attaches
+//                 over CDP and validates every platform in that same browser.
 
 import { chromium } from 'playwright';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { get as httpGet } from 'node:http';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -72,6 +79,9 @@ const HOME_URLS = {
 
 const args = new Set(process.argv.slice(2));
 const HEADED = args.has('--headed');
+const INTERACTIVE = args.has('--interactive');
+const CDP_PORT = 9222;
+const CONTINUE_FILE = join(homedir(), '.skeinos-sanity', 'continue');
 const ALERT = !args.has('--no-alert');
 
 function loadConfigs() {
@@ -215,6 +225,64 @@ function fileIssue(broken, results) {
   }
 }
 
+function cdpAlive() {
+  return new Promise((resolve) => {
+    const req = httpGet({ host: '127.0.0.1', port: CDP_PORT, path: '/json/version', timeout: 1500 }, (res) => {
+      res.resume();
+      resolve(res.statusCode === 200);
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+  });
+}
+
+/** Launch a PLAIN Chrome (no automation flags) on the check profile with a local
+ *  debug port. Sign-in flows (incl. Google) and Cloudflare behave as for a human;
+ *  the script only attaches AFTER the user says go. */
+async function openInteractiveBrowser() {
+  const child = spawn(
+    'google-chrome',
+    [
+      `--user-data-dir=${PROFILE_DIR}`,
+      `--remote-debugging-port=${CDP_PORT}`,
+      '--window-size=1440,900',
+      ...Object.values(HOME_URLS),
+    ],
+    { detached: true, stdio: 'ignore' },
+  );
+  child.unref();
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (await cdpAlive()) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(
+    'debug endpoint never came up — another Chrome window is probably using this profile; close it and retry',
+  );
+}
+
+/** Block until the user presses ENTER (foreground run) or touches CONTINUE_FILE
+ *  (when the script was started without a usable stdin). */
+function waitForUserGo() {
+  rmSync(CONTINUE_FILE, { force: true });
+  console.log('\n[sanity] Browser is open. Log into all platforms / clear any challenges.');
+  console.log(`[sanity] Then press ENTER here — or run: touch ${CONTINUE_FILE}\n`);
+  return new Promise((resolve) => {
+    const timer = setInterval(() => {
+      if (existsSync(CONTINUE_FILE)) done();
+    }, 2000);
+    const onData = () => done();
+    function done() {
+      clearInterval(timer);
+      process.stdin.off('data', onData);
+      try { process.stdin.pause(); } catch { /* no tty */ }
+      rmSync(CONTINUE_FILE, { force: true });
+      resolve();
+    }
+    try { process.stdin.on('data', onData); process.stdin.resume(); } catch { /* no tty */ }
+  });
+}
+
 async function setup() {
   const configs = loadConfigs();
   const context = await chromium.launchPersistentContext(PROFILE_DIR, {
@@ -256,7 +324,14 @@ async function main() {
   const configs = loadConfigs();
   console.log(`[sanity] profile: ${PROFILE_DIR}`);
   let context;
-  try {
+  let cdpBrowser = null;
+  if (INTERACTIVE) {
+    await openInteractiveBrowser();
+    await waitForUserGo();
+    cdpBrowser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+    context = cdpBrowser.contexts()[0];
+    console.log('[sanity] attached — validating (tabs will open and close briefly)…');
+  } else try {
     context = await chromium.launchPersistentContext(PROFILE_DIR, {
       channel: 'chrome',
       headless: !HEADED,
@@ -281,7 +356,12 @@ async function main() {
     results.push(r);
     console.log(`[sanity] ${r.platform}: ${r.status}${r.missing.length ? ` (missing: ${r.missing.join(', ')})` : ''}`);
   }
-  await context.close();
+  if (cdpBrowser) {
+    await cdpBrowser.close(); // connected browser: disconnects, leaves the window running
+    console.log('[sanity] detached — the browser window is yours to keep or close.');
+  } else {
+    await context.close();
+  }
 
   mkdirSync(STATE_DIR, { recursive: true });
   writeFileSync(join(STATE_DIR, 'last-run.json'), JSON.stringify({ at: new Date().toISOString(), results }, null, 2));
