@@ -21,7 +21,10 @@ yarn-error.log*
 !.env.submit.example
 
 # Claude Code local config
-.claude/
+# Local agent state stays untracked, but shared agent playbooks (skills) are
+# versioned so any machine/agent gets them with the repo.
+.claude/*
+!.claude/skills/
 
 # Local dev runner config (machine-specific Firefox binary path)
 web-ext.config.ts
