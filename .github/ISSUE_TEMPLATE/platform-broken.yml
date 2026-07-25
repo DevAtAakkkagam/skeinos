@@ -1,0 +1,82 @@
+name: A chat site broke
+description: Skeinos stopped working on Claude, ChatGPT, Gemini, or Perplexity
+title: "[claude|chatgpt|gemini|perplexity] panel broken — "
+labels: ["platform-breakage", "good first issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. These sites change their layout regularly and this is the
+        most common issue here.
+
+        **This is also the easiest thing to fix.** Every platform is one JSON file of CSS
+        selectors — no code. If you can find the new selector in devtools, the fix is a
+        few-line pull request: see
+        [a site broke, how do I fix it?](https://github.com/DevAtAakkkagam/skeinos/blob/main/CONTRIBUTING.md#a-site-broke).
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Which site?
+      options:
+        - Claude (claude.ai)
+        - ChatGPT (chatgpt.com)
+        - Gemini (gemini.google.com)
+        - Perplexity (perplexity.ai)
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-broke
+    attributes:
+      label: What stopped working?
+      description: The sidebar doesn't appear, the chat list is empty, prompts won't insert, a banner appeared…
+      placeholder: The Skeinos sidebar shows "Skeinos is paused on this site" on every Claude page.
+    validations:
+      required: true
+
+  - type: input
+    id: banner
+    attributes:
+      label: Banner text, if one appeared
+      description: Skeinos names what it couldn't find. Paste it here.
+
+  - type: textarea
+    id: selector
+    attributes:
+      label: The new selector, if you found it
+      description: |
+        Optional, and hugely helpful. Open devtools, find a stable hook for the element
+        that moved, and paste it. Prefer `data-testid` or custom element tags; never
+        `aria-label` values or text matching (those are localized and are rejected by CI).
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: Skeinos version
+      placeholder: "0.1.5"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 141 on macOS 15
+    validations:
+      required: true
+
+  - type: input
+    id: when
+    attributes:
+      label: When did it start?
+      placeholder: Today / after the site redesigned last week / unsure
+
+  - type: checkboxes
+    id: no-content
+    attributes:
+      label: Before you submit
+      options:
+        - label: I have not included any private conversation content in this issue (screenshots included).
+          required: true

@@ -6,7 +6,7 @@
 
 <!-- Primary SEO -->
 <title>Skeinos: one organized home for all your AI chats</title>
-<meta name="description" content="Skeinos is a free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Private by design, nothing leaves your device.">
+<meta name="description" content="Skeinos is a free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Open source and private by design — nothing leaves your device.">
 <link rel="canonical" href="https://skeinos.aakkagam.com/">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <meta name="author" content="Aakkagam">
@@ -18,7 +18,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Skeinos">
 <meta property="og:title" content="Skeinos: one organized home for all your AI chats">
-<meta property="og:description" content="A free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Private by design.">
+<meta property="og:description" content="A free, open-source, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Private by design.">
 <meta property="og:url" content="https://skeinos.aakkagam.com/">
 <meta property="og:image" content="https://skeinos.aakkagam.com/assets/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -29,7 +29,7 @@
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Skeinos: one organized home for all your AI chats">
-<meta name="twitter:description" content="A free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Private by design.">
+<meta name="twitter:description" content="A free, open-source, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Private by design.">
 <meta name="twitter:image" content="https://skeinos.aakkagam.com/assets/og-image.png">
 <meta name="twitter:image:alt" content="Skeinos, one organized home for all your AI chats.">
 
@@ -52,7 +52,7 @@
       "name": "Skeinos",
       "applicationCategory": "BrowserApplication",
       "operatingSystem": "Chrome, Firefox, Manifest V3",
-      "description": "A free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Conversations are indexed locally and never leave the device.",
+      "description": "A free, open-source, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Conversations are indexed locally and never leave the device, and the source is public so the claim is verifiable.",
       "url": "https://skeinos.aakkagam.com/",
       "downloadUrl": [
         "https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj",
@@ -63,8 +63,12 @@
         "Organize conversations into folders and tags across every LLM site",
         "Fast local search across all your AI chats",
         "Reusable prompt library with variables",
-        "Local-first and private, no account required"
+        "Local-first and private, no account required",
+        "Open source under GPL-3.0, so every privacy claim is verifiable"
       ],
+      "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "isAccessibleForFree": true,
+      "codeRepository": "https://github.com/DevAtAakkkagam/skeinos",
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -93,7 +97,12 @@
         {
           "@type": "Question",
           "name": "Does my conversation data leave my device?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No. Conversations are stored and searched locally in your browser. There is no server and no telemetry, so nothing is uploaded." }
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Conversations are stored and searched locally in your browser. There is no account and no telemetry of any kind, so nothing is uploaded. In normal use Skeinos makes no network requests at all; the one exception downloads a corrected selector file when a chat site changes its layout, and it sends nothing about you." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Skeinos open source?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, under the GPL-3.0 licence. A privacy promise you cannot inspect is just a promise, so the code is public: you can read exactly what it does, check every permission it asks for, and build it yourself." }
         },
         {
           "@type": "Question",
@@ -385,6 +394,7 @@
     <nav aria-label="Primary">
       <a class="link" href="#how">How it works</a>
       <a class="link" href="#privacy">Privacy</a>
+      <a class="link" href="https://github.com/DevAtAakkkagam/skeinos" rel="noopener">Source</a>
       <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener" data-store-cta><span data-cta-label>Add to Chrome</span></a>
     </nav>
   </div>
@@ -408,6 +418,7 @@
         <span class="item"><span class="dot" aria-hidden="true"></span> Local-first</span>
         <span class="item">Private</span>
         <span class="item">No account</span>
+        <span class="item">Open source</span>
       </div>
     </div>
   </section>
@@ -459,7 +470,12 @@
     <div class="wrap inner">
       <span class="overline">Private by architecture</span>
       <h2 id="privacy-title">Your chats never leave the browser.</h2>
-      <p>Skeinos indexes everything locally. There is <b>no account, no server, and no telemetry</b>. The stays-on-device boundary is enforced in the extension's code, not promised in a policy.</p>
+      <p>Skeinos indexes everything locally. There is <b>no account, no telemetry, and no analytics</b> — not opt-in, not off-by-default, none at all. In normal use the extension makes no network requests whatsoever.</p>
+      <p>You don't have to take our word for it. <b>Skeinos is open source</b>, so the stays-on-device boundary is something you can read in the code rather than something you're asked to believe in a policy.</p>
+      <div class="cta-row">
+        <a class="btn btn-ghost" href="https://github.com/DevAtAakkkagam/skeinos" rel="noopener">Read the source on GitHub</a>
+        <a class="btn btn-ghost" href="/privacy/">Privacy policy</a>
+      </div>
     </div>
   </section>
 
@@ -493,7 +509,11 @@
         </div>
         <div class="qa">
           <dt>Does my conversation data leave my device?</dt>
-          <dd>No. Conversations are stored and searched locally in your browser. There is no server and no telemetry, so nothing is uploaded.</dd>
+          <dd>No. Conversations are stored and searched locally in your browser. There is no account and no telemetry of any kind, so nothing is uploaded. In normal use Skeinos makes no network requests at all — the one exception downloads a corrected selector file when a chat site changes its layout, and it sends nothing about you.</dd>
+        </div>
+        <div class="qa">
+          <dt>Is Skeinos open source?</dt>
+          <dd>Yes, under the GPL-3.0 licence. A privacy promise you can't inspect is just a promise, so the code is public: you can read exactly what it does, check every permission it asks for, and build it yourself.</dd>
         </div>
         <div class="qa">
           <dt>Which browsers and AI sites does Skeinos support?</dt>
@@ -518,6 +538,7 @@
         <span class="item"><span class="dot" aria-hidden="true"></span> Local-first</span>
         <span class="item">Private</span>
         <span class="item">No account</span>
+        <span class="item">Open source</span>
       </div>
     </div>
   </section>
@@ -539,6 +560,7 @@
     <nav aria-label="Footer">
       <a href="https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj" rel="noopener">Chrome Web Store</a>
       <a href="https://addons.mozilla.org/en-US/firefox/addon/skeinos/" rel="noopener">Firefox Add-ons</a>
+      <a href="https://github.com/DevAtAakkkagam/skeinos" rel="noopener">Source on GitHub</a>
       <a href="/privacy/">Privacy</a>
       <a href="https://docs.google.com/forms/d/e/1FAIpQLSdwvGDEqZ3cv9_Fbpt0GqS70tLQWHRl209wUW3uzejlusmvXg/viewform" target="_blank" rel="noopener">Send feedback</a>
     </nav>

@@ -1,0 +1,38 @@
+name: Support a new chat site
+description: Add Grok, DeepSeek, Mistral, or another AI chat site
+title: "Add support for "
+labels: ["new-platform", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Adding a site is **a JSON config plus a recorded DOM fixture — no new code.** If
+        you want to take it on, say so below and read
+        [add a new platform](https://github.com/DevAtAakkkagam/skeinos/blob/main/CONTRIBUTING.md#add-a-new-platform).
+
+        Grok, DeepSeek, and Mistral are wanted and currently unclaimed.
+
+  - type: input
+    id: site
+    attributes:
+      label: Which site?
+      placeholder: grok.com
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Do you use it daily alongside the sites Skeinos already supports?
+      description: Helps prioritise. Cross-site search only pays off for sites people actually move between.
+
+  - type: dropdown
+    id: taking-it-on
+    attributes:
+      label: Would you like to contribute the config?
+      options:
+        - "Yes — I'll open a PR"
+        - "Yes, with some guidance"
+        - "No, just requesting it"
+    validations:
+      required: true

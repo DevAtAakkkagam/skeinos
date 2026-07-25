@@ -36,7 +36,8 @@ Skeinos is local-first. Your conversations, titles, and search index stay on you
 
 • We never read or send your passwords or logins.
 • No ads. No selling your data. No tracking of what you do.
-• Optional anonymous diagnostics are OFF by default — Skeinos only sends a crash or "a site changed and broke" signal if you choose to turn it on, and it never includes your chat content.
+• No telemetry and no analytics of any kind — not opt-in, not off-by-default, none. There is no account to create and nothing of yours on a server.
+• Skeinos is open source, so you don't have to take our word for any of this — you can read the code.
 
 
 SUPPORTED SITES

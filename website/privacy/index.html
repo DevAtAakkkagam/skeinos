@@ -242,7 +242,7 @@
     <div class="wrap inner">
       <span class="overline">Legal</span>
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated: 27 June 2026</p>
+      <p class="updated">Last updated: 24 July 2026</p>
 
       <p class="intro">Skeinos is <b>local-first and privacy-first</b>. The extension organizes your AI chats (folders, search, prompts, instruction profiles) by reading the pages you already have open. Your conversation content stays on your device.</p>
 
@@ -252,24 +252,18 @@
         <li>We never read or transmit credentials, cookies, or authentication tokens for any site.</li>
       </ul>
 
-      <h2 id="diagnostics">Anonymous diagnostics</h2>
-      <p>The only telemetry Skeinos collects is <b>anonymous diagnostics</b> — crash reports and adapter-health signals (when a chat site changes its layout and breaks an integration) so we can fix breakage quickly. We do <b>not</b> collect usage or product analytics of any kind.</p>
-      <p>Diagnostics are <b>opt-in and off by default</b>. Nothing is sent unless you turn them on — offered as an explicit choice on the final onboarding step and any time in <b>Settings → Privacy &amp; data</b> — and you can turn them back off at any point. What diagnostics contain when enabled:</p>
+      <h2 id="diagnostics">No data collection at all</h2>
+      <p>Skeinos <b>sends nothing off your device, on any tier</b>. There is no analytics, no telemetry, no crash reporting, and no diagnostics stream. There is no opt-in to make, because there is nothing to opt in to.</p>
+      <p>In normal use the extension makes <b>no network requests at all</b>. There is exactly one exception, and it never carries anything of yours: when a chat site changes its layout and Skeinos detects that its own selectors have stopped working, it fetches a corrected selector file — a plain <code>GET</code> of <code>https://skeinos.aakkagam.com/adapters/&lt;site&gt;.json</code>, with no request body, no identifiers, no cookies, and no query parameters. It is how a broken site can be fixed the same day instead of waiting on a store review. A healthy site never triggers it, and the extension works fully offline without it by falling back to its bundled selectors.</p>
       <ul>
-        <li><b>Crash reports</b> — the error type, a <b>truncated and filtered</b> error message, and stack frames limited to Skeinos's own code. Host-page frames are dropped, and sensitive substrings (URLs, emails, tokens) are masked.</li>
-        <li><b>Adapter-health signals</b> — which supported platform broke, the integration config version, and a fixed code for which page anchor was missing. Every field is a fixed category or a version number.</li>
+        <li>We hold <b>no data about you</b> — no account, no identifier, no server-side profile to access, export, or erase.</li>
+        <li>The extension bundles <b>no third-party analytics SDK</b> and loads no remote code. No session recording and no page/DOM capture ("autocapture") is used.</li>
+        <li>Everything the extension reads from a chat page is processed and stored locally, in your own browser.</li>
       </ul>
-      <p><b>No conversation content, search queries, prompt/folder/profile/tag names, URLs, or free text are ever included.</b></p>
-
-      <h3 id="anonymous">How "anonymous" works</h3>
-      <p>Diagnostics events carry <b>no per-user identifier</b>. Our processor's ingest requires every event to include a <code>distinct_id</code>, so all events ship a single fixed constant (<code>"anonymous"</code>) that is identical for every install and encodes nothing about you. Crash reports group by their stack fingerprint, not by person. We hold <b>no persistent identifier</b> for you and therefore maintain no server-side profile to access or erase.</p>
-
-      <h3 id="where">Where diagnostics go</h3>
-      <p>When diagnostics are enabled, events are sent by the extension's background service worker — the single point of egress — to <b>PostHog Cloud EU</b> (<code>https://eu.i.posthog.com</code>), our processor, hosted in the European Union. This is the <b>only</b> external endpoint Skeinos contacts. We send hand-built JSON over HTTPS; the extension bundles <b>no third-party analytics SDK</b> and loads no remote code. No session recording or page/DOM capture ("autocapture") is used.</p>
 
       <h2 id="controls">Your controls</h2>
       <ul>
-        <li>Diagnostics are off by default; opting out again is instant and also discards any not-yet-sent events from the local buffer.</li>
+        <li>Nothing is collected, so there is nothing to turn off.</li>
         <li>Uninstalling the extension removes all local data.</li>
       </ul>
 

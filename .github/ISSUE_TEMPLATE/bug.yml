@@ -1,0 +1,68 @@
+name: Bug report
+description: Something in Skeinos itself is broken
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If a chat site's panel stopped working after that site changed its layout, use the
+        **"A chat site broke"** template instead.
+
+        For a security or privacy vulnerability, don't file publicly — see
+        [SECURITY.md](https://github.com/DevAtAakkkagam/skeinos/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open claude.ai
+        2. Drag a chat into a folder
+        3. Reload
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Skeinos version
+      placeholder: "0.1.5"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 145 on Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Devtools console, if there's anything relevant. Scrub any conversation text.
+      render: text
+
+  - type: checkboxes
+    id: no-content
+    attributes:
+      label: Before you submit
+      options:
+        - label: I have not included any private conversation content in this issue (screenshots included).
+          required: true

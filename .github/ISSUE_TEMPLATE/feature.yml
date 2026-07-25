@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest something Skeinos should do
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do that Skeinos makes hard?
+      description: Describe the situation, not the solution — it usually leads somewhere better.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like it to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How do you handle it today?
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints this project won't move on
+      description: |
+        So we don't spend a round trip on it — these are settled and won't change:
+        conversation content, the search index, and comparisons never leave the device
+        on any tier; there is no telemetry or analytics of any kind; permissions stay
+        minimal (never `<all_urls>`, never credential-bearing); the extension never
+        auto-sends a message on your behalf.
+      options:
+        - label: My request works within these.
+          required: true
