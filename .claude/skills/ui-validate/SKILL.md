@@ -30,9 +30,9 @@ entire trick that makes this work.)
    ```
 
    Keep alerts ON for a real validation round — a genuine breakage then files a
-   deduped GitHub issue (label `sanity-check`) and notifies
-   ntfy.sh/SET-SKEINOS-NTFY-TOPIC automatically. Add `--no-alert` only when
-   debugging the script itself.
+   deduped GitHub issue (label `sanity-check`) and, when `SKEINOS_NTFY_TOPIC` is
+   exported, pushes an ntfy notification. Add `--no-alert` only when debugging
+   the script itself.
 
    The task will sit waiting on input by design — the harness may warn that it
    "appears to be waiting for interactive input" and suggest killing it. Do

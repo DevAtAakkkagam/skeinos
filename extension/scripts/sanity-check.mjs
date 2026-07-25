@@ -1,4 +1,4 @@
-// Skeinos platform sanity check (docs/RUNBOOK_SANITY_CHECK.md).
+// Skeinos platform sanity check.
 //
 // Drives a real Chrome (persistent profile at ~/.skeinos-sanity/profile, seeded
 // with logged-in sessions) against every supported platform and probes the LIVE
@@ -9,14 +9,19 @@
 // precise condition that raises the "Skeinos is paused" banner for users.
 //
 // On BROKEN platforms it files/updates a GitHub issue (label `sanity-check`,
-// deduped per platform) and pushes a notification to ntfy.sh/SET-SKEINOS-NTFY-TOPIC.
-// A signed-out or unreachable platform can't be verified — that's a WARN: it
-// notifies (the session needs re-seeding) but files no issue.
+// deduped per platform) and, if SKEINOS_NTFY_TOPIC is set, pushes a notification
+// to that ntfy.sh topic. A signed-out or unreachable platform can't be verified —
+// that's a WARN: it notifies (the session needs re-seeding) but files no issue.
+//
+// ntfy topics are unauthenticated: anyone who knows the name can read and post to
+// it. Keep yours out of the repo — export SKEINOS_NTFY_TOPIC with an unguessable
+// value (e.g. `skeinos-$(openssl rand -hex 8)`); unset, alerts are simply skipped.
 //
 // Usage:  node scripts/sanity-check.mjs [--headed] [--no-alert] [--test-alert] [--setup]
 //   --headed      run with a visible browser (default: headless)
 //   --no-alert    print findings only; skip GitHub + ntfy
-//   --test-alert  send a test ntfy message and exit (verifies the subscription)
+//   --test-alert  send a test ntfy message and exit (verifies the subscription;
+//                 needs SKEINOS_NTFY_TOPIC)
 //   --setup       interactive: opens each platform in a visible browser and waits
 //                 for you to log in / clear bot challenges, persisting the session
 //                 into the check profile. Run once initially and whenever a
@@ -66,7 +71,8 @@ function resolveProfileDir() {
 }
 const PROFILE_DIR = resolveProfileDir();
 const SHOT_DIR = join(REPO_DIR, '.playwright-screenshots', 'sanity');
-const NTFY_TOPIC = 'SET-SKEINOS-NTFY-TOPIC';
+// Unauthenticated by design — never hard-code a topic here (see the header note).
+const NTFY_TOPIC = process.env.SKEINOS_NTFY_TOPIC ?? '';
 const ISSUE_LABEL = 'sanity-check';
 
 /** Where each platform's signed-in home lives (hostMatch is a pattern, not a URL). */
@@ -161,6 +167,10 @@ function sh(cmd, cmdArgs, opts = {}) {
 }
 
 function notify(title, body, priority = 'high') {
+  if (!NTFY_TOPIC) {
+    console.error('[sanity] SKEINOS_NTFY_TOPIC unset — skipping push notification.');
+    return;
+  }
   try {
     sh('curl', [
       '-s', '-m', '20',
@@ -181,7 +191,6 @@ function fileIssue(broken, results) {
     `Automated sanity check found broken selectors on: **${platforms}**`,
     '',
     'Run: `node extension/scripts/sanity-check.mjs --headed --no-alert` to reproduce.',
-    'Runbook: docs/RUNBOOK_SANITY_CHECK.md',
     '',
     ...broken.map((r) =>
       [
@@ -317,7 +326,7 @@ async function main() {
   if (args.has('--setup')) return setup();
   if (args.has('--test-alert')) {
     notify('Skeinos sanity check — test', 'Subscription works. Real alerts will look like this.', 'default');
-    console.log(`[sanity] test notification sent to ntfy.sh/${NTFY_TOPIC}`);
+    if (NTFY_TOPIC) console.log(`[sanity] test notification sent to ntfy.sh/${NTFY_TOPIC}`);
     return;
   }
 
