@@ -1,4 +1,4 @@
-// Runtime validation for an `AdapterConfig` (LLD §4.2). This is the trust
+// Runtime validation for an `AdapterConfig`. This is the trust
 // boundary for remote configs: only data that fully validates is ever adopted,
 // and anything else falls back to bundled (design D-A2/D-A3). Hand-written so the
 // MV3 bundle takes on no schema-library dependency.

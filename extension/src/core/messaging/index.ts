@@ -1,5 +1,5 @@
 // core/messaging — the typed request/response + broadcast hub between content
-// scripts/UI and the single-writer service worker (LLD §7).
+// scripts/UI and the single-writer service worker.
 //
 //   Service worker  ──registerHandler(kind, fn)──▶  handlers
 //        ▲                                              │

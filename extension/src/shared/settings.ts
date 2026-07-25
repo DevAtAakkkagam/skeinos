@@ -1,4 +1,4 @@
-// The typed settings schema + privacy-first defaults (D4, PRD §8.3/§6.11).
+// The typed settings schema + privacy-first defaults (D4, §6.11).
 //
 // Settings live in `chrome.storage.local` (decision D4), NOT IndexedDB — they
 // are tiny, must be readable before the workspace DB opens, and are decoupled

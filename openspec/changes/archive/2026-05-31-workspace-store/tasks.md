@@ -1,7 +1,7 @@
 ## 1. Types & schema
 
-- [x] 1.1 Define record types + the `SyncMeta` envelope in `shared/` (`Folder`, `ConversationIndex`, `Prompt`, `PromptVar`, `InstructionProfile`, `Tag`, `Comparison`) per LLD §6
-- [x] 1.2 Declare the store/index map (LLD §6 table) incl. `searchPostings` (key `term`, sharded by prefix) and `syncMeta`, with a `synced` classification per store
+- [x] 1.1 Define record types + the `SyncMeta` envelope in `shared/` (`Folder`, `ConversationIndex`, `Prompt`, `PromptVar`, `InstructionProfile`, `Tag`, `Comparison`)
+- [x] 1.2 Declare the store/index map (table) incl. `searchPostings` (key `term`, sharded by prefix) and `syncMeta`, with a `synced` classification per store
 
 ## 2. Repo + envelope
 
@@ -14,7 +14,7 @@
 
 ## 3. WorkspaceStore facade
 
-- [x] 3.1 Expose one `Repo` per store via a `WorkspaceStore` facade (LLD §5) plus a syncable-store enumeration helper
+- [x] 3.1 Expose one `Repo` per store via a `WorkspaceStore` facade plus a syncable-store enumeration helper
 
 ## 4. Tests (Vitest + fake-indexeddb)
 

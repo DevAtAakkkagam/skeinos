@@ -2,7 +2,7 @@
 
 ### Requirement: PlatformAdapter is the only platform-facing contract
 
-The system SHALL expose a single `PlatformAdapter` interface (LLD §4.1) as the
+The system SHALL expose a single `PlatformAdapter` interface as the
 only platform-specific contract visible outside the `adapters/` module. Every
 platform SHALL be served by one generic, config-driven adapter implementation
 with no per-platform code paths.
@@ -24,7 +24,7 @@ with no per-platform code paths.
 
 ### Requirement: AdapterConfig schema validation
 
-The system SHALL validate every `AdapterConfig` against the schema (LLD §4.2)
+The system SHALL validate every `AdapterConfig` against the schema
 before use: `platformId` MUST be a known `PlatformId`, `configVersion` MUST be a
 semver string, `hostMatch` MUST be a non-empty list of URL match patterns, every
 required `selectors` key MUST be present and a string, and `behaviors.insertMode`

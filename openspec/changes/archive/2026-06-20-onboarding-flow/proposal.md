@@ -4,7 +4,7 @@
 The D17 flow itself — the four screens in `docs/design/Screens Export/01 Onboarding/` (welcome,
 permissions priming, starter-library seeding, get-started) — is still missing. This change
 replaces the placeholder with the real multi-step onboarding stepper, turning the foundation's
-gate into the product's actual first-run experience and completing PRD §6.12 / LLD T3.6 (D17).
+gate into the product's actual first-run experience and completing (D17).
 
 ## What Changes
 

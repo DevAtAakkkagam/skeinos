@@ -5,7 +5,7 @@ keeps the overlay dormant and broadcasts `platform.degraded`. But host sites cha
 their DOM after we ship, and a silently-disabled overlay leaves the user confused
 with no recourse. The LLD requires a **scheduled canary** that keeps surfacing
 breakage within 24 hours and an **in-product notice** so the user knows a platform
-is degraded and the config is flagged for a hot-fix (LLD §4.3; CLAUDE.md [ADAPT-3],
+is degraded and the config is flagged for a hot-fix (; CLAUDE.md [ADAPT-3],
 [SW-4]). This is M1 task T1.5 — the last slice of the adapter framework, and a
 prerequisite for the M8 `maintenance` change.
 

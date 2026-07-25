@@ -1,6 +1,6 @@
 ## 1. Contracts
 
-- [x] 1.1 Define `Request`, `Response<T>`, `Broadcast`, and `AppError` in `shared/` per LLD §7
+- [x] 1.1 Define `Request`, `Response<T>`, `Broadcast`, and `AppError` in `shared/`
 - [x] 1.2 Define the handler-registry types (`registerHandler(kind, fn)`)
 
 ## 2. Service-worker hub

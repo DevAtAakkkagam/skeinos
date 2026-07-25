@@ -34,7 +34,7 @@ we have decided is not worth the early-stage signal. This supersedes D29.
   `docs/PRIVACY.md`, and `docs/STORE_DATA_USE.md`.
 - Add a DECISIONS entry superseding **D29**.
 
-Out of scope: the legacy, unused `Settings.telemetry` boolean (a never-wired PRD §8.3
+Out of scope: the legacy, unused `Settings.telemetry` boolean (a never-wired
 usage-telemetry placeholder, off by default) is left as-is — it is not PostHog-related
 and removing it is a separate cleanup.
 

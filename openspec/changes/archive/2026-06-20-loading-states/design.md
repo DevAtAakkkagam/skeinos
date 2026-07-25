@@ -1,6 +1,6 @@
 ## Context
 
-Two loading affordances from PRD §6.13 / D18 are missing UI, though their data is already wired:
+Two loading affordances from D18 are missing UI, though their data is already wired:
 
 - **Workspace load status.** `useWorkspace` exposes `status: 'loading' | 'ready' | 'error'`
   (`WorkspaceStatus`), `'loading'` until the first folder-tree read resolves. Today the body

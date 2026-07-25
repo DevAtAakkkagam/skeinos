@@ -1,4 +1,4 @@
-// The single generic, config-driven adapter (LLD §4.1, design D-A1). Every method
+// The single generic, config-driven adapter (design D-A1). Every method
 // is driven by the config's selectors and behaviors — there are NO per-platform
 // branches, so adding a platform is a config + fixture, never new code. The DOM
 // root is injectable so the contract suite can run it against a recorded fixture.

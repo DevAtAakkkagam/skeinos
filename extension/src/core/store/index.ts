@@ -1,4 +1,4 @@
-// WorkspaceStore — the core/store facade (LLD §5). One typed `Repo` per store,
+// WorkspaceStore — the core/store facade. One typed `Repo` per store,
 // `tx()` for multi-store atomic writes, and the syncable-store enumeration the
 // future sync engine uses. Lives in the service worker (the single writer);
 // content scripts/UI reach it only via messaging.

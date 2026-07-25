@@ -1,6 +1,6 @@
 // Content-script logic home — DOM-only (the `side-panel` change, D4). On a
 // supported host it picks the platform's config, builds the generic adapter, and
-// runs `selfCheck()` (LLD §4.3): on failure it stays dormant, reports its health
+// runs `selfCheck()`: on failure it stays dormant, reports its health
 // to the worker, and raises an in-product breakage banner so the user knows this
 // platform is paused — all isolated to this tab. On success it ingests the host's
 // conversation list through the worker. It mounts NO workspace UI: the sidebar

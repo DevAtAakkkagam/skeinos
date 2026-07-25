@@ -11,7 +11,7 @@ testable contract rather than marketing copy. Per `docs/OPENSPEC_CHANGES.md` C9 
 ## What Changes
 
 - Add a single source of truth for tier state (`FREE` | `PRO`) and the per-tier limit
-  table (folders / prompts / profiles / tags), centralized as constants from PRD §7.
+  table (folders / prompts / profiles / tags), centralized as constants from the contract.
 - Enforce quotas **in the service worker** (the single writer) on the create paths that
   exist today: `folder.create`, `prompt.create`, `profile.create`. A create at-or-over the
   tier limit is rejected with a typed `quota_exceeded` error carrying the resource, current

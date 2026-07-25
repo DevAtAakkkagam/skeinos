@@ -2,7 +2,7 @@
 
 The workspace currently paints nothing (or a flash of empty) while the folder tree and
 conversations load, and the background bulk-indexer runs invisibly — the user gets no signal that
-their conversations are being indexed. PRD §6.13 / D18 call for **skeleton loaders** instead of
+their conversations are being indexed. D18 call for **skeleton loaders** instead of
 blank states and a **non-blocking "indexing N conversations…" indicator** (design screens
 `docs/design/Screens Export/06 States/02–03`). The plumbing already exists — `useWorkspace`
 tracks a `loading | ready | error` status, and the worker already broadcasts `index.progress`

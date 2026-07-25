@@ -1,4 +1,4 @@
-// The workspace sidebar (LLD T2.2): the folder tree with pinned + archive
+// The workspace sidebar: the folder tree with pinned + archive
 // sections and live counts, drag-drop (conversation→folder assignment, folder
 // re-parenting), a create/edit folder dialog, and a per-row actions menu opened
 // from a `⋯` button (revealed on row hover / keyboard focus).

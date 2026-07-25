@@ -1,4 +1,4 @@
-// Config loader (LLD §4.3, design D-A3): always start from a bundled config, then
+// Config loader (design D-A3): always start from a bundled config, then
 // adopt a remote (or cached last-known-good) config ONLY when it both validates
 // against the schema and carries a newer semver `configVersion`. Any fetch, parse,
 // or validation failure keeps the bundled config, so the extension works offline

@@ -2,7 +2,7 @@
 
 ### Requirement: AdapterConfig schema validation
 
-The system SHALL validate every `AdapterConfig` against the schema (LLD §4.2)
+The system SHALL validate every `AdapterConfig` against the schema
 before use: `platformId` MUST be a known `PlatformId`, `configVersion` MUST be a
 semver string, `hostMatch` MUST be a non-empty list of URL match patterns, every
 required `selectors` key MUST be present and a string, and `behaviors.insertMode`

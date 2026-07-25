@@ -1,7 +1,7 @@
 ## Why
 
 Prompts exist in the library (C12) but there is no in-context way to use one: the user must
-leave the chat, find the prompt, copy it, and paste it back. PRD §6.3 / LLD T3.3–T3.4 (D14) call
+leave the chat, find the prompt, copy it, and paste it back. –T3.4 (D14) call
 for an **input action bar** docked above the host composer with a **slash-command popover** to
 pick a prompt and a **variable-fill modal** to complete its `{{variables}}` before insertion.
 The adapter framework (C4) already reserved every platform seam for this — `mountPoints().inputBar`,
@@ -37,7 +37,7 @@ the last functional slice before the **end-of-M3 first public beta**.
 ### New Capabilities
 
 - `input-bar`: the host-docked input action bar overlay, the slash-command prompt popover, the
-  variable-fill modal, and adapter-driven insertion. Bundles LLD T3.3 (bar + slash + insert) and
+  variable-fill modal, and adapter-driven insertion. Bundles (bar + slash + insert) and
   T3.4 (variable modal), per the LLD note that the variable-fill modal lives with the input bar.
 
 ### Modified Capabilities

@@ -1,6 +1,6 @@
 ## Context
 
-Settings are small key/values read on nearly every surface and needed before the workspace DB may exist; D4 places them in `chrome.storage.local` to decouple T0.5 from the store (so the options page can ship independently). The privacy-first positioning fixes two defaults up front — telemetry off, theme system (PRD §8.3, §6.11). Theme tokens already exist from bootstrap (`ui-shell`); this change provides the persisted preference that drives them.
+Settings are small key/values read on nearly every surface and needed before the workspace DB may exist; D4 places them in `chrome.storage.local` to decouple T0.5 from the store (so the options page can ship independently). The privacy-first positioning fixes two defaults up front — telemetry off, theme system (§6.11). Theme tokens already exist from bootstrap (`ui-shell`); this change provides the persisted preference that drives them.
 
 ## Goals / Non-Goals
 
@@ -26,7 +26,7 @@ Reads return defaults merged with the stored partial, so missing keys are always
 - *Rationale:* forward-compatible as later features add settings keys; old installs stay valid.
 
 ### D-3: Privacy-first defaults baked in
-`telemetry = false`, `theme = 'system'`. These are product commitments (PRD §8.3), not incidental defaults; tests assert them.
+`telemetry = false`, `theme = 'system'`. These are product commitments, not incidental defaults; tests assert them.
 
 ### D-4: Live updates via `chrome.storage.onChanged`
 A `subscribe` helper wraps `onChanged` filtered to the settings key, so an options-page change reflects in open overlays without a custom bus.

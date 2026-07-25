@@ -131,8 +131,9 @@ Built with [WXT](https://wxt.dev/), Preact, and TypeScript. The UI mounts in a s
 root so the host page's CSS can't reach it, and styles only from `--sk-*` tokens.
 Available in English, German, Spanish, French, and Portuguese.
 
-For the full design: [`docs/LLD_Multi_LLM_Workspace.md`](docs/LLD_Multi_LLM_Workspace.md)
-(implementation-level design) and [`docs/DECISIONS.md`](docs/DECISIONS.md) (the decision log).
+For the full design, read [`openspec/`](openspec/): every capability has a spec under
+`openspec/specs/`, and `openspec/changes/archive/` holds the proposal, design note, and
+task list behind each one — which is to say, the reasoning is in the repo, per change.
 
 ## Development
 

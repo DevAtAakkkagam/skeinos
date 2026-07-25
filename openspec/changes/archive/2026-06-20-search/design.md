@@ -131,7 +131,7 @@ conversations stay indexed and queryable), and **`tags`** — the `Query.tag` fi
 exist and are spec'd, but since tag *assignment* ships in C7, with no tags present the filter is a no-op
 (forward-compatible, no hard C7 dependency).
 Stored `positions` drive in-context snippet highlighting; results are paged (offset/limit) and ordered by
-score. Returned `SearchResult[]` matches the LLD §5 shape.
+score. Returned `SearchResult[]` matches the design shape.
 
 ### D-6: `searchPostings` reshape — no-data store migration
 
@@ -180,7 +180,7 @@ is a pure view over worker state: it issues `search.run` and re-queries on `stat
 2. Land `core/conversation-index` (ingest) and `core/search` (shard indexer + query) behind the existing
    `SearchEngine` / `search.run` contracts.
 3. Land the overlay UI.
-4. Apply the D26 doc propagation (LLD §8.1 prose + type/`keyPath`).
+4. Apply the D26 doc propagation (prose + type/`keyPath`).
 
 **Rollback:** the change is additive over an empty postings store; reverting the schema bump and modules
 leaves `ConversationIndex` and all synced data untouched (postings are derivable, never a source of

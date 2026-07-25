@@ -1,6 +1,6 @@
 // search normalize primitives (task 2.4). Covers the pure text→tokens helpers in
 // src/core/search/normalize.ts that must run identically at index and query time
-// (LLD §8.1). Vitest, no storage/DOM.
+//. Vitest, no storage/DOM.
 
 import { describe, expect, it } from 'vitest';
 import {

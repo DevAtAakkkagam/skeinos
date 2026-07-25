@@ -4,7 +4,7 @@
 // `responseStyle` (verbosity + format). No I/O — fully unit-testable.
 //
 // The directive is a single natural-language line so it reads as one more standing
-// instruction riding the next message (PRD §6.4). PREPEND-only this slice (D-5): the
+// instruction riding the next message. PREPEND-only this slice (D-5): the
 // caller appends this through the bar's `onInsert` seam, never auto-submitting.
 
 import type { InstructionProfile } from '../../shared/types';

@@ -9,7 +9,7 @@ import type { Tier } from '../../shared/settings';
 
 export type { Tier };
 
-/** The quota-governed resources (PRD §7). `tags` is defined now but enforced by
+/** The quota-governed resources. `tags` is defined now but enforced by
  *  C7 (no tag-create handler exists yet — see that change's design). */
 export type Resource = 'folders' | 'prompts' | 'profiles' | 'tags';
 
@@ -17,7 +17,7 @@ export type Resource = 'folders' | 'prompts' | 'profiles' | 'tags';
 export const RESOURCES: readonly Resource[] = ['folders', 'prompts', 'profiles', 'tags'];
 
 /**
- * Per-tier maximum count per resource (PRD §7). `FREE` caps each resource; `PRO`
+ * Per-tier maximum count per resource. `FREE` caps each resource; `PRO`
  * is `Infinity` (unlimited). This is the ONE place the numbers live — worker
  * enforcement and UI copy both read from here (D1).
  */

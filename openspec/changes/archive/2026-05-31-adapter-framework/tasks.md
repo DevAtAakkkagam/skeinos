@@ -2,7 +2,7 @@
 
 - [x] 1.1 Create `extension/src/adapters/types.ts`: `PlatformAdapter`,
   `ConversationRef`, `Message`, `SelfCheckResult`, `AdapterEvent`, `AdapterConfig`
-  (selectors + behaviors), reusing `PlatformId` from `shared/` (LLD §4.1/§4.2)
+  (selectors + behaviors), reusing `PlatformId` from `shared/`
 - [x] 1.2 Export the public surface via `extension/src/adapters/index.ts` so
   nothing outside `adapters/` imports internals (only `PlatformAdapter` et al.)
 - [x] 1.3 Implement `validateAdapterConfig(raw): AdapterConfig | ValidationError[]`
@@ -64,5 +64,5 @@
 ## 6. Verification
 
 - [x] 6.1 `pnpm test` / `pnpm typecheck` / `pnpm lint` green; CI passes
-- [x] 6.2 Confirm `core/` imports nothing from `adapters/` (dependency direction, LLD §2)
+- [x] 6.2 Confirm `core/` imports nothing from `adapters/` (dependency direction)
 - [x] 6.3 Update `tasks.md` checkboxes and mark the change ready to archive

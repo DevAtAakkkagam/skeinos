@@ -1,10 +1,10 @@
 ## Why
 
-Content scripts and the in-page UI must never write storage directly — they message the service worker, the single writer, which keeps every open LLM tab consistent and race-free (CLAUDE.md spine; TDD §1.2). The entire adapter line (M1) and every feature that mutates state depend on this typed bus existing first (M0 task T0.4).
+Content scripts and the in-page UI must never write storage directly — they message the service worker, the single writer, which keeps every open LLM tab consistent and race-free (CLAUDE.md spine;). The entire adapter line (M1) and every feature that mutates state depend on this typed bus existing first (M0 task T0.4).
 
 ## What Changes
 
-- Add `core/messaging`: a typed request/response channel plus a broadcast (pub/sub) channel over `chrome.runtime` messaging (LLD §7).
+- Add `core/messaging`: a typed request/response channel plus a broadcast (pub/sub) channel over `chrome.runtime` messaging.
 - Define the `Request` discriminated union, `Response<T>` (`{ ok: true, data }` | `{ ok: false, error: AppError }`), and the `Broadcast` union (`state.changed`, `sync.status`, `platform.degraded`).
 - **Service-worker side:** a handler registry registered synchronously at module top level (so it survives worker restarts), dispatch by `kind`, and a `broadcast()` that fans out to all open tabs.
 - **Client side (content script / UI):** a typed `send(request)` returning `Response<T>`, and a `subscribe(handler)` for broadcasts.

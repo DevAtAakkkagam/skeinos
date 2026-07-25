@@ -17,7 +17,7 @@
 
 ## 4. Docs & specs reconciliation
 
-- [x] 4.1 Add decision **D28** to `docs/DECISIONS.md` reconciling PRD §6.1 with D25/D27: workspace folder browsing is unified by default with an optional platform view-filter; only the active-conversation context and host gating derive from the active tab; the structural unified⇄independent per-folder toggle stays deferred to M4 (T4.3); `Folder.platformScope` is retained but no longer drives the browser.
+- [x] 4.1 Add decision **D28** to `docs/DECISIONS.md` reconciling with D25/D27: workspace folder browsing is unified by default with an optional platform view-filter; only the active-conversation context and host gating derive from the active tab; the structural unified⇄independent per-folder toggle stays deferred to M4 (T4.3); `Folder.platformScope` is retained but no longer drives the browser.
 - [x] 4.2 Spot-check that no other doc (`docs/LLD`, `CLAUDE.md`) asserts blanket platform-scoping of the folder browser in a way D28 now contradicts; note any follow-up rather than silently editing. **Result: no contradiction found.** `CLAUDE.md` already frames the product as "unified organization"; `docs/LLD` §216 only declares the `platformScope` field and §433 (T4.3) already frames the unified⇄per-platform toggle as deferred M4 work — both consistent with D28. No follow-up edits needed.
 - [x] 4.3 Fix the stale non-normative prose in `openspec/specs/side-panel/spec.md` intro (~lines 7-8, "scopes its data to the active tab's platform") at archive time — the requirement-level delta updates the requirement block but not the capability intro paragraph; reword it to match D28 (active-conversation context + host gating scope to the active tab; folder browser is unified).
 

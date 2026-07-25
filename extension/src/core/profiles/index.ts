@@ -1,7 +1,7 @@
 // core/profiles — the instruction-profile layer. The worker query/mutate handlers
 // (`handlers`) persist the library through the store and broadcast changes, and the
 // content/UI client (`client`) talks to them over the messaging seam. Nothing here
-// touches the DOM; the Profiles tab UI lives outside `core/` (LLD §2, deps inward).
+// touches the DOM; the Profiles tab UI lives outside `core/` (deps inward).
 // CRUD + view only this slice — no activation or injection.
 
 export {

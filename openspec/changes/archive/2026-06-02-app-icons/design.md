@@ -94,4 +94,4 @@ migration, no permission prompt change for existing users.
 - Should the Chrome toolbar icon eventually be the monochrome glyph (cleaner at 16px on busy
   toolbars) rather than the colour app icon? Deferred to the action-UX change.
 - Does the team want a distinct "disabled/degraded" toolbar icon variant tied to adapter
-  `selfCheck` failure (LLD §4.3)? Out of scope here; flagged for the resilience UX work.
+  `selfCheck` failure? Out of scope here; flagged for the resilience UX work.

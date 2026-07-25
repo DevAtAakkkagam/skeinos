@@ -2,7 +2,7 @@
 
 ### Requirement: Versioned schema with explicit migrations
 
-The store SHALL define one versioned IndexedDB database whose object stores and indexes match the data model, and SHALL apply schema changes through an explicit, ordered, add-only migration list. The `searchPostings` store SHALL be keyed by `prefix` (prefix-shard layout per LLD §8.1 / D26), each record holding many terms. Additive optional `Prompt` fields (`domain`, `seedId`) SHALL be introduced by an appended no-op version step that records the bump without rewriting existing `prompts` rows.
+The store SHALL define one versioned IndexedDB database whose object stores and indexes match the data model, and SHALL apply schema changes through an explicit, ordered, add-only migration list. The `searchPostings` store SHALL be keyed by `prefix` (prefix-shard layout per D26), each record holding many terms. Additive optional `Prompt` fields (`domain`, `seedId`) SHALL be introduced by an appended no-op version step that records the bump without rewriting existing `prompts` rows.
 
 #### Scenario: All declared stores and indexes exist at the current version
 

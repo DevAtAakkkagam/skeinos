@@ -1,4 +1,4 @@
-// Pure folder-tree logic (LLD T2.1, design D-A). No IndexedDB, no DOM, no
+// Pure folder-tree logic (design D-A). No IndexedDB, no DOM, no
 // messaging — just records in, records out — so every invariant (the nest-≤5
 // depth guard and cycle prevention) is exhaustively unit-testable in isolation.
 // The worker handler loads the flat `Folder` rows, calls these functions, and

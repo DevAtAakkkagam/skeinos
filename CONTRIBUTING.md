@@ -195,11 +195,11 @@ enforces, so you're not surprised by a failing check:
 - **Keyboard-operable and ARIA-labelled**, targeting WCAG 2.2 AA. `prefers-reduced-motion`
   is honored as a first-class path.
 
-The full engineering rules, with rationale, live in
-[`docs/DEV_GUARDRAILS.md`](docs/DEV_GUARDRAILS.md). The implementation-level design is
-[`docs/LLD_Multi_LLM_Workspace.md`](docs/LLD_Multi_LLM_Workspace.md), and
-[`docs/DECISIONS.md`](docs/DECISIONS.md) is the authoritative decision log — if a doc
-contradicts it, DECISIONS.md wins.
+These rules are summarized here; the reasoning behind each one lives with the change that
+introduced it, under [`openspec/`](openspec/). A capability's current contract is
+`openspec/specs/<capability>/spec.md`, and `openspec/changes/archive/` keeps the proposal
+and design note that argued for it. If you're unsure whether a rule applies to what you're
+building, open an issue and ask — that's faster than guessing.
 
 ## Reporting bugs and security issues
 

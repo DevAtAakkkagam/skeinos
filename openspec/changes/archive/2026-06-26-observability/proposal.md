@@ -9,7 +9,7 @@ adapter breakage — without betraying the local-first / privacy-first promise t
 ## What Changes
 
 - Introduce a **diagnostics-only** observability layer with a **single consent toggle** (*diagnostics* —
-  crashes + adapter health), **opt-in and off by default** (PRD §8.3, [PRIV-4]). It is surfaced as an
+  crashes + adapter health), **opt-in and off by default** ([PRIV-4]). It is surfaced as an
   explicit opt-in on the **final onboarding step** (above "Finish setup," shown unchecked) and in Settings.
 - **No usage / product analytics.** The usage stream (feature counts, platform mix, onboarding funnel,
   DAU) and its anonymous-DAU identity are explicitly **out of scope** — cut for privacy surface and

@@ -1,11 +1,11 @@
 ## Context
 
-Skeinos is a greenfield browser extension that overlays an organization/search/prompt layer onto LLM chat sites (PRD §1). This change implements the `bootstrap` slice of M0 — LLD tasks T0.1 (build) and T0.2 (shadow-DOM mount harness) — which is the trunk of the LLD critical path (M0 → M1 → M2). The hard constraints come straight from the planning docs and the locked decisions in `docs/DECISIONS.md`:
+Skeinos is a greenfield browser extension that overlays an organization/search/prompt layer onto LLM chat sites. This change implements the `bootstrap` slice of M0 — LLD tasks T0.1 (build) and T0.2 (shadow-DOM mount harness) — which is the trunk of the LLD critical path (M0 → M1 → M2). The hard constraints come straight from the planning docs and the locked decisions in `docs/DECISIONS.md`:
 
-- **Manifest V3, minimum permissions** (PRD §10, §8.3–8.4; TDD §1.1). Host permissions are security-sensitive and gate store review.
-- **Host-CSS isolation** — the injected UI must not bleed styles in or out of the host page (TDD §3.3).
-- **200ms UI render budget** and **<5% added page-load** (PRD §8.1) — favours a tiny runtime and lazy mounting.
-- **Sustainable for one part-time maintainer** (PRD §10) — boring, proven tooling; cross-platform work done once.
+- **Manifest V3, minimum permissions** (§8.3–8.4;). Host permissions are security-sensitive and gate store review.
+- **Host-CSS isolation** — the injected UI must not bleed styles in or out of the host page.
+- **200ms UI render budget** and **<5% added page-load** — favours a tiny runtime and lazy mounting.
+- **Sustainable for one part-time maintainer** — boring, proven tooling; cross-platform work done once.
 
 Locked decisions this design implements: **WXT** (D2), **Preact + TS** (D3), shadow-DOM overlay (D3). Store/messaging/settings are out of scope (D8).
 
@@ -16,7 +16,7 @@ Locked decisions this design implements: **WXT** (D2), **Preact + TS** (D3), sha
 - A reusable shadow-DOM mount harness that renders a Preact panel with zero host-CSS bleed (verified both directions).
 - Light/dark theme tokens scoped to the shadow root, system-aware, with a small set of base components consuming them.
 - CI that builds the extension and emits a loadable zip.
-- A repo layout (LLD §3) and WXT config that the sibling M0 changes and M1 adapters slot into cleanly.
+- A repo layout and WXT config that the sibling M0 changes and M1 adapters slot into cleanly.
 
 **Non-Goals:**
 - IndexedDB store / `Repo<T>` (T0.3 — separate change).
@@ -37,7 +37,7 @@ Generates per-browser MV3 manifests, gives near-free Firefox parity (M6), and pr
 
 ### D-3: One reusable mount harness, not per-feature mounting
 A single `mount(target, vnode)` helper attaches a shadow root (`mode: 'open'`), injects the theme stylesheet + component CSS into that root, and renders the Preact tree inside it. Every later `ui/*` feature (sidebar, search overlay, input bar) reuses this one harness rather than each re-solving isolation.
-- *Rationale:* keeps CSS isolation correct in exactly one place; matches TDD §3.3 "rendered in a Shadow DOM root."
+- *Rationale:* keeps CSS isolation correct in exactly one place; matches "rendered in a Shadow DOM root."
 
 ### D-4: `mode: 'open'` shadow root
 Open mode lets tests (and our own code) reach in via `host.shadowRoot` to assert isolation and drive E2E. The isolation guarantee comes from the shadow boundary itself, not from hiding the root; closed mode would only impede testing.
@@ -47,10 +47,10 @@ Tokens (`--sk-color-*`, spacing, radius) are declared on the shadow root's `:hos
 - *Rationale:* scoping to `:host` (not `:root`) keeps tokens out of the host page; sets up T0.5's theme toggle to flip a single attribute later.
 
 ### D-6: Minimum host permissions, P0 hosts only
-The manifest requests host permissions for the P0 launch platforms only (claude.ai, gemini.google.com, perplexity.ai per PRD §5) — no `<all_urls>`, no `tabs` beyond what injection needs, no credential-bearing permissions. P1/P2 hosts are added in their own milestones.
-- *Rationale:* PRD §8.3–8.4 privacy-first + store review; smaller surface is easier to justify.
+The manifest requests host permissions for the P0 launch platforms only (claude.ai, gemini.google.com, perplexity.ai) — no `<all_urls>`, no `tabs` beyond what injection needs, no credential-bearing permissions. P1/P2 hosts are added in their own milestones.
+- *Rationale:* privacy-first + store review; smaller surface is easier to justify.
 
-### D-7: Repo layout per LLD §3, scaffolded but not over-built
+### D-7: Repo layout, scaffolded but not over-built
 Create `extension/src/{background,content,ui/{components,theme}}` now; leave `core/`, `adapters/`, and feature `ui/*` folders to the changes that fill them. Background entry exists but does nothing beyond proving the worker registers.
 
 ## Risks / Trade-offs

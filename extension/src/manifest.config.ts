@@ -3,7 +3,7 @@
 // platform that ships an adapter gets (only) its host here automatically and one
 // that is removed loses it — no hand-maintained second list to drift. This keeps
 // the surface tiny and auditable: every entry traces to a shipped adapter, with no
-// broad access and no credential-bearing permissions (PRD §5/§8.3-8.4, decision D6).
+// broad access and no credential-bearing permissions (decision D6).
 import { BUNDLED_CONFIGS } from './adapters/configs';
 
 export const P0_MATCHES: readonly string[] = Object.values(BUNDLED_CONFIGS).flatMap(
@@ -29,7 +29,7 @@ export const skeinosManifest = {
     },
   },
   host_permissions: [...P0_MATCHES],
-  // `alarms` powers the adapter-resilience canary watchdog (LLD §4.3): a durable,
+  // `alarms` powers the adapter-resilience canary watchdog: a durable,
   // worker-death-surviving schedule that re-surfaces a degraded platform within
   // 24h. `sidePanel` lets the workspace UI render in the browser's native side
   // panel (the `side-panel` change), opened from the toolbar action and enabled

@@ -53,7 +53,7 @@ later); slash-command **insertion** (C13).
 
 - **New modules** `extension/src/core/prompts/{handlers,client,index}.ts` and
   `extension/src/shared/prompts.ts`. `core/prompts/handlers.ts` imports `parseVariables` from the
-  existing `core/prompts/template.ts` (slice 1) — both inside `core/`, dependencies inward (LLD §2).
+  existing `core/prompts/template.ts` (slice 1) — both inside `core/`, dependencies inward.
 - **Modified** `extension/src/background/index.ts` (one `registerPromptHandlers()` call at module top
   level, before `installMessageHub`). No change to `shared/messages.ts` — the `prompts.query` /
   `prompts.mutate` kinds are added by declaration merging from the handler module, exactly as `folders`

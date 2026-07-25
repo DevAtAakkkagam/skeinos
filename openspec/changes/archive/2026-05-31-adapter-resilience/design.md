@@ -2,7 +2,7 @@
 
 `platform-adapter` (C4) handles load-time breakage: a failed `selfCheck()` keeps
 the overlay dormant and the content entry reports `platform.degraded`. What's
-missing (LLD §4.3, T1.5) is (a) a **scheduled canary** that keeps a degraded
+missing (T1.5) is (a) a **scheduled canary** that keeps a degraded
 platform surfaced within 24h and flags its config for hot-fix, and (b) an
 **in-product notice** so the user understands the platform is degraded and can
 retry. The guardrails are firm: scheduled work uses `chrome.alarms`, not timers

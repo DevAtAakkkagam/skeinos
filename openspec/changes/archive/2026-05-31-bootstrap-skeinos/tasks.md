@@ -1,6 +1,6 @@
 ## 1. Build scaffold (T0.1)
 
-- [x] 1.1 Initialize the repo build with WXT + TypeScript; create `extension/` layout per LLD §3 (`src/background`, `src/content`, `src/ui/{components,theme}`)
+- [x] 1.1 Initialize the repo build with WXT + TypeScript; create `extension/` layout (`src/background`, `src/content`, `src/ui/{components,theme}`)
 - [x] 1.2 Add dependencies (`wxt`, `preact`, `typescript`) and TS config; wire `dev`/`build`/`zip` scripts
 - [x] 1.3 Configure WXT to generate the MV3 manifest: service-worker background entry, minimum host permissions for P0 hosts only (claude.ai, gemini.google.com, perplexity.ai), no `<all_urls>`, no credential permissions
 - [x] 1.4 Add a no-op background service-worker entry that registers cleanly

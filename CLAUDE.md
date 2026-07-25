@@ -10,11 +10,11 @@ search, prompt-library, and multi-model-comparison layer on top of LLM chat site
 and privacy-first**: conversation content never leaves the device on the free tier; only
 encrypted metadata syncs on paid tiers.
 
-**Current state: bootstrapped.** `bootstrap-skeinos` (M0 tasks T0.1+T0.2) is applied and archived —
-the `extension/` scaffold builds an installable MV3 extension that mounts a shadow-DOM Preact panel
-with theme tokens, base components, and CI. Two capabilities exist (`extension-shell`, `ui-shell`).
-The next ready, independent slices are `workspace-store`, `messaging`, and `settings`. See
-`docs/OPENSPEC_CHANGES.md` for the full M0–M8 change map and dependency graph.
+**Current state: shipping.** v0.1.5 is live on the Chrome Web Store and Firefox Add-ons, with
+adapters for Claude, ChatGPT, Gemini, and Perplexity. Folders, tags, search, the prompt library,
+profiles, onboarding, i18n (en/de/es/fr/pt), and adapter resilience are all implemented and
+archived as OpenSpec changes; multi-device sync (M5+) is not built. `openspec/specs/` lists every
+capability that exists today.
 
 ## Commands
 
@@ -36,28 +36,22 @@ Real-browser tests live in `tests/browser/**/*.browser.test.{ts,tsx}` and need a
 
 ## Source of truth — read these before designing or coding
 
-The three planning docs are layered (each builds on the previous); when they conflict, the
-**most specific / most recent wins**, and `docs/DECISIONS.md` overrides all of them:
+`openspec/` is the source of truth for behavior. A capability's current contract is
+`openspec/specs/<capability>/spec.md`; the proposal and design note that argued for it are in
+`openspec/changes/archive/`. When a spec and a comment disagree, the spec wins.
 
-- `docs/PRD_Multi_LLM_Workspace_Extension.md` — product requirements, tiers, personas, NFRs.
-- `docs/TDD_Multi_LLM_Workspace.docx` — high-level architecture (binary `.docx`; some lines
-  superseded — see DECISIONS.md).
-- `docs/LLD_Multi_LLM_Workspace.md` — implementation-level design: module boundaries, interfaces,
-  data model, message protocol, algorithms, and the M0–M8 task plan. **This is the primary
-  reference for any implementation work.**
-- `docs/DECISIONS.md` — **authoritative decision log (D1–D23).** Reconciles doc conflicts. Read first.
-- `docs/OPENSPEC_CHANGES.md` — the M0–M8 task plan clustered into 35 OpenSpec changes, with the
-  change-level dependency graph and what's ready to start now.
-- `docs/DEV_GUARDRAILS.md` — full engineering rules (MV3 / service worker / Preact / store / adapter /
-  privacy / test), with tagged rule IDs to cite in review. The terse version is the section below.
+The product/architecture planning docs (PRD, TDD, LLD) are kept in a private repo and are not
+available here — source comments citing `PRD §x` / `LLD §x` are historical anchors into them.
+Treat those citations as provenance, not as something you can look up: if you need the rule,
+it is either in `openspec/specs/` or in the guardrails section below.
 
-## Locked stack decisions (from DECISIONS.md — do not re-litigate without reason)
+## Locked stack decisions (do not re-litigate without reason)
 
 - **Build:** WXT (generates per-browser MV3 manifest; Firefox-ready).
 - **UI:** Preact + TypeScript, mounted in a **shadow-DOM overlay** for host-CSS isolation.
 - **Settings storage:** `chrome.storage.local`. **Workspace storage:** IndexedDB via the `idb`
   wrapper, behind a typed `Repo<T>` + explicit migration list.
-- **Search:** a **custom sharded postings index** (LLD §8) — *not* MiniSearch/lunr.
+- **Search:** a **custom sharded postings index** — *not* MiniSearch/lunr.
 - **Sync envelope wired from day one:** every `Repo.put()` bumps `rev`/`updatedAt`/`deviceId`/`hash`;
   deletes write tombstones — even though sync itself ships in M5 (avoids a later data migration).
 
@@ -78,7 +72,7 @@ Three rules that ripple through every module:
    state lives in IndexedDB and the worker rehydrates on wake. Any new state must survive worker death.
 3. **Platform adapters are config-driven and isolated.** One generic adapter + a per-platform JSON
    config (selectors/anchors); a broken platform disables only its own overlay. Configs are hot-fixable
-   without a store release. The `PlatformAdapter` interface (LLD §4.1) is the only platform contract
+   without a store release. The `PlatformAdapter` interface is the only platform contract
    the rest of the system sees.
 
 **Sync boundary (hard rule):** only metadata records sync, and only as ciphertext. `ConversationIndex`,
@@ -90,16 +84,14 @@ This repo uses OpenSpec (`openspec/`) for spec-driven changes. Work is organized
 with `proposal.md` → `design.md` → `specs/**` → `tasks.md`, gated in that dependency order.
 
 - Inspect: `openspec list --json`, `openspec status --change "<name>" --json`
-- `bootstrap-skeinos` is applied and archived. Start the next change with `/opsx:propose <name>`
-  (the ready ones are `workspace-store`, `messaging`, `settings`), then `/opsx:apply <name>`.
+- Start a change with `/opsx:propose <name>`, then `/opsx:apply <name>`, then `/opsx:archive <name>`.
 - Spec scenarios are written to be testable — each `#### Scenario` maps to roughly one test, and
   `tasks.md` checkboxes are the merge gates. Keep them in sync when implementing.
 
-The LLD's ~50 tasks are clustered into **35 capability-aligned changes** in `docs/OPENSPEC_CHANGES.md`.
-M0 is deliberately **split**: `bootstrap` (done), then store / messaging / settings as independent
-siblings (settings does not depend on the store, per D4).
+Each change is scoped to one capability, so a change's delta touches one spec where possible.
+`openspec/changes/archive/` is the record of everything shipped so far, newest last.
 
-## Dev guardrails (terse — full rationale in `docs/DEV_GUARDRAILS.md`)
+## Dev guardrails
 
 - **[SW] Single writer, no memory-only state.** Only the service worker writes IndexedDB; content
   scripts/UI message it. Assume the worker cold-starts on every event — register listeners
@@ -119,7 +111,9 @@ siblings (settings does not depend on the store, per D4).
   Remote adapter *config* (data) is fine and schema-validated; remote *code* is not.
 - **[PRIV] Hard boundary.** `ConversationIndex`, `searchPostings`, `Comparison` never leave the
   device — any tier. Only metadata syncs, only AES-GCM ciphertext, backend in the EU. No credentials.
-  Telemetry off by default. Tier limits block-with-nudge; never lose user input.
+  There is no telemetry at all — the diagnostics stream was removed outright, so adding any
+  network egress is a fresh proposal, not an implementation detail. Tier limits block-with-nudge;
+  never lose user input.
 
 ## Where code lives (`extension/src/`)
 
@@ -138,8 +132,8 @@ Tests live in `extension/tests/` (flat, one file per unit) with the real-browser
 
 ## Conventions
 
-- Modules depend **inward toward the core**; nothing in `core/` imports adapter or UI code (LLD §2).
+- Modules depend **inward toward the core**; nothing in `core/` imports adapter or UI code.
 - Minimum permissions: the manifest requests host permissions for supported platforms only — never
   `<all_urls>`, never credential-bearing permissions.
-- Planned test stack (LLD §12): Vitest (unit/integration, with fake-indexeddb), Playwright (E2E on mock
+- Test stack: Vitest (unit/integration, with fake-indexeddb), Playwright (E2E on mock
   host pages), adapter contract suite against recorded DOM fixtures, CI benchmarks for NFR budgets.

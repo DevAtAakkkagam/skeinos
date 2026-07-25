@@ -1,6 +1,6 @@
 // tier-gate spec coverage — the pure limit table + `assertWithinQuota` guard.
 // Maps to openspec/changes/tier-gate/specs/tier-gate/spec.md: the per-tier quota
-// table (free numbers from PRD §7, PRO unlimited) and the at/over-limit boundary.
+// table (free numbers fixed by the tier decision, PRO unlimited) and the at/over-limit boundary.
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -13,7 +13,7 @@ import {
 } from '../src/core/tier';
 
 describe('TIER_LIMITS (1.2)', () => {
-  it('FREE matches the published PRD §7 numbers', () => {
+  it('FREE matches the published free-tier numbers', () => {
     expect(TIER_LIMITS.FREE).toEqual({ folders: 5, prompts: 25, profiles: 3, tags: 10 });
   });
 

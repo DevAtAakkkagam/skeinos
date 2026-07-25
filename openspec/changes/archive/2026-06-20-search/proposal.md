@@ -20,7 +20,7 @@ and the Claude adapter shipped `readMessages` — but no search *behavior* exist
 - Add `core/search`: the postings engine over `searchPostings` — build, incremental update, query, and
   highlight. **BREAKING (internal, no-data): reshape `searchPostings` from the shipped per-term
   `SearchPosting` (`{ term, docs[] }`, `keyPath: 'term'`) to a prefix-shard** (`{ prefix, terms: {
-  [term]: { docId, field, positions[] }[] } }`, `keyPath: 'prefix'`) per **D26/D6/LLD §8.1**. This is a
+  [term]: { docId, field, positions[] }[] } }`, `keyPath: 'prefix'`) per **D26/D6**. This is a
   store-schema version bump with **no data migration** — indexing has never run, so there are no rows.
 - Add query + ranking: parse terms + filters (**platform, date range, folder, archived state**, and a
   forward-compatible **tag** dimension), intersect postings, score by term frequency with field boosts
@@ -66,13 +66,13 @@ benchmark); and durable resumable backfill via alarms.
 - **Modified** `extension/src/shared/types.ts` (replace `SearchPosting` with the prefix-shard type; add
   the `Query` / `SearchResult` shapes and the `SearchEngine` interface) and
   `extension/src/core/store/schema.ts` (`searchPostings` `keyPath` + DB version bump). The `state.changed`
-  broadcast hub (LLD §7) already exists, but its shipped payload is `{ stores: string[] }` with no slot
+  broadcast hub already exists, but its shipped payload is `{ stores: string[] }` with no slot
   for progress — so this change also **extends the `Broadcast` union in `shared/messages.ts`** with a
   bulk-index progress variant (`{ done, total }`) that C11's indicator later reads. The `search.run`
   request kind is **introduced** by this change,
   registered on the open `RequestContracts` map via declaration merging (messaging ships no `search.run`
   handler today — its request map is empty by design and features add their own kinds), and the
-  `SearchEngine` interface (LLD §5) is **introduced** here, not pre-existing.
+  `SearchEngine` interface is **introduced** here, not pre-existing.
 - **Consumes existing contracts**: the `conversations` + `searchPostings` repos from `workspace-store`,
   the `messaging` request/response + broadcast hub, and the Claude `platform-adapter` `readMessages`
   read op — no direct DOM access from `core/`.
@@ -83,7 +83,7 @@ benchmark); and durable resumable backfill via alarms.
   build/incremental-removal, intersect + ranking + highlight, filter semantics) and a synthetic 5k-doc
   CI benchmark (<500 ms); Playwright on the mock Claude host for the keyboard-only search flow returning
   highlighted results.
-- **Docs**: applies the **D26** propagation note — update LLD §8.1's shard prose and the `SearchPosting`
+- **Docs**: applies the **D26** propagation note — update 's shard prose and the `SearchPosting`
   type/`keyPath` as part of this change.
 - **Downstream**: unblocks `loading-states` (C11), `shortcuts` (C16), `a11y` (C34), and `perf-budget`
   (C35); the tag filter activates once `tags` (C7) ships.

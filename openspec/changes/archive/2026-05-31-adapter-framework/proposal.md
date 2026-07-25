@@ -3,18 +3,18 @@
 Nothing user-facing can ship until the extension can read and write a real LLM
 page, and the spine rule is that it must do so through **one generic adapter +
 per-platform JSON config** so a broken platform disables only its own overlay and
-selectors are hot-fixable without a store release (CLAUDE.md [ADAPT]; LLD §4).
+selectors are hot-fixable without a store release (CLAUDE.md [ADAPT];).
 The framework is only provably correct against a real config, so M1 delivers it
-*and* proves it on Claude in the same slice (LLD T1.1–T1.4). It unblocks the
+*and* proves it on Claude in the same slice. It unblocks the
 entire downstream line: folders, search indexing, the input bar, and every other
 P0 platform (each later platform is then just config + fixtures).
 
 ## What Changes
 
-- Add `adapters/`: the `PlatformAdapter` contract (LLD §4.1) as the **only**
+- Add `adapters/`: the `PlatformAdapter` contract as the **only**
   platform-facing type the rest of the system sees, plus the `AdapterConfig`
-  schema (LLD §4.2) with a runtime validator.
-- **Config loader** (LLD §4.3): prefers the newest valid config (remote vs
+  schema with a runtime validator.
+- **Config loader**: prefers the newest valid config (remote vs
   bundled), validates against the schema, and **falls back to bundled on any
   validation error or fetch failure** — bundled config is always present so the
   extension works offline. Remote config is *data only* (schema-validated); no
@@ -35,7 +35,7 @@ P0 platform (each later platform is then just config + fixtures).
 
 Out of scope (deferred): the scheduled canary runner and in-product breakage
 notice UI (C5 `adapter-resilience`); full docking/reflow host-coexistence work
-(LLD §4.4 / T4.5, lands with the P0 platforms in M4); message *insertion* UX and
+(/ T4.5, lands with the P0 platforms in M4); message *insertion* UX and
 the sidebar/input-bar UIs themselves (M2/M3).
 
 ## Capabilities
@@ -57,7 +57,7 @@ the sidebar/input-bar UIs themselves (M2/M3).
 - **New module** `extension/src/adapters/` — `runtime/` (loader, generic adapter,
   self-check, contract harness), the `PlatformAdapter`/`AdapterConfig` types, and
   `configs/claude.*` with bundled JSON. Nothing in `core/` imports it (deps point
-  inward; LLD §2).
+  inward;).
 - **Consumes existing `messaging`**: emits `platform.degraded` (already in the
   `Broadcast` union) when `selfCheck` fails; reads conversation data to feed later
   indexing. No messaging requirement changes.
@@ -66,7 +66,7 @@ the sidebar/input-bar UIs themselves (M2/M3).
   permissions.
 - **No new runtime dependencies**: schema validation uses a lightweight validator
   consistent with the existing stack; tests use Vitest + recorded DOM fixtures
-  (jsdom) per the planned test stack (LLD §12).
+  (jsdom) per the planned test stack.
 - **Downstream**: unblocks C5 `adapter-resilience`, C6 `folders`, C8 `search`
   (indexing pipeline), C13 `input-bar`, and every future platform config
   (Gemini/Perplexity/Grok/DeepSeek/ChatGPT/Mistral), which become config + fixture

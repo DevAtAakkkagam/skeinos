@@ -13,7 +13,7 @@ The side panel renders three things from worker state: the folder **tree**
 
 The result is an incoherent hybrid: a folder badge of "5" over an empty body on a
 tab whose platform owns none of the five (the five are e.g. Claude conversations,
-hidden on a Gemini tab). PRD §6.1 wants unified-or-independent **by user choice**;
+hidden on a Gemini tab). wants unified-or-independent **by user choice**;
 D25 made the panel "scoped to the active tab's platform"; D27 added the
 per-platform active-conversation seam. No decision reconciles these, so the panel
 honors neither PRD mode.
@@ -46,7 +46,7 @@ and the UI owns narrowing. The selector's required `platform` field is removed
 (`conversation.active` keeps its `platform` — the active card is genuinely per-tab).
 
 *Why:* the folder browser is one library; filtering it to the active tab is what
-broke PRD §6.1. *Alternative considered:* keep `platform` but add a `'unified'`
+broke. *Alternative considered:* keep `platform` but add a `'unified'`
 sentinel — rejected as carrying the dead-data smell forward; a clean unscoped read
 is simpler and the active-card path already carries the per-platform selector it needs.
 
@@ -92,7 +92,7 @@ already render unified; the value is simply ignored. Backfilling old rows to
 Amend `side-panel` ("scopes to active tab's platform" → only the active-conversation
 context and host gating derive from the active tab; the workspace browser is unified),
 amend `folders` (contents unified, counts match the filter), extend `sidebar-shell`
-(platform filter). Add `docs/DECISIONS.md` **D28** citing PRD §6.1 ↔ D25/D27.
+(platform filter). Add `docs/DECISIONS.md` **D28** citing ↔ D25/D27.
 
 ## Risks / Trade-offs
 

@@ -2,7 +2,7 @@
 
 Slices 1–2 made the prompt library real (model, parser, worker CRUD) but it has **no surface** — the
 Prompts tab in the shell is still a disabled "coming soon" stub. This change is **slice 3 of
-`prompts-library`** (LLD T3.2): the Prompts tab UI — a pure shadow-DOM view over the slice-2 worker that
+`prompts-library`**: the Prompts tab UI — a pure shadow-DOM view over the slice-2 worker that
 lets a user browse, filter, create, edit, and delete prompts and categories. It adapts the wide 3-pane
 "Prompt library" design into the narrow side-panel column. **End of this slice = the prompt library is
 usable end-to-end** (insertion still comes in C13).
@@ -70,7 +70,7 @@ this slice exposes the `openPrompt` seam it consumes); usage-count display and m
 - **New module** `extension/src/ui/prompts/` (`usePromptLibrary`, `PromptsPanel`, `PromptCard`,
   `PromptEditor`, styles). Consumes `core/prompts` client + `template` (slice 1/2), the `Dialog`/`Menu`
   primitives (the primitives layer explicitly names "the M4 prompt library" as a target consumer), and
-  `PlatformLogo`. A pure view over worker state — no store/DOM/adapter imports (LLD §2, PREACT).
+  `PlatformLogo`. A pure view over worker state — no store/DOM/adapter imports (PREACT).
 - **Modified** `extension/src/ui/sidebar/SidebarShell.tsx` (tab state + body swap + `openPrompt` seam).
   The platform filter row and collapsed-list nudge become Folders-tab-only.
 - **No new permissions, no network, no new request kinds, no schema/migration.** Pure presentation over

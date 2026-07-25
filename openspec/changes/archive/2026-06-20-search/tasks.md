@@ -44,5 +44,5 @@
 
 - [x] 6.1 Real-Chromium E2E over the real worker + IndexedDB: index fixture conversations, then a keyboard-only search returns highlighted results.
 - [x] 6.2 E2E: a filtered query (platform/date/folder) constrains results; the empty state shows for a no-match query.
-- [x] 6.3 Apply the D26 doc propagation: update LLD §8.1's shard prose to the `{ prefix, terms{} }` shape and confirm the type/`keyPath` match.
+- [x] 6.3 Apply the D26 doc propagation: update 's shard prose to the `{ prefix, terms{} }` shape and confirm the type/`keyPath` match.
 - [x] 6.4 Confirm the leftover seams are clean (tag filter inert with a `// C7` marker, progress signal emitted but no indicator UI, no alarms/cursor backfill) and update `docs/OPENSPEC_CHANGES.md` C8 status.

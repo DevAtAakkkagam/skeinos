@@ -1,7 +1,7 @@
-// adapters — one generic, config-driven adapter + per-platform configs (LLD §4).
+// adapters — one generic, config-driven adapter + per-platform configs.
 // `PlatformAdapter` is the ONLY platform contract the rest of the system imports;
 // everything else here is the runtime that builds and feeds it. Nothing in
-// `core/` imports this module — dependencies point inward (LLD §2).
+// `core/` imports this module — dependencies point inward.
 
 export type {
   AdapterBehaviors,
@@ -43,7 +43,7 @@ export { reportDegraded, registerAdapterHandlers } from './runtime/degraded';
 export { getBundledConfig, BUNDLED_CONFIGS } from './configs';
 
 // adapter-resilience: durable health, the health-report seam, the canary
-// watchdog, and the breakage-notice banner (LLD §4.3).
+// watchdog, and the breakage-notice banner.
 export {
   getHealth,
   getPlatformHealth,

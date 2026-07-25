@@ -61,7 +61,7 @@ export const MIGRATIONS: Migration[] = [
     // change to the (schemaless-per-record) IndexedDB object store.
   },
   // v4 — reshape `searchPostings` from the shipped per-term layout (keyPath
-  // `term`) to the prefix-shard layout (keyPath `prefix`) per D26/D6/LLD §8.1.
+  // `term`) to the prefix-shard layout (keyPath `prefix`) per D26/D6.
   // Indexing has never run, so the store is empty: drop and recreate with the new
   // key path — no row transformation, no rollback risk. `conversations` (holding
   // `ConversationIndex`) and every syncable store are untouched.

@@ -1,6 +1,6 @@
 ## Why
 
-Skeinos has three thorough planning docs (PRD, TDD, LLD) but no code. Nothing in M1–M8 can begin until the foundation exists: an installable MV3 extension that loads on a host LLM page and can render its own UI without colliding with that page. This change builds that trunk — the build pipeline and the shadow-DOM mount harness — that every later milestone branches off (per LLD §14 critical path: M0 → M1 → M2).
+Skeinos has three thorough planning docs (PRD, TDD, LLD) but no code. Nothing in M1–M8 can begin until the foundation exists: an installable MV3 extension that loads on a host LLM page and can render its own UI without colliding with that page. This change builds that trunk — the build pipeline and the shadow-DOM mount harness — that every later milestone branches off ( critical path: M0 → M1 → M2).
 
 This is the `bootstrap` slice of M0 (LLD tasks **T0.1 + T0.2**). The store (T0.3), messaging (T0.4), and settings (T0.5) are deliberately scoped as separate, independent follow-up changes (decision D8 in `docs/DECISIONS.md`).
 
@@ -26,8 +26,8 @@ Non-goals for this change: any IndexedDB store, the messaging hub, the settings/
 
 ## Impact
 
-- **New repo structure** under `extension/` per LLD §3 (`src/background/`, `src/content/`, `src/ui/{components,theme}/`, `manifest`/WXT config).
+- **New repo structure** under `extension/` (`src/background/`, `src/content/`, `src/ui/{components,theme}/`, `manifest`/WXT config).
 - **New dependencies**: `wxt`, `preact`, `typescript`, and WXT's build toolchain. No runtime/network dependencies introduced.
 - **New CI**: a build job producing a packaged zip.
-- **Permissions surface**: the manifest's host-permission list is established here and is security-sensitive — it gates Chrome Web Store review and the privacy-first positioning (PRD §8.3, §8.4). Kept minimal.
+- **Permissions surface**: the manifest's host-permission list is established here and is security-sensitive — it gates Chrome Web Store review and the privacy-first positioning (§8.4). Kept minimal.
 - **Downstream**: unblocks the sibling M0 changes (store, messaging, settings) and the M1 adapter framework, all of which mount into or message through this shell.

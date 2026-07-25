@@ -1,11 +1,11 @@
-// Messaging contracts (LLD §7). Content scripts and the in-page UI never write
+// Messaging contracts. Content scripts and the in-page UI never write
 // storage directly — they `send` a typed `Request` to the service worker (the
 // single writer), which dispatches by `kind` and returns a `Response<T>`. The
 // worker also `broadcast`s `Broadcast` messages so every open LLM tab stays
 // consistent.
 //
 // This change ships the *channel + envelope* only. The concrete request kinds
-// from LLD §7 (`workspace.query`, `workspace.mutate`, `search.run`,
+// from the contract (`workspace.query`, `workspace.mutate`, `search.run`,
 // `prompt.insert`, `profile.activate`, `multimodel.dispatch`, `sync.now`) carry
 // payload types (`WorkspaceSelector`, `MutationOp`, …) owned by later feature
 // changes. So `Request` is *open*: a feature change registers its kinds by
@@ -72,7 +72,7 @@ export type RequestOf<K extends RequestKind> = { kind: K } & RequestContracts[K]
 /** The success `data` type returned for a single `kind`. */
 export type ResponseDataOf<K extends RequestKind> = RequestContracts[K]['response'];
 
-/** The discriminated union of every registered request (LLD §7). */
+/** The discriminated union of every registered request. */
 export type Request = { [K in RequestKind]: RequestOf<K> }[RequestKind];
 
 /**
@@ -91,14 +91,14 @@ export interface RequestBase {
 /**
  * Sync progress carried by the `sync.status` broadcast. The M5 sync change owns
  * the authoritative shape; this is the minimal status the broadcast contract
- * needs today so the union below is concrete (LLD §7).
+ * needs today so the union below is concrete.
  */
 export type SyncStatus =
   | { state: 'idle'; lastSyncedAt?: number }
   | { state: 'syncing' }
   | { state: 'error'; error: AppError };
 
-/** Live state pushed from the worker so every open tab self-updates (LLD §7). */
+/** Live state pushed from the worker so every open tab self-updates. */
 export type Broadcast =
   | { kind: 'state.changed'; stores: string[] }
   | { kind: 'sync.status'; status: SyncStatus }

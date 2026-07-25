@@ -1,6 +1,6 @@
 ## Why
 
-Instruction profiles (PRD §6.4 / LLD T3.5) let users save and reuse named standing instructions
+Instruction profiles (/) let users save and reuse named standing instructions
 ("act as a senior staff engineer; be terse") instead of re-pasting them into every chat — pain #2
 in the PRD. The data model (`InstructionProfile`) and the synced `profiles` store already exist, and
 the side-panel shell already reserves a **disabled `Profiles` tab stub**. This change builds the

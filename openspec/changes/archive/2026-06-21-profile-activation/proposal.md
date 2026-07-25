@@ -4,7 +4,7 @@
 yet — there is no way to activate one and apply it to a chat. The input action bar (C13) already
 ships a **disabled Profile stub** reserving the spot. This slice makes that stub a working chip:
 pick a profile and its instruction is inserted into the composer, so the standing instruction
-("act as a senior staff engineer; be terse") rides the next message — PRD §6.4 / LLD T3.5. It is
+("act as a senior staff engineer; be terse") rides the next message —. It is
 the **PREPEND** path that works on every platform; the true-system-prompt mode (D13 `SYSTEM`) stays
 in the later `profile-system-prompt` slice.
 

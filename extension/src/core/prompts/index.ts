@@ -2,7 +2,7 @@
 // (`template`, slice 1) plus the worker query/mutate handlers (`handlers`, slice 2)
 // that persist the library through the store and broadcast changes, and the
 // content/UI client (`client`). Nothing here touches the DOM; the Prompts tab UI
-// lives outside `core/` (LLD §2, dependencies inward).
+// lives outside `core/` (dependencies inward).
 
 export * from './template';
 export {

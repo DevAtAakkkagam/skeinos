@@ -7,7 +7,7 @@ parsing exists. This slice builds the single pure module they all consume, and s
 record shape so later slices don't reshape a synced type.
 
 Constraints carried in from the project:
-- **Inward dependencies (LLD §2):** a `core/` module imports nothing from `store/`, `messaging/`,
+- **Inward dependencies:** a `core/` module imports nothing from `store/`, `messaging/`,
   `adapters/`, or `ui/`. The parser is pure text-in / data-out.
 - **Privacy (PRIV-1):** this is in-memory only; it neither persists nor syncs. `Prompt` stays syncable
   metadata as already defined; no field here changes that classification.

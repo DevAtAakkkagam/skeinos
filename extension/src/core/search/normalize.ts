@@ -1,4 +1,4 @@
-// Pure text → tokens primitives shared by indexing and querying (LLD §8.1). The
+// Pure text → tokens primitives shared by indexing and querying. The
 // single rule that makes the index correct: the SAME normalization, stemming, and
 // prefixing run at index time and at query time, so a term derived from a document
 // and the same term typed into the search box collapse to identical keys. Nothing

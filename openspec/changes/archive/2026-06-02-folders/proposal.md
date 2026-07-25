@@ -1,7 +1,7 @@
 ## Why
 
 The free tier's core promise is organizing LLM conversations into a folder hierarchy that the
-host site doesn't offer. Folders are the foundational M2 slice (LLD T2.1+T2.2): the sidebar tree is
+host site doesn't offer. Folders are the foundational M2 slice: the sidebar tree is
 the workspace's primary navigation, and `tags`, `import-export`, and `loading-states` all build on
 it. With the store (C1), messaging (C2), and the Claude adapter (C4) in place, this is the first
 user-visible workspace capability and the widest M2 unblocker.

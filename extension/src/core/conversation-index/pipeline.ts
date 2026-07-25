@@ -1,4 +1,4 @@
-// The ingest pipeline (LLD §8): adapter messages → normalized text → contentHash →
+// The ingest pipeline: adapter messages → normalized text → contentHash →
 // `ConversationIndex` + postings. Runs in the service worker (the single writer);
 // the content-script adapter only reads the DOM and ships message text over the
 // messaging hub. Two invariants make it safe under MV3's crash-on-idle worker:
@@ -175,7 +175,7 @@ export async function bulkIndex(
   return { done, total };
 }
 
-/** Bundle the pipeline + query into the {@link SearchEngine} contract (LLD §5). */
+/** Bundle the pipeline + query into the {@link SearchEngine} contract. */
 export function createSearchEngine(store: StoreLike): SearchEngine {
   return {
     index: (input) => indexConversation(store, input),

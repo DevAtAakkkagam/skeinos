@@ -1,6 +1,6 @@
 ## Context
 
-`core/store` runs in the service worker — the single writer (CLAUDE.md spine; TDD §3.2). MV3 terminates the worker after ~30s idle, so all durable state lives here and the worker rehydrates on wake; there is no memory-only source of truth. Locked decisions this design implements: the `idb` wrapper + typed `Repo` + migration list (D5), the sync envelope wired from day one (D7), and the custom sharded postings store present from the start (D6). Settings live in `chrome.storage.local` (D4) and are out of scope. Record shapes and the store/index list come from LLD §6; the `WorkspaceStore`/`Repo` interfaces from LLD §5.
+`core/store` runs in the service worker — the single writer (CLAUDE.md spine;). MV3 terminates the worker after ~30s idle, so all durable state lives here and the worker rehydrates on wake; there is no memory-only source of truth. Locked decisions this design implements: the `idb` wrapper + typed `Repo` + migration list (D5), the sync envelope wired from day one (D7), and the custom sharded postings store present from the start (D6). Settings live in `chrome.storage.local` (D4) and are out of scope. Record shapes and the store/index list come from the contract; the `WorkspaceStore`/`Repo` interfaces from the contract.
 
 ## Goals / Non-Goals
 
@@ -8,7 +8,7 @@
 - Typed `Repo<T>` (`get`/`put`/`delete`/`query`) over a single versioned IndexedDB DB via `idb`.
 - The sync envelope enforced uniformly inside `put`/`delete` so feature code cannot forget it.
 - An explicit, ordered, add-only migration list with a working v1→v2 example proven by test.
-- All stores + indexes from LLD §6, including `searchPostings` (keyed by `term`, sharded) and `syncMeta`.
+- All stores + indexes from the contract, including `searchPostings` (keyed by `term`, sharded) and `syncMeta`.
 - Local-only classification for `conversations`, `searchPostings`, `comparisons`.
 - Multi-store atomic transactions via `tx()`.
 

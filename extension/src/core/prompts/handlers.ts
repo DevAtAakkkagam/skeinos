@@ -8,7 +8,7 @@
 //
 // `variables` is NEVER trusted from the client: the worker derives it from `body` via
 // slice 1's `parseVariables` on create and on any body change (D-C) — both modules live
-// in `core/`, dependencies inward (LLD §2). No DOM access here.
+// in `core/`, dependencies inward. No DOM access here.
 
 import { broadcast, registerHandler } from '../../core/messaging';
 import { workspaceStore, type WorkspaceStore } from '../../core/store';

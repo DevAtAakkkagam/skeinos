@@ -1,5 +1,5 @@
 // Workspace query/mutate payloads carried by the `workspace.query` and
-// `workspace.mutate` request kinds (LLD §7). `folders` (C6) is the first feature
+// `workspace.mutate` request kinds. `folders` (C6) is the first feature
 // to introduce these generic kinds; later M2 changes (tags, search) extend the
 // `WorkspaceSelector` / `MutationOp` unions here. The request-kind contracts are
 // registered via declaration merging in `core/folders/handlers.ts` (the messaging

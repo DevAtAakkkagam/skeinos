@@ -1,11 +1,11 @@
 ## Context
 
-The service worker is the single writer (spine rule 1) and holds no memory-only state (rule 2): it may be torn down between messages, so handlers must assume a cold start and be registered synchronously at module top level (guardrail SW-3). Message shapes are fixed by LLD §7. This change defines the transport + contracts only; the concrete `workspace.mutate` / `search.run` / `prompt.insert` handlers are implemented by their owning feature changes, which register into the hub's registry.
+The service worker is the single writer (spine rule 1) and holds no memory-only state (rule 2): it may be torn down between messages, so handlers must assume a cold start and be registered synchronously at module top level (guardrail SW-3). Message shapes are fixed by. This change defines the transport + contracts only; the concrete `workspace.mutate` / `search.run` / `prompt.insert` handlers are implemented by their owning feature changes, which register into the hub's registry.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Typed `send`/dispatch over `chrome.runtime` using the LLD §7 `Request`/`Response` unions.
+- Typed `send`/dispatch over `chrome.runtime` using the design `Request`/`Response` unions.
 - A typed `AppError` envelope so no thrown error crosses the boundary.
 - A broadcast channel delivering `Broadcast` messages to all open subscribed tabs.
 - Synchronous, top-level handler registration that survives worker restart.

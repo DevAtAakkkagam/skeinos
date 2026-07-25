@@ -35,7 +35,7 @@ Two entanglements matter:
 
 **Non-Goals:**
 
-- Removing the legacy `Settings.telemetry` boolean (unused PRD §8.3 placeholder,
+- Removing the legacy `Settings.telemetry` boolean (unused placeholder,
   not PostHog-related). Left for a separate cleanup.
 - Any manifest / permissions change. The feature never required a host permission,
   `connect-src` entry, or `<all_urls>`, so there is nothing to unwind.

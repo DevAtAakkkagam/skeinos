@@ -1,4 +1,4 @@
-// Pure `{{variable}}` template parser for the prompt library (LLD T3.1, slice 1).
+// Pure `{{variable}}` template parser for the prompt library (slice 1).
 //
 // Two functions over one scanner (design D-D): `tokenizeTemplate` exposes the body
 // as an ordered run of text/var tokens for rendering, and `parseVariables` folds
@@ -6,7 +6,7 @@
 // consume. Deriving both from the same scan means the card highlight and the
 // variable list can never disagree about which spans are variables.
 //
-// Dependencies inward (LLD §2): this imports only shared types — no `store`,
+// Dependencies inward: this imports only shared types — no `store`,
 // `messaging`, `adapters`, or `ui`. It is pure text-in / data-out and TOTAL: the
 // editor re-parses on every keystroke, so neither function ever throws, for any
 // input string (design D-B).

@@ -1,4 +1,4 @@
-// Persisted record shapes for the workspace store (LLD §6).
+// Persisted record shapes for the workspace store.
 //
 // Every *syncable* record extends `SyncMeta` — the sync envelope wired from day
 // one (D7) so the M5 sync engine never forces a data migration. Local-only
@@ -208,7 +208,7 @@ export interface Comparison {
 }
 
 /**
- * One term's occurrences within a single document (LLD §8.1 / D26). `field`
+ * One term's occurrences within a single document (/ D26). `field`
  * tracks title-vs-body provenance so ranking can boost titles and highlighting
  * can target the right field; `positions` are token indices into the document's
  * normalized `indexedText` (a single token stream over title then body), so the
@@ -221,7 +221,7 @@ export interface Posting {
 }
 
 /**
- * A shard of the search postings index (LLD §8.1 / D26), keyed by a 2-char term
+ * A shard of the search postings index (/ D26), keyed by a 2-char term
  * **prefix** — each shard record holds many terms, mapping each to its postings.
  * Prefix sharding keeps individual records small (vs. one monolithic blob) while
  * avoiding the write amplification of one-record-per-term (the shipped per-term
@@ -294,7 +294,7 @@ export interface IndexInput {
 }
 
 /**
- * The query/index contract the rest of the worker programs against (LLD §5),
+ * The query/index contract the rest of the worker programs against,
  * introduced by the `search` change. Implemented over the `searchPostings` +
  * `conversations` repos in the service worker (the single writer).
  */

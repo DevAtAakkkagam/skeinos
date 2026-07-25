@@ -5,7 +5,7 @@ The extension needs durable user preferences (theme, per-platform toggles, telem
 ## What Changes
 
 - Add a typed settings module backed by `chrome.storage.local` (not IndexedDB — D4), with a defined `Settings` schema and defaults.
-- Bake the privacy stance into the defaults: **telemetry off**, **theme = system** (PRD §6.11, §8.3).
+- Bake the privacy stance into the defaults: **telemetry off**, **theme = system** (§8.3).
 - Provide typed `getSettings` / `setSettings(partial)` accessors and a change subscription via `chrome.storage.onChanged` so open UI updates live.
 - Add the WXT **options page** entrypoint — a skeleton that opens, reads current settings, and persists a theme change across reloads.
 

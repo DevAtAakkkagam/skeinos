@@ -1,6 +1,6 @@
 ## Context
 
-The generic, config-driven `PlatformAdapter` (LLD §4.1, `adapters/runtime/adapter.ts`) already drives Claude, Gemini, and Perplexity with no per-platform branches — a platform is an `AdapterConfig` (selectors + behaviors) plus a recorded DOM fixture proven against the shared contract suite (`tests/adapter-contract.ts`). ChatGPT is the next platform. `PlatformId` already lists `"chatgpt"`; the gaps are the bundled config, its registration, the manifest host permission (not yet present, unlike the other three), and the fixture/test.
+The generic, config-driven `PlatformAdapter` (`adapters/runtime/adapter.ts`) already drives Claude, Gemini, and Perplexity with no per-platform branches — a platform is an `AdapterConfig` (selectors + behaviors) plus a recorded DOM fixture proven against the shared contract suite (`tests/adapter-contract.ts`). ChatGPT is the next platform. `PlatformId` already lists `"chatgpt"`; the gaps are the bundled config, its registration, the manifest host permission (not yet present, unlike the other three), and the fixture/test.
 
 Selectors and behaviors below were captured live from a logged-in `chatgpt.com` session (console DOM probes), not guessed.
 

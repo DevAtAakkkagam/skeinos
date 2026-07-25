@@ -40,7 +40,7 @@ PostHog EU ingests crashes (as `$exception` events) and adapter-health events th
 `/batch` HTTP endpoint, with an Error Tracking surface for grouping crashes by fingerprint. One vendor =
 one endpoint, one DPA, one privacy-policy line, one CWS disclosure — itself a privacy win (smaller
 network surface). Enable only Product Analytics + Error Tracking in the project; never Session Replay or
-Feature Flags. EU region satisfies PRD §8.3 data residency.
+Feature Flags. EU region satisfies data residency.
 - *Alternatives:* Sentry (best-in-class errors but weak for analytics → would need a 2nd vendor);
   self-hosted GlitchTip/PostHog (best brand fit but ops burden — deferred; the HTTP-ingest design keeps
   this swappable later by changing the endpoint). Roll-your-own (most work, no analytics UI).

@@ -1,4 +1,4 @@
-// The scheduled canary watchdog (LLD §4.3, design D-R1). The service worker has no
+// The scheduled canary watchdog (design D-R1). The service worker has no
 // DOM, so it cannot itself probe a host page — the probe is `selfCheck()`, run
 // content-side and reported via `report.ts`. This module is the durable other half:
 // a `chrome.alarms` schedule that, on every tick, re-surfaces still-degraded

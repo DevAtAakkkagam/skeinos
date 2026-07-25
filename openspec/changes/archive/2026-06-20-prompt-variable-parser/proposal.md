@@ -1,12 +1,12 @@
 ## Why
 
-The prompt library (C12 `prompts-library`, LLD T3.1–T3.2) is the next free-tier promise after folders
+The prompt library (C12 `prompts-library`, –T3.2) is the next free-tier promise after folders
 and search, but every visible part of it — the library cards, the editor's live variable preview, and
 later the fill-in-on-insert modal (D14, C13) — depends on one pure thing that does not exist yet:
 turning a template body like `Summarise results with a {{metric}} and a {{tone=neutral}} note.` into a
 structured, deduplicated list of variables with defaults and input types. This change is **slice 1 of
 `prompts-library`**: it establishes the canonical `Prompt` data model and the `{{variable}}` parser
-(LLD T3.1) as a pure, fully unit-tested core module, so the worker capability (slice 2) and the Prompts
+ as a pure, fully unit-tested core module, so the worker capability (slice 2) and the Prompts
 tab UI (slice 3) build on a settled contract instead of reshaping it later.
 
 It is deliberately scoped to pure logic — no store writes, no worker handlers, no UI — because the
@@ -36,8 +36,8 @@ parser is the most edge-case-heavy atom in the whole feature and the one every l
 
 Out of scope (later slices / changes, clean seams left here): the worker `prompts.query`/`prompts.mutate`
 capability and derived counts (slice 2); the Prompts tab, card list, chip filter, and editor (slice 3,
-LLD T3.2); search → prompt navigation (slice 4); slash-command **insertion** and the variable-fill modal
-(C13, LLD T3.3–T3.4); usage analytics (C25). The `slug` field is **defined but unused** here; the
+); search → prompt navigation (slice 4); slash-command **insertion** and the variable-fill modal
+(C13, –T3.4); usage analytics (C25). The `slug` field is **defined but unused** here; the
 `targetModels` editor control arrives with slice 3.
 
 ## Capabilities
@@ -57,7 +57,7 @@ LLD T3.2); search → prompt navigation (slice 4); slash-command **insertion** a
 ## Impact
 
 - **New module** `extension/src/core/prompts/template.ts` (parser + tokenizer) — pure functions,
-  imports nothing from `store/`, `messaging/`, `adapters/`, or `ui/` (dependencies inward, LLD §2).
+  imports nothing from `store/`, `messaging/`, `adapters/`, or `ui/` (dependencies inward).
 - **Modified** `extension/src/shared/types.ts`: add `Prompt.slug?`, change `targetModel?` →
   `targetModels: PlatformId[]`, and (if not already exported) the `TemplateToken` type for the
   tokenizer. No change to `core/store/schema.ts` — the `prompts`/`promptFolders` stores and their

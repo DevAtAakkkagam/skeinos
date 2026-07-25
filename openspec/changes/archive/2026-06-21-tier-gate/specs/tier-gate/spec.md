@@ -22,7 +22,7 @@ the UI SHALL derive tier from this single source.
 
 The system SHALL define a single, centralized limit table mapping each tier to a maximum count
 for folders, prompts, profiles, and tags. The `FREE` limits SHALL be 5 folders, 25 prompts,
-3 profiles, and 10 tags (PRD §7). The `PRO` tier SHALL be unlimited for every resource.
+3 profiles, and 10 tags. The `PRO` tier SHALL be unlimited for every resource.
 
 #### Scenario: Free limits match the published values
 

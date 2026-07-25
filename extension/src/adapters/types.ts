@@ -1,4 +1,4 @@
-// The platform adapter contract (LLD §4.1) and config schema (LLD §4.2). This is
+// The platform adapter contract and config schema. This is
 // the ONLY platform-facing surface the rest of the system sees: every platform is
 // driven by one generic adapter + a per-platform config, so a new platform is a
 // config + fixture — never new code (CLAUDE.md [ADAPT]).
@@ -89,7 +89,7 @@ export type InsertMode = 'execCommand' | 'react-set' | 'paste';
 /** How the generic adapter sends a composed message. */
 export type SubmitMode = 'click' | 'enter';
 
-/** The selector set every platform config must provide (LLD §4.2). */
+/** The selector set every platform config must provide. */
 export interface AdapterSelectors {
   conversationList: string;
   conversationItem: string;
@@ -187,7 +187,7 @@ export const WORKSPACE_ANCHORS = [
   'sidebarAnchor',
 ] as const satisfies readonly (keyof AdapterSelectors)[];
 
-/** The selector keys that must resolve for the full overlay to mount (LLD §4.3) —
+/** The selector keys that must resolve for the full overlay to mount —
  *  the union of the COMPOSE and WORKSPACE tiers. */
 export const REQUIRED_ANCHORS = [
   'composer',

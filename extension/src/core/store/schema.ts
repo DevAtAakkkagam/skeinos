@@ -1,4 +1,4 @@
-// The store/index map (LLD §6 table) — the single source of truth for the
+// The store/index map — the single source of truth for the
 // IndexedDB schema. The migration list (db.ts) creates exactly these stores and
 // indexes at v1; the `synced` flag drives the local-only/syncable classification
 // (D5) so the future sync engine enumerates only syncable stores structurally,
@@ -25,7 +25,7 @@ export const DB_NAME = 'skeinos';
 
 /**
  * Canonical store definitions. Order is irrelevant; lookups are by name.
- * Mirrors the LLD §6 table exactly.
+ * Mirrors the design table exactly.
  */
 export const STORES = {
   folders: {
@@ -101,7 +101,7 @@ export const STORES = {
     indexes: [],
     synced: false,
   },
-  // Prefix-shard postings (D6/D26/LLD §8.1): keyed by the 2-char term `prefix`,
+  // Prefix-shard postings (D6/D26): keyed by the 2-char term `prefix`,
   // each record holding many terms. Reshaped from the shipped per-term layout by
   // the v4 migration (no-data — indexing had never run). Local-only (PRIV-1).
   searchPostings: {
