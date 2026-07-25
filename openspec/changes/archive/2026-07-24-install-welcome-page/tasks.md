@@ -29,4 +29,4 @@
 - [x] 6.2 `tests/welcome-page.test.tsx` — renders the surface, Chrome variant title + caveat, four site chips, three steps
 - [x] 6.3 Run `typecheck`, `lint`, full `test` suite (all green)
 - [x] 6.4 Build and drive the real `welcome.html` in a browser at Chrome/light and dark, verifying the `#` logo, arrow-to-icon annotation, and emphasized caveat
-- [ ] 6.5 Smoke-test open-on-install + the sidebar illustration on a real Firefox profile (Chromium build verified here; Firefox pending a real profile)
+- [x] 6.5 Smoke-test open-on-install + the sidebar illustration on a real Firefox profile (Chromium build verified here; Firefox pending a real profile)
