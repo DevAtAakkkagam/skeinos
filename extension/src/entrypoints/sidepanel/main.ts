@@ -4,7 +4,6 @@ import { SidePanelApp } from './SidePanelApp';
 import { SIDEBAR_CSS } from '../../ui/sidebar/styles';
 import { ONBOARDING_CSS } from '../../ui/onboarding/styles';
 import { getSettings, subscribeSettings } from '../../core/settings';
-import { installExceptionCapture } from '../../core/observability/client';
 import { ensureLocale } from '../../core/i18n';
 
 // The side panel bootstraps the same shadow-DOM mount + theme tokens as the
@@ -14,8 +13,6 @@ import { ensureLocale } from '../../core/i18n';
 // live. The sidebar's own token-based CSS is injected into the shadow root, same
 // as the in-page `mountSidebar` did — keeping feature styles out of the harness.
 async function main() {
-  // Capture shadow-DOM UI crashes for diagnostics (task 6.6). Gated/scrubbed worker-side.
-  installExceptionCapture('ui');
   // Load the active locale's catalog before first paint so the panel opens already
   // translated (non-English catalogs are code-split; English/pseudo need no load).
   const [initial] = await Promise.all([getSettings(), ensureLocale()]);

@@ -30,13 +30,13 @@ export default defineConfig({
             gecko: {
               id: 'skeinos@aakkagam.com',
               // Firefox data-consent declaration (required for new AMO versions).
-              // `required: ['none']` — nothing is collected without consent; the
-              // only telemetry is opt-in, off-by-default anonymous diagnostics
-              // (crash + adapter-health), declared as OPTIONAL technical data.
+              // `required: ['none']` and NO optional entry: Skeinos collects
+              // nothing, on any tier, with or without consent — the diagnostics
+              // stream was deleted outright (remove-observability, supersedes D29),
+              // so there is no optional technical data left to declare.
               // Mirrors docs/STORE_DATA_USE.md / the Chrome data disclosure.
               data_collection_permissions: {
                 required: ['none'],
-                optional: ['technicalAndInteraction'],
               },
             },
           },

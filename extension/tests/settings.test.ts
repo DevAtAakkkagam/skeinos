@@ -58,11 +58,14 @@ afterEach(() => setChrome(originalChrome));
 describe('Privacy-first defaults (3.1)', () => {
   beforeEach(() => setChrome(makeChrome()));
 
-  it('a fresh read returns telemetry off + theme system', async () => {
+  it('a fresh read returns theme system and carries no telemetry setting at all', async () => {
     const settings = await getSettings();
-    expect(settings.telemetry).toBe(false);
     expect(settings.theme).toBe('system');
     expect(settings).toEqual(DEFAULT_SETTINGS);
+    // There is no telemetry opt-in to default off, because nothing is ever
+    // collected (remove-observability). Guards the key from creeping back.
+    expect(settings).not.toHaveProperty('telemetry');
+    expect(DEFAULT_SETTINGS).not.toHaveProperty('telemetry');
   });
 });
 
@@ -82,12 +85,12 @@ describe('Persistence (3.2)', () => {
   });
 
   it('a partial store falls back to defaults for missing keys', async () => {
-    // Only `theme` was ever stored; `telemetry` must come from the defaults.
+    // Only `theme` was ever stored; `onboardingCompleted` must come from the defaults.
     setChrome(makeChrome({ [SETTINGS_KEY]: { theme: 'light' } as Partial<Settings> }));
 
     const settings = await getSettings();
     expect(settings.theme).toBe('light'); // stored value wins
-    expect(settings.telemetry).toBe(false); // missing key → default
+    expect(settings.onboardingCompleted).toBe(false); // missing key → default
   });
 });
 

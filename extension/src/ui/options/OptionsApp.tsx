@@ -7,7 +7,6 @@ import {
 import { DEFAULT_SETTINGS, type Settings, type Theme } from '../../shared/settings';
 import { Panel } from '../components/Panel';
 import { Text } from '../components/Text';
-import { ConsentToggle } from '../components/ConsentToggle';
 import { FEEDBACK_URL, REVIEW_URL } from '../../shared/links';
 import { useT, type MessageKey } from '../../core/i18n';
 
@@ -50,11 +49,6 @@ export function OptionsApp({ onThemeChange }: OptionsAppProps) {
     onThemeChange?.(theme);
   };
 
-  const toggleConsent = async (key: 'diagnosticsOptIn', value: boolean) => {
-    setLocal((s) => ({ ...s, [key]: value })); // optimistic
-    await setSettings({ [key]: value });
-  };
-
   return (
     <Panel>
       <Text>{t('options.heading')}</Text>
@@ -77,13 +71,6 @@ export function OptionsApp({ onThemeChange }: OptionsAppProps) {
       <div class="sk-stack" data-testid="sk-privacy-settings">
         <Text>{t('options.privacyHeading')}</Text>
         <Text muted>{t('options.privacyIntro')}</Text>
-        <ConsentToggle
-          testId="sk-consent-diagnostics"
-          label={t('options.diagnosticsLabel')}
-          body={t('options.diagnosticsBody')}
-          checked={settings.diagnosticsOptIn}
-          onChange={(v) => void toggleConsent('diagnosticsOptIn', v)}
-        />
       </div>
       <div class="sk-stack" data-testid="sk-support">
         <Text>{t('options.supportHeading')}</Text>

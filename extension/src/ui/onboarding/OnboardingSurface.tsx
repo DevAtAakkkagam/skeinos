@@ -11,9 +11,7 @@
 
 import { useState } from 'preact/hooks';
 import { BrandGlyph } from '../components/BrandGlyph';
-import { ConsentToggle } from '../components/ConsentToggle';
 import { CheckIcon, ChevronIcon, FolderIcon, ShieldIcon } from '../components/Icon';
-import { setSettings } from '../../core/settings';
 import { DOMAIN_REGISTRY, type DomainId } from '../../shared/domains';
 import { seedsForDomain } from '../../core/prompts/catalog';
 import { installPromptSeedsRemote } from '../../core/prompts/client';
@@ -66,8 +64,6 @@ export interface OnboardingSurfaceProps {
   persistDomain?: (domain: DomainId) => void | Promise<void>;
   /** Override the folder-create writer (tests). Defaults to the real worker client. */
   createFolder?: (name: string, platform: PlatformId) => void | Promise<void>;
-  /** Override the consent persister (tests). Defaults to the real settings writer. */
-  persistConsent?: (partial: { diagnosticsOptIn?: boolean }) => void | Promise<void>;
 }
 
 /** Default seed installer: through the worker, seeding BOTH the prompt library and the
@@ -101,23 +97,10 @@ export function OnboardingSurface({
   installSeeds = defaultInstallSeeds,
   persistDomain = setOnboardingDomain,
   createFolder = defaultCreateFolder,
-  persistConsent = (partial) => setSettings(partial),
 }: OnboardingSurfaceProps) {
   const t = useT();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
-
-  // Diagnostics consent, surfaced on the FINAL step as an explicit opt-IN: the box
-  // starts unchecked and diagnostics stay off unless the user ticks it before
-  // finishing. Loaded from durable settings so a returning user sees their choice
-  // (default off, so unchecked on a fresh install).
-  const [consent, setConsent] = useState({ diagnosticsOptIn: false });
-  // The onboarding toggle is pure local opt-in state — it always starts unchecked and
-  // is NOT pre-loaded from settings (a returning/leftover value must not pre-check an
-  // opt-in). The chosen value is committed to durable settings on finish (below).
-  const toggleConsent = (key: 'diagnosticsOptIn', value: boolean) => {
-    setConsent((c) => ({ ...c, [key]: value }));
-  };
 
   // Starter-library sub-state: which domain was picked, the install reply count,
   // and any non-blocking install error (retryable — the gate is not yet complete).
@@ -129,16 +112,13 @@ export function OnboardingSurface({
   const next = () => setStep((s) => Math.min(s + 1, STEP_COUNT - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
-  // Terminal completion: commit the diagnostics opt-in to durable settings (so the
-  // stored value matches the box the user saw — unticked stays off, ticked turns on),
-  // then write the gate once, guarding re-entry. The settings write broadcasts via
-  // storage.onChanged, so the subscribed panel re-scopes out of onboarding — no
-  // reload (D-2).
+  // Terminal completion: write the gate once, guarding re-entry. The settings write
+  // broadcasts via storage.onChanged, so the subscribed panel re-scopes out of
+  // onboarding — no reload (D-2).
   const finish = (before?: () => Promise<void> | void) => {
     if (busy) return;
     setBusy(true);
-    void Promise.resolve(persistConsent({ diagnosticsOptIn: consent.diagnosticsOptIn }))
-      .then(() => before?.())
+    void Promise.resolve(before?.())
       .then(() => onComplete())
       .catch(() => setBusy(false));
   };
@@ -299,19 +279,6 @@ export function OnboardingSurface({
               <ChevronIcon size={16} />
             </button>
           ) : null}
-        </div>
-
-        {/* Diagnostics consent — the final, explicit trust moment (onboarding spec).
-            Shown unchecked: an opt-IN the user actively makes before finishing. */}
-        <div class="sk-onb__consent" data-testid="sk-onboarding-consent">
-          <p class="sk-onb__eyebrow">{t('onboarding.consentHeading')}</p>
-          <ConsentToggle
-            testId="sk-onboarding-consent-diagnostics"
-            label={t('onboarding.consentDiagnosticsLabel')}
-            body={t('onboarding.consentDiagnosticsBody')}
-            checked={consent.diagnosticsOptIn}
-            onChange={(v) => toggleConsent('diagnosticsOptIn', v)}
-          />
         </div>
 
         <button

@@ -3,7 +3,6 @@ import { mount } from '../../ui/mount';
 import { WelcomeApp } from '../../ui/welcome/WelcomeApp';
 import { WELCOME_CSS } from '../../ui/welcome/styles';
 import { getSettings, subscribeSettings } from '../../core/settings';
-import { installExceptionCapture } from '../../core/observability/client';
 import { ensureLocale } from '../../core/i18n';
 
 // The install welcome page bootstraps the same shadow-DOM mount + theme tokens as
@@ -12,7 +11,6 @@ import { ensureLocale } from '../../core/i18n';
 // the options page) re-flips the host attribute live. The page's own token-based
 // CSS is injected into the shadow root, mirroring `mountSidebar`.
 async function main() {
-  installExceptionCapture('ui'); // capture welcome-page crashes (diagnostics only)
   // Load the active locale's catalog before first paint (non-English is code-split).
   const [initial] = await Promise.all([getSettings(), ensureLocale()]);
 

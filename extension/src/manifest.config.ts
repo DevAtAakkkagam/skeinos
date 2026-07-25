@@ -53,7 +53,7 @@ export const skeinosManifest = {
   // tab, breaking the "your open chats just appear" promise.
   //
   // `storage` backs `chrome.storage.local`, the settings store (D4): theme,
-  // telemetry, and later per-platform toggles. Without it `chrome.storage` is
+  // onboarding state, and later per-platform toggles. Without it `chrome.storage` is
   // undefined, so settings writes silently no-op and never persist, and the
   // `storage.onChanged` live-update bus never fires (e.g. the side panel would
   // not re-theme when the options page changes the theme).

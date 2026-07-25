@@ -90,19 +90,6 @@ export const COMPONENT_CSS = `
   border-color: var(--sk-color-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--sk-color-accent) 35%, transparent);
 }
-/* Consent toggle row (observability): a checkbox + a label/body stack. Reads from
-   tokens only, keyboard-operable via the native checkbox. */
-.sk-consent {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sk-space-2);
-  padding: var(--sk-space-2) 0;
-  cursor: pointer;
-}
-.sk-consent__input { margin-top: 2px; flex: none; accent-color: var(--sk-color-accent); }
-.sk-consent__text { display: flex; flex-direction: column; gap: 2px; }
-.sk-consent__label { font-weight: 600; }
-.sk-consent__body { font-size: 0.85em; opacity: 0.7; }
 /* Compact, centered-top breakage snackbar. Fixed to the viewport (its shadow host
    has no transform, so fixed resolves against the page) and out of the host page's
    flow, so it never reflows or overlaps page chrome the way a full-width banner did. */

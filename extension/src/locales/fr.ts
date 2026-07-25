@@ -287,10 +287,6 @@ export const fr = {
     'Local d’abord, par conception. Vos conversations sont lues et indexées sur cet appareil ; rien n’est téléversé, et aucun compte n’est requis.',
   'onboarding.haveAccount': 'Ignorer pour l’instant',
   'onboarding.getStarted': 'Commencer',
-  'onboarding.consentHeading': 'Aidez à améliorer Skeinos',
-  'onboarding.consentDiagnosticsLabel': 'Partager les diagnostics',
-  'onboarding.consentDiagnosticsBody':
-    'Rapports anonymes de plantages et de santé des adaptateurs. Aucun contenu de conversation, aucune identité. Désactivé sauf si vous l’activez.',
   'onboarding.permEyebrow': 'Étape 2 · Autorisations',
   'onboarding.permTitle': 'Pourquoi Skeinos demande l’accès',
   'onboarding.permBody':
@@ -388,10 +384,7 @@ export const fr = {
   'options.off': 'Désactivé',
   'options.privacyHeading': 'Confidentialité et données',
   'options.privacyIntro':
-    'Les diagnostics sont désactivés par défaut. Rien n’est envoyé tant que vous ne l’activez pas, et vous pouvez le désactiver à tout moment — vos conversations ne sont jamais incluses, dans tous les cas.',
-  'options.diagnosticsLabel': 'Partager les diagnostics',
-  'options.diagnosticsBody':
-    'Rapports anonymes de plantages et de santé des adaptateurs pour corriger les pannes rapidement. Aucun contenu de conversation, aucune identité.',
+    'Tout reste sur cet appareil. Skeinos n’effectue aucune requête réseau externe : rien n’est téléversé, rien n’est suivi, et aucun compte n’est nécessaire.',
 
   // ── Incitation à la mise à niveau (limites de palier) ────────────────────
   'nudge.nounFolders': 'dossiers',

@@ -89,11 +89,11 @@ describe('Settings.activeProfileId (4.2)', () => {
 
   it('a stored object missing activeProfileId still reads the other keys correctly', async () => {
     // An install written before the key existed: theme is stored, activeProfileId is not.
-    setChrome(makeChrome({ [SETTINGS_KEY]: { theme: 'dark', telemetry: true } as Partial<Settings> }));
+    setChrome(makeChrome({ [SETTINGS_KEY]: { theme: 'dark' } as Partial<Settings> }));
 
     const settings = await getSettings();
     expect(settings.activeProfileId).toBeUndefined(); // missing → undefined
     expect(settings.theme).toBe('dark'); // other keys unaffected
-    expect(settings.telemetry).toBe(true);
+    expect(settings.onboardingCompleted).toBe(false); // missing → default
   });
 });

@@ -283,10 +283,6 @@ export const es = {
     'Local primero por diseño. Tus chats se leen e indexan en este dispositivo; no se sube nada y no hace falta cuenta.',
   'onboarding.haveAccount': 'Omitir por ahora',
   'onboarding.getStarted': 'Empezar',
-  'onboarding.consentHeading': 'Ayuda a mejorar Skeinos',
-  'onboarding.consentDiagnosticsLabel': 'Compartir diagnósticos',
-  'onboarding.consentDiagnosticsBody':
-    'Informes anónimos de fallos y del estado de los adaptadores. Sin contenido de conversaciones ni identidad. Desactivado salvo que lo actives.',
   'onboarding.permEyebrow': 'Paso 2 · Permisos',
   'onboarding.permTitle': 'Por qué Skeinos pide acceso',
   'onboarding.permBody':
@@ -384,10 +380,7 @@ export const es = {
   'options.off': 'Desactivado',
   'options.privacyHeading': 'Privacidad y datos',
   'options.privacyIntro':
-    'Los diagnósticos están desactivados por defecto. No se envía nada salvo que lo actives, y puedes volver a desactivarlo cuando quieras — tus conversaciones nunca se incluyen de ningún modo.',
-  'options.diagnosticsLabel': 'Compartir diagnósticos',
-  'options.diagnosticsBody':
-    'Informes anónimos de fallos y del estado de los adaptadores para que podamos corregir errores rápido. Sin contenido de conversaciones ni identidad.',
+    'Todo permanece en este dispositivo. Skeinos no hace ninguna petición de red externa: no se sube nada, no se rastrea nada y no hace falta cuenta.',
 
   // ── Upgrade nudge (tier limits) ──────────────────────────────────────────
   'nudge.nounFolders': 'carpetas',

@@ -294,10 +294,6 @@ export const en = {
     'Local-first by design. Your chats are read and indexed on this device; nothing is uploaded, and no account is needed.',
   'onboarding.haveAccount': 'Skip for now',
   'onboarding.getStarted': 'Get started',
-  'onboarding.consentHeading': 'Help improve Skeinos',
-  'onboarding.consentDiagnosticsLabel': 'Share diagnostics',
-  'onboarding.consentDiagnosticsBody':
-    'Anonymous crash and adapter-health reports. No conversation content, no identity. Off unless you turn it on.',
   'onboarding.permEyebrow': 'Step 2 · Permissions',
   'onboarding.permTitle': 'Why Skeinos asks for access',
   'onboarding.permBody':
@@ -434,10 +430,7 @@ export const en = {
   'options.off': 'Off',
   'options.privacyHeading': 'Privacy & data',
   'options.privacyIntro':
-    'Diagnostics are off by default. Nothing is sent unless you turn this on, and you can turn it back off any time — your conversations are never included either way.',
-  'options.diagnosticsLabel': 'Share diagnostics',
-  'options.diagnosticsBody':
-    'Anonymous crash and adapter-health reports so we can fix breakage fast. No conversation content, no identity.',
+    'Everything stays on this device. Skeinos makes no external network requests — nothing is uploaded, nothing is tracked, and no account is needed.',
   'options.supportHeading': 'Feedback & support',
   'options.supportIntro':
     'Found a bug, or a site that stopped working? Tell us — it’s the fastest way to get it fixed. A quick rating helps others find Skeinos too.',

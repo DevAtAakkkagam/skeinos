@@ -25,7 +25,6 @@ import { indexConversationFromMessagesRemote } from '../core/conversation-index/
 // Leaf import (not the messaging barrel) so the content bundle never pulls the
 // worker-only hub/registry — same reason as the conversation-index client above.
 import { isContextValid, runtime } from '../core/messaging/chrome';
-import { installExceptionCapture, track } from '../core/observability/client';
 import { conversationId } from '../shared/workspace';
 import { OPEN_SIDE_PANEL } from '../shared/sidepanel';
 import { mountInputBar } from '../ui/input-bar/mountInputBar';
@@ -53,10 +52,6 @@ export async function runContent(): Promise<void> {
   // control-flow narrowing) still sees a `PlatformId`, not `PlatformId | null`.
   const platformId: PlatformId = matched;
 
-  // Capture content-script crashes for diagnostics (task 6.6). Gated/scrubbed
-  // worker-side; host-page stack frames are dropped before anything is sent.
-  installExceptionCapture('content');
-
   // Load the active locale's catalog before any in-tab UI (the input bar) mounts, so
   // it renders translated from the first paint. English/pseudo resolve immediately;
   // a non-English catalog is a code-split fetch awaited once here.
@@ -76,8 +71,6 @@ export async function runContent(): Promise<void> {
   // available on every outcome — including the breakage path that raises the
   // banner and returns, which is exactly when a user needs to ask "why?".
   installDebugGlobal(config, adapter);
-  // A diagnostics-safe version string (the audit requires a dotted version).
-  const configVer = /^\d+(?:\.\d+)*$/.test(adapter.configVersion) ? adapter.configVersion : '0';
   // Don't judge the adapter broken on the first synchronous probe: the host SPA
   // hydrates its anchors after `document_idle`, so wait (re-probing on DOM
   // mutations) until the check passes or a bounded timeout elapses. A genuinely
@@ -85,7 +78,7 @@ export async function runContent(): Promise<void> {
   const check = await waitForSelfCheck(adapter);
   // Classify the failure instead of always bannering (design D2): only a provably
   // signed-in page with a missing anchor is a breakage; a signed-out page is quiet
-  // (no banner, no degraded report, no fallback telemetry). Fall back to the legacy
+  // (no banner, no degraded report). Fall back to the legacy
   // ok→ready / fail→breakage split when the adapter predates `classify` (test stubs).
   const readiness =
     typeof adapter.classify === 'function' ? adapter.classify() : check.ok ? 'ready' : 'breakage';
@@ -95,20 +88,15 @@ export async function runContent(): Promise<void> {
     // breakage (isolated to this tab). Retry re-probes and, on recovery, runs the
     // SAME full ready path as a fresh load so the overlay actually mounts — closing
     // the banner alone would leave the page bare (the "Retry does nothing" bug).
-    await reportHealth(platformId, check, adapter.configVersion);
+    await reportHealth(platformId, check);
     console.warn('[Skeinos] adapter self-check failed', platformId, check.missing);
     mountBanner(adapter, platformId, { onRecover: () => activate('full') });
-    // Fallback-banner diagnostics (task 6.5): the user-visible degraded signal,
-    // gated/dropped worker-side when diagnostics consent is off.
-    track('adapter_fallback_shown', { platform: platformId, configVer, reason: 'selfcheck_failed' });
     return;
   }
 
   if (readiness !== 'ready') {
     // Signed-out (compose-only or dormant): never raise the banner and never report
-    // degraded (so the canary/hot-fix signal stays clean). Emit a distinct, id-less
-    // diagnostic instead so the heuristic's field accuracy is observable.
-    track('adapter_signed_out', { platform: platformId, configVer });
+    // degraded (so the canary/hot-fix signal stays clean).
     if (readiness === 'signed-out-compose') {
       console.log('[Skeinos] signed-out compose-only', platformId);
       activate('compose');
@@ -119,7 +107,7 @@ export async function runContent(): Promise<void> {
   }
 
   // Self-check passed: report healthy (clearing any prior degraded) and activate.
-  await reportHealth(platformId, check, adapter.configVersion);
+  await reportHealth(platformId, check);
   activate('full');
 
   // The ready path, wrapped so Retry/recovery can re-run it without a page reload.

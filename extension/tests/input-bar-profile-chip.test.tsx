@@ -67,8 +67,6 @@ function makeSettings(activeProfileId?: string) {
   const handlers = new Set<SettingsHandler>();
   let current: Settings = {
     theme: 'system',
-    telemetry: false,
-    diagnosticsOptIn: true,
     onboardingCompleted: false,
     activeProfileId,
   };

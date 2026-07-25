@@ -282,10 +282,6 @@ export const de = {
     'Lokal zuerst, von Grund auf. Deine Chats werden auf diesem Gerät gelesen und indexiert; nichts wird hochgeladen, und es ist kein Konto nötig.',
   'onboarding.haveAccount': 'Vorerst überspringen',
   'onboarding.getStarted': 'Loslegen',
-  'onboarding.consentHeading': 'Hilf mit, Skeinos zu verbessern',
-  'onboarding.consentDiagnosticsLabel': 'Diagnosedaten teilen',
-  'onboarding.consentDiagnosticsBody':
-    'Anonyme Absturz- und Adapter-Statusberichte. Keine Unterhaltungsinhalte, keine Identität. Aus, sofern du es nicht einschaltest.',
   'onboarding.permEyebrow': 'Schritt 2 · Berechtigungen',
   'onboarding.permTitle': 'Warum Skeinos um Zugriff bittet',
   'onboarding.permBody':
@@ -383,10 +379,7 @@ export const de = {
   'options.off': 'Aus',
   'options.privacyHeading': 'Datenschutz & Daten',
   'options.privacyIntro':
-    'Diagnosedaten sind standardmäßig aus. Es wird nichts gesendet, sofern du dies nicht einschaltest, und du kannst es jederzeit wieder ausschalten – deine Unterhaltungen sind so oder so nie enthalten.',
-  'options.diagnosticsLabel': 'Diagnosedaten teilen',
-  'options.diagnosticsBody':
-    'Anonyme Absturz- und Adapter-Statusberichte, damit wir Fehler schnell beheben können. Keine Unterhaltungsinhalte, keine Identität.',
+    'Alles bleibt auf diesem Gerät. Skeinos stellt keine externen Netzwerkanfragen – nichts wird hochgeladen, nichts wird getrackt, und ein Konto ist nicht nötig.',
 
   // ── Upgrade nudge (tier limits) ──────────────────────────────────────────
   'nudge.nounFolders': 'Ordner',

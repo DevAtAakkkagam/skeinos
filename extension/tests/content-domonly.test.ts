@@ -27,11 +27,10 @@ const m = vi.hoisted(() => ({
   inputBarMount: vi.fn((): HTMLElement | null => null),
   mountBanner: vi.fn(),
   reportHealth: vi.fn(async () => {}),
-  track: vi.fn(),
   mutateWorkspaceRemote: vi.fn(async () => ({ ok: true, data: {} })),
   loadConfig: vi.fn(async (): Promise<Record<string, unknown>> => ({ platformId: 'claude' })),
 }));
-const { selfCheck, classify, mountBanner, reportHealth, track, mutateWorkspaceRemote } = m;
+const { selfCheck, classify, mountBanner, reportHealth, mutateWorkspaceRemote } = m;
 
 vi.mock('../src/adapters', () => ({
   matchPlatform: () => 'claude',
@@ -61,10 +60,6 @@ vi.mock('../src/adapters', () => ({
 }));
 
 vi.mock('../src/core/folders', () => ({ mutateWorkspaceRemote: m.mutateWorkspaceRemote }));
-vi.mock('../src/core/observability/client', () => ({
-  installExceptionCapture: () => {},
-  track: m.track,
-}));
 
 import { runContent } from '../src/content';
 
@@ -168,7 +163,7 @@ describe('content script is DOM-only (7.4)', () => {
   // Signed-out classification (design D2): a failing self-check on a signed-out page
   // must NOT raise the banner, report degraded, or ingest — it is not a breakage.
   describe('signed-out pages stay quiet (no false banner)', () => {
-    it('compose-only: no banner, no health report, no ingest; emits adapter_signed_out', async () => {
+    it('compose-only: no banner, no health report, no ingest', async () => {
       selfCheck.mockReturnValue({ ok: false, missing: ['conversationList', 'sidebarAnchor'] });
       classify.mockReturnValue('signed-out-compose');
       await runContent();
@@ -176,14 +171,9 @@ describe('content script is DOM-only (7.4)', () => {
       expect(mountBanner).not.toHaveBeenCalled();
       expect(reportHealth).not.toHaveBeenCalled();
       expect(mutateWorkspaceRemote).not.toHaveBeenCalled();
-      expect(track).toHaveBeenCalledWith(
-        'adapter_signed_out',
-        expect.objectContaining({ platform: 'claude' }),
-      );
-      expect(track).not.toHaveBeenCalledWith('adapter_fallback_shown', expect.anything());
     });
 
-    it('dormant: fully quiet (no banner, no health, no ingest); emits adapter_signed_out', async () => {
+    it('dormant: fully quiet (no banner, no health, no ingest)', async () => {
       selfCheck.mockReturnValue({
         ok: false,
         missing: ['composer', 'conversationList', 'sidebarAnchor'],
@@ -194,24 +184,15 @@ describe('content script is DOM-only (7.4)', () => {
       expect(mountBanner).not.toHaveBeenCalled();
       expect(reportHealth).not.toHaveBeenCalled();
       expect(mutateWorkspaceRemote).not.toHaveBeenCalled();
-      expect(track).toHaveBeenCalledWith(
-        'adapter_signed_out',
-        expect.objectContaining({ platform: 'claude' }),
-      );
     });
 
-    it('breakage still reports health and emits the fallback metric, not adapter_signed_out', async () => {
+    it('breakage still banners and reports health', async () => {
       selfCheck.mockReturnValue({ ok: false, missing: ['composer'] });
       classify.mockReturnValue('breakage');
       await runContent();
 
       expect(mountBanner).toHaveBeenCalled();
       expect(reportHealth).toHaveBeenCalled();
-      expect(track).toHaveBeenCalledWith(
-        'adapter_fallback_shown',
-        expect.objectContaining({ reason: 'selfcheck_failed' }),
-      );
-      expect(track).not.toHaveBeenCalledWith('adapter_signed_out', expect.anything());
     });
   });
 

@@ -69,12 +69,12 @@ describe('Additive onboarding settings keys (4.1)', () => {
   });
 
   it('a store missing the keys falls back without dropping other keys', async () => {
-    // A settings object written before onboarding existed: it has theme/telemetry
-    // but neither onboarding key. The defaults merge supplies the missing keys and
+    // A settings object written before onboarding existed: it has theme but
+    // neither onboarding key. The defaults merge supplies the missing keys and
     // leaves the stored ones untouched (additive, never-invalidating — design D-2).
     setChrome(
       makeChrome({
-        [SETTINGS_KEY]: { theme: 'light', telemetry: true } as Partial<Settings>,
+        [SETTINGS_KEY]: { theme: 'light' } as Partial<Settings>,
       }),
     );
 
@@ -82,7 +82,6 @@ describe('Additive onboarding settings keys (4.1)', () => {
     expect(settings.onboardingCompleted).toBe(false); // missing → default
     expect(settings.domain).toBeUndefined(); // missing → undefined
     expect(settings.theme).toBe('light'); // stored value unchanged
-    expect(settings.telemetry).toBe(true); // stored value unchanged
   });
 
   it('written onboardingCompleted + domain round-trip across a simulated reload', async () => {
