@@ -5,4 +5,9 @@
 
 export * from './tree';
 export { FolderError, queryWorkspace, mutateWorkspace, registerFolderHandlers } from './handlers';
-export { queryWorkspaceRemote, mutateWorkspaceRemote } from './client';
+export {
+  queryWorkspaceRemote,
+  mutateWorkspaceRemote,
+  isHistoryBackfilled,
+  recordHistoryBackfillRemote,
+} from './client';

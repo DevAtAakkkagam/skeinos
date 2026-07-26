@@ -80,6 +80,40 @@ async function requireConversation(store: WorkspaceStore, id: string): Promise<C
   return c;
 }
 
+/**
+ * Decide the `updatedAt` each ingested ref gets, honouring the backfill rule (D5).
+ *
+ * Ordinary ingest stamps `now - position`, which preserves the host's newest-first
+ * DOM order. A BACKFILL ingest cannot use that rule for conversations the host had
+ * never rendered before: one discovered at position 400 would stamp `now - 400ms`,
+ * i.e. newer than every record from every previous session, inverting the list.
+ * So newly-discovered records stamp below the platform's existing floor, decreasing
+ * with host-list position (relative backlog order preserved), and already-known
+ * records keep the `updatedAt` they were stored with.
+ */
+function stampIngest(
+  refs: { nativeId: string }[],
+  known: Map<string, number>,
+  backfill: boolean,
+  now: number,
+): number[] {
+  if (!backfill) return refs.map((_, i) => now - i);
+
+  // Floor over the platform's existing records; `null` when the index is empty, in
+  // which case there is nothing to sort below and host-list order is already right.
+  let floor: number | null = null;
+  for (const updatedAt of known.values()) {
+    if (floor === null || updatedAt < floor) floor = updatedAt;
+  }
+  const firstNew = refs.findIndex((ref) => !known.has(ref.nativeId));
+  return refs.map((ref, i) => {
+    const prev = known.get(ref.nativeId);
+    if (prev !== undefined) return prev; // pre-existing: never re-stamped
+    if (floor === null) return now - i; // empty index: plain host-list order
+    return floor - 1 - (i - firstNew);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------
@@ -209,14 +243,24 @@ export async function mutateWorkspace(
       // OLDEST timestamp, so the side panel — sorted by updatedAt desc — showed the
       // whole initial ingest reversed.) Re-ingests of unchanged records are hash-
       // gated no-ops, so these synthetic stamps never churn existing rows.
-      const base = Date.now();
+      // A backfill ingest stamps newly-discovered records below the existing floor
+      // instead — see `stampIngest`.
+      const backfill = op.backfill === true;
+      const known = new Map<string, number>();
+      if (backfill) {
+        const all = (await store.conversations.query()) as ConversationIndex[];
+        for (const c of all) {
+          if (c.platform === op.platform) known.set(c.nativeId, c.updatedAt);
+        }
+      }
+      const stamps = stampIngest(op.refs, known, backfill, Date.now());
       for (const [i, ref] of op.refs.entries()) {
         await indexConversationTitle(store, {
           id: conversationId(op.platform, ref.nativeId),
           platform: op.platform,
           nativeId: ref.nativeId,
           title: ref.title,
-          updatedAt: base - i,
+          updatedAt: stamps[i],
         });
       }
       return { stores: ['conversations', 'searchPostings'] };
@@ -295,9 +339,28 @@ export async function mutateWorkspace(
       const prev = await store.platformState.get(op.platform);
       if ((prev?.listCollapsed ?? false) === op.listCollapsed) return { stores: [] };
       await store.platformState.put({
+        // Merge, don't replace: this record also carries the history-backfill state,
+        // and a bare rebuild here would silently un-record the sweep and re-run it.
+        ...prev,
         platform: op.platform,
         listCollapsed: op.listCollapsed,
         updatedAt: Date.now(),
+      });
+      return { stores: ['platformState'] };
+    }
+    case 'platform.recordHistoryBackfill': {
+      // The content script finished (or skipped) its one-per-install history sweep.
+      // The worker is the single writer, and this record is what makes the gate
+      // survive both a page reload and MV3 worker death (design D4).
+      const prev = await store.platformState.get(op.platform);
+      const now = Date.now();
+      await store.platformState.put({
+        ...prev,
+        platform: op.platform,
+        listCollapsed: prev?.listCollapsed ?? false,
+        historyBackfilledAt: now,
+        historyBackfillOutcome: op.stoppedBy,
+        updatedAt: now,
       });
       return { stores: ['platformState'] };
     }

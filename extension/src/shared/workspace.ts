@@ -60,7 +60,12 @@ export type MutationOp =
   | { op: 'folder.move'; id: string; parentId: string | null }
   | { op: 'folder.reorder'; orderedIds: string[] }
   | { op: 'folder.delete'; id: string }
-  | { op: 'conversation.ingest'; platform: PlatformId; refs: ConversationRefLite[] }
+  // `backfill` marks an ingest that follows a history-expansion sweep, i.e. one
+  // whose `refs` include conversations the host had never rendered before. Those
+  // newly-discovered records are stamped BELOW the platform's existing recency
+  // floor instead of at "now", so a backfill can never reorder the user's list
+  // (design D5). Absent/false keeps today's `now - position` stamping.
+  | { op: 'conversation.ingest'; platform: PlatformId; refs: ConversationRefLite[]; backfill?: boolean }
   // Prune index records for conversations the user deleted on the host (the adapter
   // detects the row removal). Local-only cleanup — never the result of a sync op.
   | { op: 'conversation.remove'; platform: PlatformId; nativeIds: string[] }
@@ -71,6 +76,10 @@ export type MutationOp =
   | { op: 'conversation.reportActive'; platform: PlatformId; nativeId: string; title: string; listCollapsedHint?: boolean }
   | { op: 'conversation.clearActive'; platform: PlatformId }
   | { op: 'platform.reportListState'; platform: PlatformId; listCollapsed: boolean }
+  // Record that the once-per-install history-expansion sweep ran for this platform,
+  // and how it ended. Read back through the `platform.state` selector before a later
+  // activation decides whether to sweep again (design D4).
+  | { op: 'platform.recordHistoryBackfill'; platform: PlatformId; stoppedBy: 'plateau' | 'cap' | 'noop' }
   // Tag lifecycle (C7/M2). The `tags` array on conversations/prompts stores Tag
   // *ids* (design D-1), so rename/recolor touch only the one `Tag` record and never
   // rewrite carriers. `conversation.tag` / `prompt.tag` toggle one id on one record.
