@@ -6,6 +6,8 @@
 import {
   type AdapterConfig,
   type AdapterSelectors,
+  type HistoryExpansion,
+  type HistoryExpansionMode,
   type InsertMode,
   type PlatformId,
   type SubmitMode,
@@ -41,6 +43,15 @@ const SELECTOR_KEYS: readonly (keyof AdapterSelectors)[] = [
 
 const INSERT_MODES: readonly InsertMode[] = ['execCommand', 'react-set', 'paste'];
 const SUBMIT_MODES: readonly SubmitMode[] = ['click', 'enter'];
+// `scroll` is the only IMPLEMENTED mode; `route` is reserved but unbuilt, so a
+// config asking for it must be rejected rather than silently doing nothing.
+const HISTORY_EXPANSION_MODES: readonly HistoryExpansionMode[] = ['scroll'];
+const HISTORY_EXPANSION_TUNING: readonly (keyof HistoryExpansion)[] = [
+  'settleMs',
+  'stableRounds',
+  'maxRounds',
+  'maxMs',
+];
 
 // Permissive semver: major.minor.patch with an optional pre-release/build suffix.
 const SEMVER = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/;
@@ -196,6 +207,33 @@ export function validateAdapterConfig(raw: unknown): AdapterConfig | ValidationE
       typeof raw.behaviors.composerStealsFocus !== 'boolean'
     ) {
       errors.push({ path: 'behaviors.composerStealsFocus', message: 'must be a boolean' });
+    }
+    // Optional history-expansion block: absent means the platform sweeps nothing.
+    // When present its `mode` must be an implemented member and every supplied
+    // tuning field a positive number — a zero/negative settle or round cap would
+    // turn the sweep into a busy loop or a no-op that still claims to have run.
+    const expansion = raw.behaviors.historyExpansion;
+    if (expansion !== undefined) {
+      if (!isRecord(expansion)) {
+        errors.push({ path: 'behaviors.historyExpansion', message: 'must be an object' });
+      } else {
+        if (!HISTORY_EXPANSION_MODES.includes(expansion.mode as HistoryExpansionMode)) {
+          errors.push({
+            path: 'behaviors.historyExpansion.mode',
+            message: `must be one of ${HISTORY_EXPANSION_MODES.join(', ')}`,
+          });
+        }
+        for (const key of HISTORY_EXPANSION_TUNING) {
+          const value = expansion[key];
+          if (value === undefined) continue;
+          if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+            errors.push({
+              path: `behaviors.historyExpansion.${key}`,
+              message: 'must be a positive number when present',
+            });
+          }
+        }
+      }
     }
   }
 

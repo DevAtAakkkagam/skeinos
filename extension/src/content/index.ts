@@ -18,7 +18,11 @@ import {
   reportHealth,
   waitForSelfCheck,
 } from '../adapters';
-import { mutateWorkspaceRemote } from '../core/folders';
+import {
+  isHistoryBackfilled,
+  mutateWorkspaceRemote,
+  recordHistoryBackfillRemote,
+} from '../core/folders';
 // Import from the leaf client (not the feature barrel) so the tight content-script
 // bundle never risks pulling the worker-only engine/handlers + IndexedDB code.
 import { indexConversationFromMessagesRemote } from '../core/conversation-index/client';
@@ -141,6 +145,16 @@ export async function runContent(): Promise<void> {
   // the open conversation when the empty↔non-empty state flips, so the nudge
   // appears/clears immediately instead of waiting for the next navigation.
   const listHidesWhenCollapsed = config.behaviors?.listHiddenWhenCollapsed === true;
+  // History-sweep state. `sweepDeclared` is decided synchronously from the config so
+  // ingest can be suspended from the very first tick — whether the sweep has ALREADY
+  // run is a worker round-trip, and an ingest firing while we wait for that answer
+  // would be exactly the partial snapshot D3 exists to prevent. (`expandHistory` is
+  // probed because older adapter stubs in tests predate it.)
+  const sweepDeclared =
+    workspace &&
+    config.behaviors?.historyExpansion !== undefined &&
+    typeof adapter.expandHistory === 'function';
+  let sweeping = sweepDeclared;
   let listEmpty = false;
   let lastActiveRef: { nativeId: string; title: string } | null = null;
   // Disposers, populated once the observers below are wired. Held on a `const`
@@ -221,8 +235,15 @@ export async function runContent(): Promise<void> {
     });
   };
 
-  const ingestList = (): void => {
+  const ingestList = (opts: { backfill?: boolean } = {}): void => {
     if (!isContextValid()) return void teardown();
+    // Ingest is SUSPENDED for the duration of a history sweep (design D3): the
+    // settle interval between scroll rounds exceeds INGEST_DEBOUNCE_MS, so without
+    // this the sweep's own `list-changed` bursts would ingest half-loaded snapshots
+    // — and because stamping is first-write-wins under the hash gate, a row first
+    // seen mid-sweep would keep a stamp computed against a partial list that the
+    // final ingest could no longer correct.
+    if (sweeping) return;
     const refs = adapter
       .listConversations()
       .map((ref) => ({ nativeId: ref.nativeId, title: ref.title }));
@@ -249,11 +270,16 @@ export async function runContent(): Promise<void> {
       return;
     }
     console.log('[Skeinos] ingesting', refs.length, 'conversations', platformId);
-    void mutateWorkspaceRemote({ op: 'conversation.ingest', platform: platformId, refs }).then(
-      (res) => {
-        if (!res?.ok) console.warn('[Skeinos] ingest mutation failed', platformId, res);
-      },
-    );
+    void mutateWorkspaceRemote({
+      op: 'conversation.ingest',
+      platform: platformId,
+      refs,
+      // Only carry the flag on the post-sweep ingest, so an ordinary ingest's
+      // payload — and the worker's stamping path — stay exactly as before.
+      ...(opts.backfill ? { backfill: true } : {}),
+    }).then((res) => {
+      if (!res?.ok) console.warn('[Skeinos] ingest mutation failed', platformId, res);
+    });
   };
 
   const scheduleIngest = (): void => {
@@ -265,9 +291,43 @@ export async function runContent(): Promise<void> {
     }, INGEST_DEBOUNCE_MS);
   };
 
+  // History backfill (chatgpt-history-backfill): a host that paginates its sidebar
+  // only ever renders the page it has fetched, so `listConversations()` sees a
+  // fraction of the user's history (ChatGPT: 55 of 137, measured live). Once per
+  // install per platform, drive the host list to its end before the first ingest so
+  // the whole backlog is indexed. Gated on worker-owned durable state, because the
+  // sweep is user-visible (their sidebar scrolls) and costs up to a minute.
+  const runHistoryBackfill = async (): Promise<void> => {
+    // `null` when the sweep did not run (already recorded, or it failed) — which is
+    // also what distinguishes a plain on-load ingest from the post-sweep one.
+    let stoppedBy: 'plateau' | 'cap' | 'noop' | null = null;
+    try {
+      if (!(await isHistoryBackfilled(platformId))) {
+        const summary = await adapter.expandHistory();
+        stoppedBy = summary.stoppedBy;
+        console.log('[Skeinos] history backfill', platformId, summary);
+      }
+    } catch (err) {
+      // Best-effort: a failed sweep costs an incomplete backlog, never a broken tab.
+      console.warn('[Skeinos] history backfill failed', platformId, err);
+    } finally {
+      sweeping = false;
+    }
+    if (!isContextValid()) return void teardown();
+    // Drop any ingest the sweep's own mutations debounced into existence, so the
+    // fully-loaded list ingests exactly once rather than racing a stale timer.
+    if (ingestTimer !== undefined) clearTimeout(ingestTimer);
+    ingestTimer = undefined;
+    ingestList({ backfill: stoppedBy !== null });
+    if (stoppedBy !== null) void recordHistoryBackfillRemote(platformId, stoppedBy);
+  };
+
   // Workspace seam: the conversation list only exists when signed in, so a
-  // compose-only page skips ingest entirely.
-  if (workspace) ingestList();
+  // compose-only page skips ingest entirely — and so does the sweep.
+  if (workspace) {
+    if (sweepDeclared) void runHistoryBackfill();
+    else ingestList();
+  }
 
   // Active-conversation seam (conversation-filing): tell the worker which
   // conversation this tab currently has open so the side panel's

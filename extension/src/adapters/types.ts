@@ -56,6 +56,53 @@ export type AdapterEvent =
   | { type: 'composer-ready' };
 
 /**
+ * How the generic adapter expands a host's lazily-paginated conversation history.
+ * `scroll` — drive the host's own conversation scroller to its end until the list
+ * stops growing (ChatGPT: ~28 rows per page, fetched only on reaching the end).
+ *
+ * The enum ships with ONE implemented member on purpose. A live probe confirmed a
+ * second, genuinely different mode is needed for Claude — its sidebar hard-caps at
+ * 20 rows and the full list lives at a separate `/recents` route, so expanding it
+ * means navigation, not scrolling — and `route` is deliberately NOT implemented
+ * here (design Non-Goals). Reserving the enum now means adding it later is a config
+ * value, not a schema migration across the hot-fixable remote-config surface.
+ */
+export type HistoryExpansionMode = 'scroll';
+
+/** Optional `behaviors.historyExpansion` block: the mode plus its tuning knobs.
+ *  Every tuning field is optional and falls back to the runtime default; when
+ *  supplied it MUST be a positive number (enforced by `validateAdapterConfig`). */
+export interface HistoryExpansion {
+  mode: HistoryExpansionMode;
+  /** How long to wait after each scroll for the host's next page to land (ms). */
+  settleMs?: number;
+  /** Consecutive no-growth rounds required before the sweep calls it a plateau. */
+  stableRounds?: number;
+  /** Hard cap on rounds, so a host that never plateaus still terminates. */
+  maxRounds?: number;
+  /** Hard wall-clock cap for the whole sweep (ms). */
+  maxMs?: number;
+}
+
+/** Per-call overrides for {@link PlatformAdapter.expandHistory} — same knobs as the
+ *  config block, minus `mode`. Used by tests and by callers that need a shorter
+ *  sweep than the config declares. */
+export type HistoryExpansionOptions = Partial<Omit<HistoryExpansion, 'mode'>>;
+
+/** What a sweep did. `distinctSeen` vs `finalCount` is the append-only signal: they
+ *  are equal when the host never recycles rows (the assumption the once-per-install
+ *  backfill rests on) and `distinctSeen` exceeds `finalCount` under windowed
+ *  virtualization. `noop` means the sweep never ran (no `historyExpansion` in the
+ *  config, no list, no scroller, or a DOM error). */
+export interface HistoryExpansionSummary {
+  startCount: number;
+  finalCount: number;
+  distinctSeen: number;
+  rounds: number;
+  stoppedBy: 'plateau' | 'cap' | 'noop';
+}
+
+/**
  * The single contract the rest of the system programs against. One generic
  * implementation fulfils this for every platform by reading an {@link AdapterConfig}.
  */
@@ -69,6 +116,12 @@ export interface PlatformAdapter {
   classify(): Readiness;
   detectConversation(): ConversationRef | null;
   listConversations(): ConversationRef[];
+  /** Best-effort, config-driven sweep that drives a lazily-paginated host list to
+   *  its end so `listConversations()` can observe the user's full history. A config
+   *  without `behaviors.historyExpansion` resolves immediately as a no-op without
+   *  touching the DOM. Never rejects — a missing list/scroller or a DOM error
+   *  resolves as a no-op summary, so a failed sweep never disrupts the tab. */
+  expandHistory(opts?: HistoryExpansionOptions): Promise<HistoryExpansionSummary>;
   readMessages(nativeId: string): Promise<Message[]>;
   getInputElement(): HTMLElement | null;
   /** Whether the host composer currently holds no draft (trimmed). */
@@ -157,6 +210,13 @@ export interface AdapterBehaviors {
   // omit it — the guard is invasive (it suppresses host focus events while open), so
   // only the platforms that need it opt in. Optional/additive.
   composerStealsFocus?: boolean;
+  // The host paginates its conversation list, so `listConversations()` sees only
+  // the page it has rendered (ChatGPT: 55 of 137 conversations, measured live).
+  // When present, the adapter can sweep the list to its end via `expandHistory()`.
+  // Absent ⇒ the platform performs no history sweep (Gemini/Perplexity render the
+  // account's full history up front, so they have no gap to close).
+  // Optional/additive.
+  historyExpansion?: HistoryExpansion;
 }
 
 /**

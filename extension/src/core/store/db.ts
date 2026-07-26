@@ -169,6 +169,17 @@ export const MIGRATIONS: Migration[] = [
       if (canon !== null) await active.put({ ...activeClaude, nativeId: canon });
     }
   },
+  // v8 — optional `historyBackfilledAt` / `historyBackfillOutcome` fields on
+  // `PlatformState` (chatgpt-history-backfill, design D4). Both are optional,
+  // non-indexed record fields on a local-only store, so existing `platformState`
+  // rows stay valid unchanged and read back with the fields `undefined` — which is
+  // exactly the desired "never swept" state for an existing install. This step
+  // exists only to record the additive bump as an explicit, append-only version
+  // ([STORE], mirroring v3/v5); it is a no-op.
+  () => {
+    // Intentionally empty — additive optional record fields require no structural
+    // change to the (schemaless-per-record) IndexedDB object store.
+  },
 ];
 
 /**

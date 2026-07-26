@@ -1,6 +1,6 @@
 {
   "platformId": "chatgpt",
-  "configVersion": "1.2.0",
+  "configVersion": "1.3.0",
   "hostMatch": ["*://chatgpt.com/*"],
   "selectors": {
     "conversationList": "#history",
@@ -21,6 +21,7 @@
     "insertMode": "execCommand",
     "submitMode": "click",
     "supportsSystemPrompt": false,
-    "listHiddenWhenCollapsed": true
+    "listHiddenWhenCollapsed": true,
+    "historyExpansion": { "mode": "scroll" }
   }
 }

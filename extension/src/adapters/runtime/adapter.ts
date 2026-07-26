@@ -7,6 +7,8 @@ import {
   type AdapterConfig,
   type AdapterEvent,
   type ConversationRef,
+  type HistoryExpansionOptions,
+  type HistoryExpansionSummary,
   type Message,
   type PlatformAdapter,
   type Readiness,
@@ -14,6 +16,27 @@ import {
   REQUIRED_ANCHORS,
 } from '../types';
 import { readComposerText, writeComposer } from './composer-io';
+import { findScroller } from './scroller';
+
+/** Sweep tuning defaults, from the live ChatGPT trace (design D2): a page lands
+ *  within ~900ms of hitting the end, growth arrives in +2/+26 row pairs so two
+ *  quiet rounds mean the end, and ~28 rows per page × 2 rounds per page puts a
+ *  1000-conversation account at ~72 rounds ≈ 65s — inside both caps. */
+const HISTORY_DEFAULTS = {
+  settleMs: 900,
+  stableRounds: 2,
+  maxRounds: 120,
+  maxMs: 90_000,
+} as const;
+
+/** A configured/overridden tuning value, or the default when absent or unusable.
+ *  Validation already rejects non-positive numbers in a bundled config; this is the
+ *  same guard for per-call overrides and for a config that skipped validation. */
+function tuning(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Anything we can query + observe — a live `Document` or a fixture container. */
 type Root = Document | HTMLElement;
@@ -206,6 +229,105 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     return itemElements().map(refFromItem);
   }
 
+  // History-expansion sweep (chatgpt-history-backfill). Hosts that paginate their
+  // sidebar only render the page they have fetched, so `listConversations()` sees a
+  // fraction of the user's history (ChatGPT: 55 of 137, measured live). Drive the
+  // host's own scroller to the end until the list stops growing, then hand back the
+  // (now complete) DOM for a normal `listConversations()` read.
+  //
+  // Best-effort by contract: it never throws and always restores the user's scroll
+  // position, so a host that changed shape costs an incomplete backfill, never a
+  // broken tab.
+  const noopSummary = (): HistoryExpansionSummary => ({
+    startCount: 0,
+    finalCount: 0,
+    distinctSeen: 0,
+    rounds: 0,
+    stoppedBy: 'noop',
+  });
+
+  async function expandHistory(
+    opts: HistoryExpansionOptions = {},
+  ): Promise<HistoryExpansionSummary> {
+    const expansion = behaviors.historyExpansion;
+    // No declared expansion ⇒ resolve without touching the DOM at all.
+    if (!expansion || expansion.mode !== 'scroll') return noopSummary();
+
+    const settleMs = tuning(opts.settleMs ?? expansion.settleMs, HISTORY_DEFAULTS.settleMs);
+    const stableRounds = tuning(
+      opts.stableRounds ?? expansion.stableRounds,
+      HISTORY_DEFAULTS.stableRounds,
+    );
+    const maxRounds = tuning(opts.maxRounds ?? expansion.maxRounds, HISTORY_DEFAULTS.maxRounds);
+    const maxMs = tuning(opts.maxMs ?? expansion.maxMs, HISTORY_DEFAULTS.maxMs);
+
+    let scroller: Element | null = null;
+    let originalScrollTop = 0;
+    try {
+      scroller = findScroller(q(selectors.conversationList));
+      if (!scroller) return noopSummary(); // nothing paginates here
+      originalScrollTop = scroller.scrollTop;
+
+      // Every id ever rendered, across every round. Equal to the final row count on
+      // an append-only host; larger under windowed virtualization — the signal a
+      // later change can act on rather than trusting the append-only assumption.
+      const seen = new Set<string>();
+      const measure = (): number => {
+        const items = itemElements();
+        for (const item of items) {
+          const id = itemId(item);
+          if (id) seen.add(id);
+        }
+        return items.length;
+      };
+
+      const startCount = measure();
+      let count = startCount;
+      let height = scroller.scrollHeight;
+      let rounds = 0;
+      let stable = 0;
+      // Assume a cap until a plateau proves otherwise, so every early exit below
+      // (round cap, wall clock) reports the partial outcome honestly.
+      let stoppedBy: HistoryExpansionSummary['stoppedBy'] = 'cap';
+      const deadline = Date.now() + maxMs;
+
+      while (rounds < maxRounds && Date.now() < deadline) {
+        scroller.scrollTop = scroller.scrollHeight;
+        await delay(settleMs);
+        rounds++;
+        const nextCount = measure();
+        const nextHeight = scroller.scrollHeight;
+        // Growth in EITHER signal keeps the sweep going: the host renders short
+        // placeholder rounds (+2 rows) before each real page (+26), and a host that
+        // renders fixed-height skeletons would grow the count without the height.
+        // Requiring both to go quiet is what stops an early exit mid-history.
+        const grew = nextCount > count || nextHeight > height;
+        count = nextCount;
+        height = nextHeight;
+        stable = grew ? 0 : stable + 1;
+        if (stable >= stableRounds) {
+          stoppedBy = 'plateau';
+          break;
+        }
+      }
+
+      return { startCount, finalCount: count, distinctSeen: seen.size, rounds, stoppedBy };
+    } catch (err) {
+      console.warn('[Skeinos] history expansion failed', config.platformId, err);
+      return noopSummary();
+    } finally {
+      // Restore on EVERY exit path — plateau, cap, and error alike. The user's
+      // sidebar is left where they had it (design D6).
+      if (scroller) {
+        try {
+          scroller.scrollTop = originalScrollTop;
+        } catch {
+          // A detached/replaced scroller can't be restored — nothing else to do.
+        }
+      }
+    }
+  }
+
   async function readMessages(_nativeId: string): Promise<Message[]> {
     const combined = `${selectors.messageUser}, ${selectors.messageAssistant}`;
     return qa(root, combined).map((el, order) => ({
@@ -374,6 +496,7 @@ export function createAdapter(config: AdapterConfig, ctx: AdapterContext = {}): 
     classify,
     detectConversation,
     listConversations,
+    expandHistory,
     readMessages,
     getInputElement,
     isComposerEmpty,

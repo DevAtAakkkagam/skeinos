@@ -85,6 +85,15 @@ export interface PlatformState {
   platform: PlatformId;
   listCollapsed: boolean;
   updatedAt: number;
+  // When the once-per-install history-expansion sweep finished for this platform
+  // (epoch ms), and how it ended. The content script consults this before sweeping,
+  // so a visible, up-to-a-minute scroll of the host sidebar happens once per install
+  // rather than on every page load — and survives MV3 worker death, which an
+  // in-memory flag would not (SW-2). Absent means "never swept". A `cap` outcome
+  // records an INCOMPLETE backfill, so a later change can resume rather than
+  // re-sweep from scratch. Local-only metadata, never synced.
+  historyBackfilledAt?: number;
+  historyBackfillOutcome?: 'plateau' | 'cap' | 'noop';
 }
 
 /** Local only — never synced. */

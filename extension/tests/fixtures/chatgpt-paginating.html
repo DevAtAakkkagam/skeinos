@@ -1,0 +1,33 @@
+<!-- ChatGPT's PAGINATING sidebar (chatgpt-history-backfill). Same shape as
+     chatgpt.html, but modelling what a live account actually looks like: the sidebar
+     renders one page of conversations and fetches the next only when its scroll
+     container reaches the end (measured live 2026-07-26: 55 rows rendered out of 137
+     real conversations, loading in ~28-row pages).
+
+     The structural point this fixture exists to capture is that the SCROLLER IS NOT
+     `#history` — it is the `nav` scrollport ABOVE it. That is why `expandHistory()`
+     discovers its scroller at runtime by walking outward from the configured
+     `conversationList` element rather than taking a selector (design D1).
+
+     The `#history` list starts EMPTY here: rows (and the pagination behaviour, which
+     static HTML cannot express) are driven by the test, which appends each page as
+     the scrollport is driven to its end and never removes a previously-rendered row
+     — ChatGPT's list is append-only, the assumption the once-per-install backfill
+     rests on. See tests/adapter-chatgpt.test.ts. -->
+<div class="app">
+  <nav aria-label="Chat history" class="scrollport" style="overflow-y: auto">
+    <aside id="history"></aside>
+  </nav>
+
+  <main>
+    <div class="thread">
+      <div data-message-author-role="user">How do I cook a rump steak?</div>
+      <div data-message-author-role="assistant">Sear it hot, then rest it for five minutes.</div>
+    </div>
+
+    <form class="composer-parent flex">
+      <div id="prompt-textarea" role="textbox" contenteditable="true"></div>
+      <button data-testid="send-button" aria-label="Send prompt">Send</button>
+    </form>
+  </main>
+</div>
