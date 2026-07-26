@@ -1,9 +1,9 @@
 name: Deploy website
 
-# Publishes the static marketing site + privacy policy (website/) to the
-# Cloudflare Pages project "skeinos" (served at https://skeinos.aakkagam.com).
-# The Pages project is Direct Upload, so Wrangler uploads the folder — there is
-# no Cloudflare-side git integration.
+# Publishes the static marketing site + privacy policy (website/) to GitHub Pages,
+# served at https://skeinos.aakkagam.com. Pages is free for public repos and needs
+# no secrets, which is why this replaced the Cloudflare Pages deploy when the repo
+# went open source.
 
 on:
   push:
@@ -14,6 +14,11 @@ on:
       - '.github/workflows/deploy-website.yml'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 # Never let two site deploys race; cancel an in-flight one on a newer push.
 concurrency:
   group: deploy-website
@@ -22,16 +27,20 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Adapter selector hot-fix channel: the extension's config loader polls
       # https://skeinos.aakkagam.com/adapters/<platform>.json when a platform is
       # degraded (adapters/runtime/loader.ts). Publish the configs from their
       # single source of truth so a selector fix ships by bumping configVersion
       # and pushing to main — no store release.
+      #
+      # This path is load-bearing for already-installed extensions: if it stops
+      # serving, a site that changes its DOM stays broken until a store release.
       - name: Stage adapter configs
         run: |
           mkdir -p website/adapters
@@ -40,9 +49,11 @@ jobs:
             cp "$f" website/adapters/
           done
 
-      - name: Publish to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy website --project-name=skeinos --branch=main
+          path: website
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
