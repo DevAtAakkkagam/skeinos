@@ -2,73 +2,89 @@
 
 Paste-ready text for the **Notes to Reviewer** box on Firefox Add-ons
 (*Submit a New Version → Describe Version*). Private: only you and Mozilla reviewers
-see it. The **Release Notes** box above it is public — that one takes the current
-version's section from `CHANGELOG.md`, unchanged.
+see it. The **Release Notes** box above it is public and takes the current version's
+section from `CHANGELOG.md`, unchanged.
 
 Build instructions are mandatory whenever a source package is submitted (AMO policy),
-because the uploaded bundle is minified by WXT/Vite. Re-verify the commands below
-before each release; the byte-for-byte claim is only worth making if it is true.
+because the uploaded bundle is minified by WXT/Vite.
 
-Last verified against 0.1.6 (2026-07-26): a clean `npm ci && npm run zip:firefox`
-from the sources zip produced `.output/firefox-mv2/` identical to the uploaded build
-across all 28 files.
+**Before each release:** replace every `<version>` with the version being submitted,
+and re-run the reproducibility check so the claim in the first paragraph stays true:
+
+```bash
+cd extension && npm run zip:firefox                    # the package you upload
+mkdir -p /tmp/amo && cd /tmp/amo && rm -rf ./*
+unzip -q <repo>/extension/.output/skeinos-<version>-sources.zip
+npm ci && npm run zip:firefox
+diff -r <repo>/extension/.output/firefox-mv2 .output/firefox-mv2   # must be silent
+```
+
+Last verified: 0.1.6 on 2026-07-26, all 28 files identical.
 
 ---
 
 ## Paste this
 
-Build instructions (produces an exact copy of the uploaded package):
+BUILD INSTRUCTIONS
 
-Environment: Node.js 22 LTS (CI builds on 22; 24 also works) and npm 10+, on Linux.
-No other system dependencies. The source package is the repository's `extension/`
-directory; all commands run from its root.
+A clean build of the attached source package reproduces the uploaded extension
+exactly. We ran the steps below and compared the result against what we uploaded:
+all 28 files under `.output/firefox-mv2/` were byte-for-byte identical.
 
-  1. unzip skeinos-0.1.6-sources.zip -d skeinos-src
-  2. cd skeinos-src
-  3. npm ci
-  4. npm run zip:firefox
+Environment: Node.js 22 LTS (our CI builds on 22; 24 works too), npm 10+, Linux. No
+other system dependencies. The source package is the repository's `extension/`
+directory, so every command runs from the root of the unzipped package.
 
-Output: `.output/firefox-mv2/` is the unpacked extension, and
-`.output/skeinos-0.1.6-firefox.zip` is the packaged one. We verified that this
-produces `.output/firefox-mv2/` byte-for-byte identical to the uploaded package
-(all 28 files). The zip container itself differs only in embedded timestamps, so
-please compare the unpacked directories rather than zip checksums.
+    1. unzip skeinos-<version>-sources.zip -d skeinos-src
+    2. cd skeinos-src
+    3. npm ci
+    4. npm run zip:firefox
 
-The build is WXT (https://wxt.dev) over Vite + Rollup: it bundles and minifies, but
-applies no obfuscation. Everything is also public on GitHub under GPL-3.0 —
-https://github.com/DevAtAakkkagam/skeinos, tagged `v0.1.6` — so you can diff the
-source package against the public repository if that is easier than building.
+This writes the unpacked extension to `.output/firefox-mv2/` and the packaged one to
+`.output/skeinos-<version>-firefox.zip`. Please compare the unpacked directories
+rather than zip checksums: the zip container embeds build timestamps, so its hash
+differs even when its contents do not.
 
-Two things you will likely see, answered up front:
+The build is WXT (https://wxt.dev) over Vite and Rollup. It bundles and minifies; it
+does not obfuscate. The same code is public under GPL-3.0 at
+https://github.com/DevAtAakkkagam/skeinos, tagged `v<version>`, if diffing against
+the repository is easier than building.
 
-1. "Unsafe assignment to innerHTML" (2 warnings). Both are inside Preact's own
-   `diffElementNodes`, bundled twice (shared chunk + content script). Skeinos never
-   uses `dangerouslySetInnerHTML` and never assigns `.innerHTML` / `.outerHTML` /
-   `insertAdjacentHTML` anywhere in its own source — grep the source package to
-   confirm. The only reachable one of the two flagged statements is Preact's
-   `element.innerHTML = ""` node-clearing path, a static empty string.
+TWO THINGS YOU WILL RUN INTO
 
-2. One outbound network request exists, and it is data, not code. When a chat site
-   changes its layout, the adapter self-check fails and the extension downloads a
-   corrected CSS-selector file:
-   `GET https://skeinos.aakkagam.com/adapters/<platform>.json`. No request body, no
-   identifiers, no cookies, no query parameters — a one-way download of
-   schema-validated *configuration*, never executable code, which is what lets a
-   broken site be repaired without a full release. See
-   `src/adapters/runtime/loader.ts` (the fetch) and `src/adapters/resilience/health.ts`
-   (`hotfixWanted`, which gates it). There are no other network requests: no
-   analytics, no telemetry, no crash reporting, no account, no server of any kind.
-   This matches the manifest's `data_collection_permissions: { required: ["none"] }`.
+1. "Unsafe assignment to innerHTML", 2 warnings. Both sit inside Preact's own
+   `diffElementNodes`, which the bundler emits twice (shared chunk and content
+   script). Skeinos never uses `dangerouslySetInnerHTML`, and never assigns
+   `.innerHTML`, `.outerHTML`, or `insertAdjacentHTML` anywhere in its own source.
+   Grep the source package to confirm. Of the two flagged statements, only Preact's
+   `element.innerHTML = ""` node-clearing path is reachable here, and it assigns a
+   static empty string.
 
-How to test:
+2. One outbound request exists, and it carries configuration, not code. When a chat
+   site changes its layout, the adapter self-check fails and the extension downloads
+   a corrected CSS-selector file:
 
-Most of the UI needs no chat account. On install a welcome page opens; the options
-page is reachable from the add-on's toolbar button (theme, privacy, feedback, and a
-Source code link). Skeinos only activates on the four sites in `host_permissions`:
-claude.ai, chatgpt.com, gemini.google.com, perplexity.ai. To see the sidebar populate
-with conversations, sign in to any one of them with a free account and open the
-Skeinos sidebar (`sidebar_action`, from the toolbar). While signed out, Skeinos
-detects this and shows a paused state rather than an empty list.
+       GET https://skeinos.aakkagam.com/adapters/<platform>.json
 
-All conversation data — titles, content, folders, tags, and the search index — is
-stored locally in IndexedDB and never leaves the device on any tier.
+   It sends no request body, no identifiers, no cookies, and no query parameters.
+   What comes back is schema-validated JSON, never executable code, and it is what
+   lets a broken site be repaired without a full release. The fetch is in
+   `src/adapters/runtime/loader.ts`; `src/adapters/resilience/health.ts` gates it
+   behind `hotfixWanted`. Nothing else leaves the device: no analytics, no telemetry,
+   no crash reporting, no account, no server. This matches the manifest's
+   `data_collection_permissions: { required: ["none"] }`.
+
+HOW TO TEST
+
+Most of the UI needs no chat account. A welcome page opens on install, and the
+options page (theme, privacy, feedback, and a Source code link) opens from the
+toolbar button.
+
+Skeinos activates only on the four sites in `host_permissions`: claude.ai,
+chatgpt.com, gemini.google.com, and perplexity.ai. To see the sidebar fill with
+conversations, sign in to any one of them with a free account, then open the Skeinos
+sidebar from the toolbar (`sidebar_action`). While signed out, Skeinos detects that
+and shows a paused state instead of an empty list.
+
+Conversation titles and content, folders, tags, and the search index are stored
+locally in IndexedDB and never leave the device, on any tier.
