@@ -6,7 +6,7 @@
 
 <!-- Primary SEO -->
 <title>Skeinos: one organized home for all your AI chats</title>
-<meta name="description" content="Skeinos is a free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Open source and private by design — nothing leaves your device.">
+<meta name="description" content="Skeinos is a free, local-first browser extension that organizes, searches, and saves prompts across Claude, ChatGPT, Gemini, and Perplexity. Open source and private by design: nothing leaves your device.">
 <link rel="canonical" href="https://skeinos.aakkagam.com/">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <meta name="author" content="Aakkagam">
@@ -97,12 +97,12 @@
         {
           "@type": "Question",
           "name": "Does my conversation data leave my device?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No. Conversations are stored and searched locally in your browser. There is no account and no telemetry of any kind, so nothing is uploaded. In normal use Skeinos makes no network requests at all; the one exception downloads a corrected selector file when a chat site changes its layout, and it sends nothing about you." }
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Conversations are stored and searched locally in your browser, and with no account and no telemetry there is nothing to upload. Skeinos makes one kind of network request, ever: when a chat site changes its layout, it downloads a small file of corrected page selectors so the sidebar keeps working. That download carries no cookies, no identifiers, and nothing about you or your chats." }
         },
         {
           "@type": "Question",
           "name": "Is Skeinos open source?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Yes, under the GPL-3.0 licence. A privacy promise you cannot inspect is just a promise, so the code is public: you can read exactly what it does, check every permission it asks for, and build it yourself." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, under the GPL-3.0 license, at github.com/DevAtAakkkagam/skeinos. GPL-3.0 means anyone can read, modify, and redistribute it, and that any fork has to stay open source too. If a chat site changes and breaks the sidebar, the fix is usually one small file, so you can send a patch instead of waiting for us." }
         },
         {
           "@type": "Question",
@@ -208,6 +208,9 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+
+  /* Keeps hyphenated tokens (GPL-3.0, Manifest V3) from breaking across lines. */
+  .nb { white-space: nowrap; }
 
   /* ---- Header ---- */
   header {
@@ -470,8 +473,8 @@
     <div class="wrap inner">
       <span class="overline">Private by architecture</span>
       <h2 id="privacy-title">Your chats never leave the browser.</h2>
-      <p>Skeinos indexes everything locally. There is <b>no account, no telemetry, and no analytics</b> — not opt-in, not off-by-default, none at all. In normal use the extension makes no network requests whatsoever.</p>
-      <p>You don't have to take our word for it. <b>Skeinos is open source</b>, so the stays-on-device boundary is something you can read in the code rather than something you're asked to believe in a policy.</p>
+      <p>Skeinos indexes everything locally. There is <b>no account, no telemetry, and no analytics</b>: not opt-in, not off-by-default, none at all. In normal use the extension makes no network requests.</p>
+      <p>You can check that yourself. <b>Skeinos is open source under <span class="nb">GPL-3.0</span></b>, so the code that reads your conversations is public. Read it, review every permission it asks for, or build the extension from source and run that instead.</p>
       <div class="cta-row">
         <a class="btn btn-ghost" href="https://github.com/DevAtAakkkagam/skeinos" rel="noopener">Read the source on GitHub</a>
         <a class="btn btn-ghost" href="/privacy/">Privacy policy</a>
@@ -509,11 +512,11 @@
         </div>
         <div class="qa">
           <dt>Does my conversation data leave my device?</dt>
-          <dd>No. Conversations are stored and searched locally in your browser. There is no account and no telemetry of any kind, so nothing is uploaded. In normal use Skeinos makes no network requests at all — the one exception downloads a corrected selector file when a chat site changes its layout, and it sends nothing about you.</dd>
+          <dd>No. Conversations are stored and searched locally in your browser, and with no account and no telemetry there is nothing to upload. Skeinos makes one kind of network request, ever: when a chat site changes its layout, it downloads a small file of corrected page selectors so the sidebar keeps working. That download carries no cookies, no identifiers, and nothing about you or your chats.</dd>
         </div>
         <div class="qa">
           <dt>Is Skeinos open source?</dt>
-          <dd>Yes, under the GPL-3.0 licence. A privacy promise you can't inspect is just a promise, so the code is public: you can read exactly what it does, check every permission it asks for, and build it yourself.</dd>
+          <dd>Yes, under the <span class="nb">GPL-3.0</span> license, at <a href="https://github.com/DevAtAakkkagam/skeinos" rel="noopener">github.com/DevAtAakkkagam/skeinos</a>. <span class="nb">GPL-3.0</span> means anyone can read, modify, and redistribute it, and that any fork has to stay open source too. If a chat site changes and breaks the sidebar, the fix is usually one small file, so you can send a patch instead of waiting for us.</dd>
         </div>
         <div class="qa">
           <dt>Which browsers and AI sites does Skeinos support?</dt>

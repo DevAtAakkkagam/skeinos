@@ -1,15 +1,15 @@
 SHORT SUMMARY (tagline — max 132 characters)
 
-One organized, searchable home for all your AI chats — folders, search, and a prompt library for Claude, Gemini, Perplexity & ChatGPT.
+Folders, search, and a prompt library for Claude, ChatGPT, Gemini & Perplexity. Open source, local-first, no account.
 
 
 DESCRIPTION
 
 Skeinos turns your AI chat sites into one organized workspace.
 
-If you use Claude, Gemini, Perplexity, or ChatGPT every day, your chats pile up fast — and each site keeps them in a plain, messy list. Skeinos adds a simple sidebar on top of the sites you already use, so you can finally organize, search, and reuse everything in one place.
+If you use Claude, Gemini, Perplexity, or ChatGPT every day, your chats pile up fast, and each site keeps them in a plain, messy list. Skeinos adds a simple sidebar on top of the sites you already use, so you can finally organize, search, and reuse everything in one place.
 
-It works right inside the chat page. Nothing new to log into.
+It works right inside the chat page. Nothing new to log into, and the whole extension is open source.
 
 
 WHAT YOU CAN DO
@@ -32,12 +32,14 @@ WHAT YOU CAN DO
 
 PRIVATE BY DESIGN
 
-Skeinos is local-first. Your conversations, titles, and search index stay on your device and are never sent anywhere — on any plan.
+Skeinos is local-first. Your conversations, titles, and search index stay on your device and are never sent anywhere, on any plan.
 
 • We never read or send your passwords or logins.
 • No ads. No selling your data. No tracking of what you do.
-• No telemetry and no analytics of any kind — not opt-in, not off-by-default, none. There is no account to create and nothing of yours on a server.
-• Skeinos is open source, so you don't have to take our word for any of this — you can read the code.
+• No telemetry and no analytics of any kind: not opt-in, not off-by-default, none. There is no account to create and nothing of yours on a server.
+• You can check all of this yourself. Skeinos is open source under the GPL-3.0 license, so the code that handles your chats is public: read it, review every permission it asks for, or build the extension from source.
+
+  Source code: https://github.com/DevAtAakkkagam/skeinos
 
 
 SUPPORTED SITES

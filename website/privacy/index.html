@@ -242,7 +242,7 @@
     <div class="wrap inner">
       <span class="overline">Legal</span>
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated: 24 July 2026</p>
+      <p class="updated">Last updated: 26 July 2026</p>
 
       <p class="intro">Skeinos is <b>local-first and privacy-first</b>. The extension organizes your AI chats (folders, search, prompts, instruction profiles) by reading the pages you already have open. Your conversation content stays on your device.</p>
 
@@ -254,11 +254,19 @@
 
       <h2 id="diagnostics">No data collection at all</h2>
       <p>Skeinos <b>sends nothing off your device, on any tier</b>. There is no analytics, no telemetry, no crash reporting, and no diagnostics stream. There is no opt-in to make, because there is nothing to opt in to.</p>
-      <p>In normal use the extension makes <b>no network requests at all</b>. There is exactly one exception, and it never carries anything of yours: when a chat site changes its layout and Skeinos detects that its own selectors have stopped working, it fetches a corrected selector file — a plain <code>GET</code> of <code>https://skeinos.aakkagam.com/adapters/&lt;site&gt;.json</code>, with no request body, no identifiers, no cookies, and no query parameters. It is how a broken site can be fixed the same day instead of waiting on a store review. A healthy site never triggers it, and the extension works fully offline without it by falling back to its bundled selectors.</p>
+      <p>In normal use the extension makes <b>no network requests at all</b>. There is exactly one exception, and it never carries anything of yours: when a chat site changes its layout and Skeinos detects that its own selectors have stopped working, it fetches a corrected selector file: a plain <code>GET</code> of <code>https://skeinos.aakkagam.com/adapters/&lt;site&gt;.json</code>, with no request body, no identifiers, no cookies, and no query parameters. It is how a broken site can be fixed the same day instead of waiting on a store review. A healthy site never triggers it, and the extension works fully offline without it by falling back to its bundled selectors.</p>
       <ul>
-        <li>We hold <b>no data about you</b> — no account, no identifier, no server-side profile to access, export, or erase.</li>
+        <li>We hold <b>no data about you</b>: no account, no identifier, no server-side profile to access, export, or erase.</li>
         <li>The extension bundles <b>no third-party analytics SDK</b> and loads no remote code. No session recording and no page/DOM capture ("autocapture") is used.</li>
         <li>Everything the extension reads from a chat page is processed and stored locally, in your own browser.</li>
+      </ul>
+
+      <h2 id="verify">How to check this yourself</h2>
+      <p>A privacy policy is a claim. Skeinos is <b>open source under the GPL-3.0 license</b>, so you can test every claim on this page against the code that actually runs in your browser:</p>
+      <ul>
+        <li>Read the source at <a href="https://github.com/DevAtAakkkagam/skeinos" rel="noopener">github.com/DevAtAakkkagam/skeinos</a>, including the permissions the extension requests and why each one is needed.</li>
+        <li>Build the extension from that source and load it yourself, instead of trusting the store build.</li>
+        <li>Watch it work. Open your browser's network panel while you use Skeinos: outside the selector fix described above, there is nothing to see.</li>
       </ul>
 
       <h2 id="controls">Your controls</h2>

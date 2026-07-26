@@ -1,6 +1,6 @@
 # Skeinos — Privacy Policy
 
-_Last updated: 2026-07-24_
+_Last updated: 2026-07-26_
 
 Skeinos is **local-first and privacy-first**. The extension organizes your AI chats
 (folders, search, prompts, instruction profiles) by reading the pages you already
@@ -24,7 +24,7 @@ make, because there is nothing to opt in to.
 In normal use the extension makes **no network requests at all**. There is exactly
 one exception, and it never carries anything of yours: when a chat site changes its
 layout and Skeinos detects that its own selectors have stopped working, it fetches a
-corrected selector file — a plain `GET` of
+corrected selector file: a plain `GET` of
 `https://skeinos.aakkagam.com/adapters/<site>.json`, with no request body, no
 identifiers, no cookies, and no query parameters. It is how a broken site can be
 fixed the same day instead of waiting on a store review. A healthy site never
@@ -33,12 +33,25 @@ extension works fully offline without it by falling back to its bundled selector
 
 Consequently:
 
-- We hold **no data about you** — no account, no identifier, no server-side profile
+- We hold **no data about you**: no account, no identifier, no server-side profile
   to access, export, or erase.
 - The extension bundles **no third-party analytics SDK** and loads no remote code.
   No session recording and no page/DOM capture ("autocapture") is used.
 - Everything the extension reads from a chat page is processed and stored locally, in
   your own browser.
+
+## How to check this yourself
+
+A privacy policy is a claim. Skeinos is **open source under the GPL-3.0 license**, so
+you can test every claim on this page against the code that actually runs in your
+browser:
+
+- Read the source at <https://github.com/DevAtAakkkagam/skeinos>, including the
+  permissions the extension requests and why each one is needed.
+- Build the extension from that source and load it yourself, instead of trusting the
+  store build.
+- Watch it work. Open your browser's network panel while you use Skeinos: outside the
+  selector fix described above, there is nothing to see.
 
 ## Your controls
 
