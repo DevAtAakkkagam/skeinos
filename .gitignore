@@ -54,3 +54,7 @@ promo/demo-video/skeinos-demo.mp4
 promo/demo-video/skeinos-demo.gif
 website/adapters/
 .playwright-screenshots/
+
+# Private planning + launch material (a sparse checkout of the skeinos-private repo).
+# Never commit this to the public repo.
+notes/
