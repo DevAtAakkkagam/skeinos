@@ -59,8 +59,11 @@ site be repaired without a store update. See `src/adapters/runtime/loader.ts` an
 
 ## Processor / data destination
 
-None. There is no external endpoint: the extension bundles no analytics SDK, loads no
-remote code, and sends no request off the device. No session replay or autocapture.
+None. No user data has a destination: the extension bundles no analytics SDK, loads no
+remote code, and sends no data off the device. No session replay or autocapture. The one
+outbound request is the selector-config `GET` described above — a download that carries
+no request body, identifiers, cookies, or query parameters, so it transfers no user data
+in either direction.
 
 ## Privacy policy URL
 
