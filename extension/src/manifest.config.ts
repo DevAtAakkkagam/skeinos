@@ -12,7 +12,13 @@ export const P0_MATCHES: readonly string[] = Object.values(BUNDLED_CONFIGS).flat
 
 export const skeinosManifest = {
   name: 'Skeinos',
-  description: 'A unified workspace layer for your LLM chats.',
+  // This is not just the chrome://extensions blurb: the Chrome Web Store renders it
+  // as the listing's read-only "Summary from package" (max 132 chars) and AMO seeds
+  // the add-on summary from it, so it is store copy and must match the tagline at the
+  // top of docs/STORE_LISTING.txt. Neither store lets you edit it in the dashboard —
+  // changing it requires shipping a new version.
+  description:
+    'Folders, search, and a prompt library for Claude, ChatGPT, Gemini & Perplexity. Open source, local-first, no account.',
   // Branded toolbar button. Icon-only for now (no popup/command wiring — that is a
   // later UX change). `default_icon` is declared explicitly: Chrome would fall back to
   // the extension `icons` set, but Firefox does NOT — its `browser_action` renders

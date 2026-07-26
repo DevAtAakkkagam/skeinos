@@ -1,5 +1,10 @@
 SHORT SUMMARY (tagline — max 132 characters)
 
+NOT a dashboard field. Chrome shows this as the read-only "Summary from package" and
+AMO seeds the add-on summary from it, both taken from the manifest `description`. It
+lives in extension/src/manifest.config.ts and only changes by shipping a new version —
+keep the two in sync; pasting it into a store form is not possible.
+
 Folders, search, and a prompt library for Claude, ChatGPT, Gemini & Perplexity. Open source, local-first, no account.
 
 
