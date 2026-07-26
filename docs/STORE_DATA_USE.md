@@ -6,9 +6,13 @@ extension collects nothing). When the store dashboard form changes, update both.
 
 ## Single purpose
 
-Skeinos overlays a unified organization, search, prompt-library, and model-comparison
-layer on top of supported LLM chat sites. It is local-first: conversation content is
-read and indexed on the user's device.
+Skeinos overlays a unified organization, search, and prompt-library layer on top of
+supported LLM chat sites (Claude, ChatGPT, Gemini, Perplexity). It is local-first:
+conversation content is read and indexed on the user's device.
+
+(Model comparison is *not* claimed here: it has no capability in `openspec/specs/` and
+only a reserved `Comparison` store table exists. Do not describe unshipped features in
+a field whose entire job is to state a narrow scope.)
 
 ## Permission justifications
 
