@@ -384,7 +384,7 @@ export const fr = {
   'options.off': 'Désactivé',
   'options.privacyHeading': 'Confidentialité et données',
   'options.privacyIntro':
-    'Tout reste sur cet appareil. Skeinos n’effectue aucune requête réseau externe : rien n’est téléversé, rien n’est suivi, et aucun compte n’est nécessaire.',
+    'Tout reste sur cet appareil : rien n’est téléversé, rien n’est suivi, et aucun compte n’est nécessaire. En usage normal, Skeinos n’effectue aucune requête réseau, et la seule exception n’envoie rien vous concernant : elle télécharge un fichier de réparation lorsqu’un site de chat change sa mise en page. Skeinos est open source, vous pouvez donc tout vérifier vous-même.',
 
   // ── Incitation à la mise à niveau (limites de palier) ────────────────────
   'nudge.nounFolders': 'dossiers',
@@ -442,5 +442,6 @@ export const fr = {
   'options.supportIntro':
     'Vous avez trouvé un bug, ou un site qui ne fonctionne plus ? Dites-le-nous : c’est le moyen le plus rapide de le corriger. Une petite note aide aussi les autres à découvrir Skeinos.',
   'options.sendFeedback': 'Envoyer un retour',
+  'options.sourceCode': 'Code source',
   'options.rateExtension': 'Noter Skeinos',
 } satisfies Catalog;

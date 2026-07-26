@@ -380,7 +380,7 @@ export const pt = {
   'options.off': 'Desativado',
   'options.privacyHeading': 'Privacidade e dados',
   'options.privacyIntro':
-    'Tudo fica neste dispositivo. O Skeinos não faz quaisquer pedidos de rede externos: nada é carregado, nada é rastreado e não é preciso conta.',
+    'Tudo fica neste dispositivo: nada é carregado, nada é rastreado e não é preciso conta. Em utilização normal o Skeinos não faz pedidos de rede, e a única exceção não envia nada sobre si — descarrega um ficheiro de reparação quando um site de chat muda o seu esquema. O Skeinos é open source, por isso pode verificar tudo isto por si próprio.',
 
   // ── Upgrade nudge (tier limits) ──────────────────────────────────────────
   'nudge.nounFolders': 'pastas',
@@ -438,5 +438,6 @@ export const pt = {
   'options.supportIntro':
     'Encontrou um erro ou um site que parou de funcionar? Conte para nós: é a forma mais rápida de corrigir. Uma avaliação rápida também ajuda outras pessoas a descobrir o Skeinos.',
   'options.sendFeedback': 'Enviar feedback',
+  'options.sourceCode': 'Código-fonte',
   'options.rateExtension': 'Avaliar o Skeinos',
 } satisfies Catalog;

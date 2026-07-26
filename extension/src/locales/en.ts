@@ -430,11 +430,12 @@ export const en = {
   'options.off': 'Off',
   'options.privacyHeading': 'Privacy & data',
   'options.privacyIntro':
-    'Everything stays on this device. Skeinos makes no external network requests — nothing is uploaded, nothing is tracked, and no account is needed.',
+    'Everything stays on this device: nothing is uploaded, nothing is tracked, and no account is needed. Skeinos makes no network requests in normal use, and the one exception sends nothing about you — it downloads a repair file when a chat site changes its layout. Skeinos is open source, so you can check all of this yourself.',
   'options.supportHeading': 'Feedback & support',
   'options.supportIntro':
     'Found a bug, or a site that stopped working? Tell us — it’s the fastest way to get it fixed. A quick rating helps others find Skeinos too.',
   'options.sendFeedback': 'Send feedback',
+  'options.sourceCode': 'Source code',
   'options.rateExtension': 'Rate Skeinos',
 
   // ── Upgrade nudge (tier limits) ──────────────────────────────────────────

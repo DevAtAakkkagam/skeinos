@@ -379,7 +379,7 @@ export const de = {
   'options.off': 'Aus',
   'options.privacyHeading': 'Datenschutz & Daten',
   'options.privacyIntro':
-    'Alles bleibt auf diesem Gerät. Skeinos stellt keine externen Netzwerkanfragen – nichts wird hochgeladen, nichts wird getrackt, und ein Konto ist nicht nötig.',
+    'Alles bleibt auf diesem Gerät: nichts wird hochgeladen, nichts wird getrackt, und ein Konto ist nicht nötig. Im normalen Betrieb stellt Skeinos keine Netzwerkanfragen, und die eine Ausnahme sendet nichts über dich – sie lädt eine Reparaturdatei herunter, wenn eine Chat-Website ihr Layout ändert. Skeinos ist Open Source, du kannst das alles also selbst überprüfen.',
 
   // ── Upgrade nudge (tier limits) ──────────────────────────────────────────
   'nudge.nounFolders': 'Ordner',
@@ -437,5 +437,6 @@ export const de = {
   'options.supportIntro':
     'Einen Fehler gefunden oder funktioniert eine Website nicht mehr? Sag uns Bescheid – so wird es am schnellsten behoben. Eine kurze Bewertung hilft auch anderen, Skeinos zu finden.',
   'options.sendFeedback': 'Feedback senden',
+  'options.sourceCode': 'Quellcode',
   'options.rateExtension': 'Skeinos bewerten',
 } satisfies Catalog;

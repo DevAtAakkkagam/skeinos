@@ -16,6 +16,14 @@ export const FEEDBACK_URL =
 export const REVIEW_URL =
   'https://chromewebstore.google.com/detail/skeinos/kaajkklgkepoeoelogkdpkenjoihobdj/reviews';
 
+/**
+ * The public repository (GPL-3.0). Surfaced in the UI because the privacy claim is
+ * "you can check this yourself" — a verifiability claim the product never links to
+ * is not verifiable. The store listing and site say Skeinos is open source; this is
+ * the path there from inside the extension.
+ */
+export const SOURCE_URL = 'https://github.com/DevAtAakkkagam/skeinos';
+
 /** True for a web URL we should open in a new tab (a `mailto:` opens in the mail
  *  client and needs no target). Lets callers set `target`/`rel` correctly whether
  *  FEEDBACK_URL is still the mailto fallback or the live form URL. */
