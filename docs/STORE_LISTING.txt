@@ -44,7 +44,7 @@ Skeinos is local-first. Your conversations, titles, and search index stay on you
 • No telemetry and no analytics of any kind: not opt-in, not off-by-default, none. There is no account to create and nothing of yours on a server.
 • You can check all of this yourself. Skeinos is open source under the GPL-3.0 license, so the code that handles your chats is public: read it, review every permission it asks for, or build the extension from source.
 
-  Source code: https://github.com/DevAtAakkkagam/skeinos
+  Source code: https://github.com/aakkagam/skeinos
 
 
 SUPPORTED SITES

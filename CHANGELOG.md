@@ -9,7 +9,7 @@ to be pasted into the Chrome Web Store description's "WHAT'S NEW" section
 
 • ChatGPT: Skeinos now indexes your full conversation history on first visit, instead of only the chats ChatGPT had already loaded into its sidebar — folders, tags, and search finally see everything.
 • Skeinos sends nothing off your device. The optional diagnostics stream is gone entirely, along with its settings toggle.
-• Skeinos is now open source (GPL-3.0) — the full extension source is public at github.com/DevAtAakkkagam/skeinos, and Settings has a "Source code" link so you can go read it.
+• Skeinos is now open source (GPL-3.0) — the full extension source is public at github.com/aakkagam/skeinos, and Settings has a "Source code" link so you can go read it.
 
 ## 0.1.5 — 2026-07-18
 

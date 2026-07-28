@@ -18,7 +18,7 @@ understand the rest of the codebase to do it.
 ## Setup
 
 ```bash
-git clone https://github.com/DevAtAakkkagam/skeinos.git
+git clone https://github.com/aakkagam/skeinos.git
 cd skeinos/extension
 npm install
 npm run dev              # WXT dev server, Chrome; `npm run dev:firefox` for Firefox
@@ -203,7 +203,7 @@ building, open an issue and ask — that's faster than guessing.
 
 ## Reporting bugs and security issues
 
-Bugs and platform breakage: [open an issue](https://github.com/DevAtAakkkagam/skeinos/issues/new/choose).
+Bugs and platform breakage: [open an issue](https://github.com/aakkagam/skeinos/issues/new/choose).
 
 Security or privacy vulnerabilities: **please don't open a public issue** — see
 [SECURITY.md](SECURITY.md).

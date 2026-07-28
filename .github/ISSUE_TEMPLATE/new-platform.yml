@@ -8,7 +8,7 @@ body:
       value: |
         Adding a site is **a JSON config plus a recorded DOM fixture — no new code.** If
         you want to take it on, say so below and read
-        [add a new platform](https://github.com/DevAtAakkkagam/skeinos/blob/main/CONTRIBUTING.md#add-a-new-platform).
+        [add a new platform](https://github.com/aakkagam/skeinos/blob/main/CONTRIBUTING.md#add-a-new-platform).
 
         Grok, DeepSeek, and Mistral are wanted and currently unclaimed.
 

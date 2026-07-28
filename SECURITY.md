@@ -6,7 +6,7 @@
 
 Report it privately in either of these ways:
 
-- [GitHub private vulnerability reporting](https://github.com/DevAtAakkkagam/skeinos/security/advisories/new) (preferred)
+- [GitHub private vulnerability reporting](https://github.com/aakkagam/skeinos/security/advisories/new) (preferred)
 - Email **admin@aakkagam.com** with `SECURITY` in the subject
 
 Please include what you found, how to reproduce it, which version and browser, and what

@@ -22,7 +22,7 @@ export const REVIEW_URL =
  * is not verifiable. The store listing and site say Skeinos is open source; this is
  * the path there from inside the extension.
  */
-export const SOURCE_URL = 'https://github.com/DevAtAakkkagam/skeinos';
+export const SOURCE_URL = 'https://github.com/aakkagam/skeinos';
 
 /** True for a web URL we should open in a new tab (a `mailto:` opens in the mail
  *  client and needs no target). Lets callers set `target`/`rel` correctly whether

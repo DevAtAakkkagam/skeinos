@@ -45,6 +45,6 @@ describe('options page external links', () => {
 
   it('points the source link at the public repository', () => {
     // The listing tells users they can read the code; this is the path there.
-    expect(SOURCE_URL).toBe('https://github.com/DevAtAakkkagam/skeinos');
+    expect(SOURCE_URL).toBe('https://github.com/aakkagam/skeinos');
   });
 });

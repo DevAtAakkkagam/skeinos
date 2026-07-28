@@ -46,7 +46,7 @@ A privacy policy is a claim. Skeinos is **open source under the GPL-3.0 license*
 you can test every claim on this page against the code that actually runs in your
 browser:
 
-- Read the source at <https://github.com/DevAtAakkkagam/skeinos>, including the
+- Read the source at <https://github.com/aakkagam/skeinos>, including the
   permissions the extension requests and why each one is needed.
 - Build the extension from that source and load it yourself, instead of trusting the
   store build.

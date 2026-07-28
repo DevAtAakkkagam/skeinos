@@ -44,7 +44,7 @@ match.
 
 Built with WXT (https://wxt.dev) over Vite and Rollup: bundled and minified, never
 obfuscated. The same code is public under GPL-3.0 at
-https://github.com/DevAtAakkkagam/skeinos, tagged `v<version>`, if diffing is easier
+https://github.com/aakkagam/skeinos, tagged `v<version>`, if diffing is easier
 than building.
 
 TWO THINGS YOU WILL RUN INTO

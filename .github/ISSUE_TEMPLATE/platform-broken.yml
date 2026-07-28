@@ -12,7 +12,7 @@ body:
         **This is also the easiest thing to fix.** Every platform is one JSON file of CSS
         selectors — no code. If you can find the new selector in devtools, the fix is a
         few-line pull request: see
-        [a site broke, how do I fix it?](https://github.com/DevAtAakkkagam/skeinos/blob/main/CONTRIBUTING.md#a-site-broke).
+        [a site broke, how do I fix it?](https://github.com/aakkagam/skeinos/blob/main/CONTRIBUTING.md#a-site-broke).
 
   - type: dropdown
     id: platform
